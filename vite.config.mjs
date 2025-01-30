@@ -19,8 +19,11 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       rollupOptions: {
-        external: ['pages/announcements/ListAnnouncements', 'components/dashboard/PreviewDataCard'],
-      },
+        external: [
+          /^components\//,
+          /^pages\//,
+        ],
+        },
     },
     preview: {
       open: true,
