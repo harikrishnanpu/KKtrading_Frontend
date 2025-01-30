@@ -33,10 +33,7 @@ export default defineConfig(({ mode }) => {
       {
         find: /^src(.+)/,
         replacement: path.join(process.cwd(), 'src/$1')
-      },
-     {
-        '@': path.resolve(__dirname, 'src'),
-      },
+      }
     ]
   },
     base: API_URL,
