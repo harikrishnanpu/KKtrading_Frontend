@@ -17,6 +17,11 @@ export default defineConfig(({ mode }) => {
       port: PORT,
       host: true
     },
+    build: {
+      rollupOptions: {
+        external: ['pages/announcements/ListAnnouncements'],
+      },
+    },
     preview: {
       open: true,
       host: true
@@ -40,3 +45,6 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), jsconfigPaths()]
   };
 });
+
+
+
