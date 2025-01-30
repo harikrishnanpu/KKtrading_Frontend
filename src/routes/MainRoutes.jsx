@@ -78,7 +78,7 @@ const PreviewProduct = Loadable(lazy(() => import('pages/products/productPreview
 
 
 
-const ListAnnouncement = Loadable(lazy(() => import('pages/announcements/listAnnouncements')));
+const ListAnnouncement = Loadable(lazy(() => import('pages/announcements/ListAnnouncements')));
 
 
 
