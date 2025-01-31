@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
-import BillingSuccess from "components/invoice/BillingSuccess";
+import BillingSuccess from "components/invoice/billingsuccess";
 import { useGetMenuMaster } from "api/menu";
 import useAuth from "hooks/useAuth";
 
