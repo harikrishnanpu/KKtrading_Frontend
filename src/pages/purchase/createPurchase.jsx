@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
-import BillingSuccess from "../../components/invoice/BillingSuccess";import useAuth from "hooks/useAuth";
+import BillingSuccess from "components/invoice/BillingSuccess";
 import { useGetMenuMaster } from "api/menu";
+import useAuth from "hooks/useAuth";
 
 export default function PurchasePage() {
   const [currentStep, setCurrentStep] = useState(1);

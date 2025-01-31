@@ -1,9 +1,8 @@
 // src/screens/EditBillScreen.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import SuccessModal from '../../components/invoice/SccessModal';
-import SummaryModal from '../../components/invoice/SummaryModal';
-import OutOfStockModal from '../../components/invoice/itemAddingModal';
+import SummaryModal from 'components/invoice/SummaryModal';
+import OutOfStockModal from 'components/invoice/itemAddingModal';
 import api from '../api';
 import useAuth from 'hooks/useAuth';
 import { useGetMenuMaster } from 'api/menu';

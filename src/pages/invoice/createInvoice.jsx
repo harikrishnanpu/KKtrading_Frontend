@@ -1,12 +1,12 @@
 // src/screens/BillingScreen.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import SuccessModal from '../../components/invoice/SccessModal';
-import SummaryModal from '../../components/invoice/SummaryModal';
+import SuccessModal from 'components/invoice/SccessModal';
+import SummaryModal from 'components/invoice/SummaryModal';
 import api from '../api';
-import OutOfStockModal from '../../components/invoice/itemAddingModal';
+import OutOfStockModal from 'components/invoice/itemAddingModal';
 import axios from 'axios';
-import BillingSuccess from '../../components/invoice/billingsuccess';
+import BillingSuccess from 'components/invoice/billingsuccess';
 import useAuth from 'hooks/useAuth';
 import { useGetMenuMaster } from 'api/menu';
 import Backdrop from '@mui/material/Backdrop';
