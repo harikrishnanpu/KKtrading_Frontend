@@ -7,8 +7,8 @@ import Typography from '@mui/material/Typography';
 
 // project-imports
 import WelcomeBanner from 'sections/dashboard/default/WelcomeBanner';
-import PreviewDataCard from 'components/dashboard/PreviewDataCard';  // Ensure this path is correct
-import PreviewDataChart from 'components/dashboard/PreviewDataChart'; // Ensure this path is correct
+import PreviewDataCard from 'components/dashboard/previewDataCard';  // Ensure this path is correct
+import PreviewDataChart from 'components/dashboard/previewDataChart'; // Ensure this path is correct
 import LowStockPreview from 'components/dashboard/lowstockPreview';   // Ensure this path is correct
 import TotalIncome from 'sections/widget/chart/TotalIncome';          // Ensure this path is correct
 
