@@ -4,7 +4,7 @@ import jsconfigPaths from 'vite-jsconfig-paths';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const API_URL = env.VITE_API_URL || 'https://kktrading-backend.vercel.app/'; // Use ENV variable for API URL
+  const API_URL =  '/'; // Use ENV variable for API URL
   const PORT = 3000;
 
   return {
