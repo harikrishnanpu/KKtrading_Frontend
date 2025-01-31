@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from 'pages/api';
-import Product from './Product';
+import Product from './product';
 
 export default function SearchBox() {
   const navigate = useNavigate();
