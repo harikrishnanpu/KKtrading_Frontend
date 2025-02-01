@@ -38,6 +38,12 @@ export default defineConfig(({ mode }) => {
       ]
     },
     base: API_URL,
+    build: {
+      outDir: 'dist'
+    },
+    server: {
+      historyApiFallback: true
+    },
     plugins: [react(), jsconfigPaths()]
   };
 });
