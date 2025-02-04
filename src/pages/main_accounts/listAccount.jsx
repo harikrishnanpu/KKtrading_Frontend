@@ -4,24 +4,39 @@ import React, { useState, useEffect, useCallback } from 'react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { useNavigate } from 'react-router-dom';
-import api from '../api'; 
+import api from '../api';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
-import debounce from 'lodash.debounce'; // Added for debouncing search input
+import debounce from 'lodash.debounce';
 import useAuth from 'hooks/useAuth';
+
+// Material-UI Imports
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import IconButton from '@mui/material/IconButton';
+import Slide from '@mui/material/Slide';
+import CloseIcon from '@mui/icons-material/Close';
+
+// Transition for MUI Dialog (slide up animation)
+const Transition = React.forwardRef(function Transition(props, ref) {
+  return <Slide direction="up" ref={ref} {...props} />;
+});
 
 const PaymentAccountsList = () => {
   const navigate = useNavigate();
+  const { user: userInfo } = useAuth();
+
+  // Main states
   const [accounts, setAccounts] = useState([]);
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [loading, setLoading] = useState(true);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [error, setError] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // State for mobile sidebar
   const itemsPerPage = 15;
 
-  // States for sorting and filtering inside the modal
+  // Filter and sort states (for modal and sidebar)
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState('date');
   const [sortDirection, setSortDirection] = useState('desc');
@@ -30,13 +45,10 @@ const PaymentAccountsList = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  const { user: userInfo } = useAuth();
-
-  // Load selected accounts from localStorage or default select all
+  // Sidebar (filter) states
   const [selectedAccountIds, setSelectedAccountIds] = useState([]);
-
-  // Search state for the sidebar search input
   const [accountSearch, setAccountSearch] = useState('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Fetch all payment accounts
   const fetchAccounts = async () => {
@@ -50,7 +62,7 @@ const PaymentAccountsList = () => {
       }));
       setAccounts(formattedAccounts);
 
-      // After fetching, set default selection if not already set in local storage
+      // Set default selection to all accounts if not stored already
       const storedSelection = localStorage.getItem('selectedAccountIds');
       if (storedSelection) {
         setSelectedAccountIds(JSON.parse(storedSelection));
@@ -73,11 +85,11 @@ const PaymentAccountsList = () => {
 
   const totalPages = Math.ceil(accounts.length / itemsPerPage);
 
-  // Debounced search handler to optimize performance
+  // Debounced search handler for sidebar search
   const debouncedSearch = useCallback(
     debounce((query) => {
       setAccountSearch(query);
-      setCurrentPage(1); // Reset to first page on new search
+      setCurrentPage(1);
     }, 300),
     []
   );
@@ -86,30 +98,32 @@ const PaymentAccountsList = () => {
     debouncedSearch(e.target.value);
   };
 
-  // Filter accounts based on selectedAccountIds and accountSearch
-  const filteredAccounts = accounts.filter((acc) =>
-    selectedAccountIds.includes(acc._id) &&
-    acc.accountName.toLowerCase().includes(accountSearch.toLowerCase())
+  // Filter accounts based on selected IDs and search query
+  const filteredAccounts = accounts.filter(
+    (acc) =>
+      selectedAccountIds.includes(acc._id) &&
+      acc.accountName.toLowerCase().includes(accountSearch.toLowerCase())
   );
 
-  // Calculate totals based on selected accounts
-  const totalBalance = filteredAccounts.reduce((acc, account) => acc + account.balanceAmount, 0);
-
+  // Totals calculation
+  const totalBalance = filteredAccounts.reduce(
+    (acc, account) => acc + account.balanceAmount,
+    0
+  );
   const totalIn = filteredAccounts.reduce((total, account) => {
     return total + account.paymentsIn.reduce((sum, p) => sum + p.amount, 0);
   }, 0);
-
   const totalOut = filteredAccounts.reduce((total, account) => {
     return total + account.paymentsOut.reduce((sum, p) => sum + p.amount, 0);
   }, 0);
 
-  // Paginate all accounts (for the main table)
+  // Paginate accounts for main table
   const paginateAccounts = () => {
     const start = (currentPage - 1) * itemsPerPage;
     return filteredAccounts.slice(start, start + itemsPerPage);
   };
 
-  // Generate PDF and show in a popup
+  // Generate PDF for an account
   const generatePDF = (account) => {
     setPdfLoading(true);
     const doc = new jsPDF();
@@ -120,11 +134,7 @@ const PaymentAccountsList = () => {
     doc.text(`Account ID: ${account.accountId}`, 14, 32);
     doc.text(`Account Name: ${account.accountName}`, 14, 40);
     doc.text(`Balance Amount: Rs. ${account.balanceAmount.toFixed(2)}`, 14, 48);
-    doc.text(
-      `Created At: ${new Date(account.createdAt).toLocaleString()}`,
-      14,
-      56
-    );
+    doc.text(`Created At: ${new Date(account.createdAt).toLocaleString()}`, 14, 56);
 
     // Payments In
     doc.setFontSize(14);
@@ -137,7 +147,6 @@ const PaymentAccountsList = () => {
       payment.submittedBy,
       new Date(payment.date).toLocaleString(),
     ]);
-
     doc.autoTable({
       startY: 75,
       head: [['#', 'Amount', 'Method', 'Remark', 'Submitted By', 'Date']],
@@ -159,7 +168,6 @@ const PaymentAccountsList = () => {
       payment.submittedBy,
       new Date(payment.date).toLocaleString(),
     ]);
-
     doc.autoTable({
       startY: finalY + 5,
       head: [['#', 'Amount', 'Method', 'Remark', 'Submitted By', 'Date']],
@@ -169,23 +177,19 @@ const PaymentAccountsList = () => {
       headStyles: { fillColor: [231, 76, 60] },
     });
 
-    // Instead of saving, create a blob URL and open in a new window
     const pdfBlobUrl = doc.output('bloburl');
-    // Open in a new window as a popup
     window.open(pdfBlobUrl, '_blank', 'width=800,height=600');
-
     setPdfLoading(false);
   };
 
-  // Handle Removing an Account
+  // Remove an account
   const handleRemove = async (id) => {
     if (window.confirm('Are you sure you want to remove this account?')) {
       try {
         await api.delete(`/api/accounts/acc/${id}/delete`);
         alert('Successfully deleted');
         setAccounts(accounts.filter((account) => account._id !== id));
-        // Also remove from selection if present
-        const updatedSelection = selectedAccountIds.filter(aid => aid !== id);
+        const updatedSelection = selectedAccountIds.filter((aid) => aid !== id);
         setSelectedAccountIds(updatedSelection);
         localStorage.setItem('selectedAccountIds', JSON.stringify(updatedSelection));
       } catch (error) {
@@ -195,7 +199,7 @@ const PaymentAccountsList = () => {
     }
   };
 
-  // Handle Viewing Account Details (modal)
+  // Open account details (modal)
   const handleView = (account) => {
     setSelectedAccount(account);
     setSearchQuery('');
@@ -211,20 +215,16 @@ const PaymentAccountsList = () => {
     setSelectedAccount(null);
   };
 
-  // Delete a single payment
+  // Delete a payment from an account
   const handlePaymentDelete = async (paymentId, type) => {
     if (window.confirm('Are you sure you want to delete this payment?')) {
       try {
         await api.delete(`/api/daily/acc/${paymentId}/delete`);
         const updatedAccount = { ...selectedAccount };
         if (type === 'in') {
-          updatedAccount.paymentsIn = updatedAccount.paymentsIn.filter(
-            (p) => p._id !== paymentId
-          );
+          updatedAccount.paymentsIn = updatedAccount.paymentsIn.filter((p) => p._id !== paymentId);
         } else {
-          updatedAccount.paymentsOut = updatedAccount.paymentsOut.filter(
-            (p) => p._id !== paymentId
-          );
+          updatedAccount.paymentsOut = updatedAccount.paymentsOut.filter((p) => p._id !== paymentId);
         }
         setSelectedAccount(updatedAccount);
       } catch (error) {
@@ -234,25 +234,21 @@ const PaymentAccountsList = () => {
     }
   };
 
-  // Filtering and sorting logic for payments inside modal
+  // Filtering and sorting payments for the modal
   const filterAndSortPayments = (payments) => {
-    let filtered = payments.filter((p) => {
+    if (!payments) return [];
+    const filtered = payments.filter((p) => {
       const matchesQuery =
         searchQuery.trim() === '' ||
         (p.remark && p.remark.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (p.method && p.method.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (p.submittedBy && p.submittedBy.toLowerCase().includes(searchQuery.toLowerCase()));
-
       const matchesMethod = filterMethod === '' || (p.method && p.method === filterMethod);
-
       const paymentDate = new Date(p.date);
       const withinStartDate = startDate ? paymentDate >= new Date(startDate) : true;
       const withinEndDate = endDate ? paymentDate <= new Date(endDate) : true;
-
       return matchesQuery && matchesMethod && withinStartDate && withinEndDate;
     });
-
-    // Sort by selected field
     filtered.sort((a, b) => {
       let valA, valB;
       if (sortField === 'amount') {
@@ -262,24 +258,53 @@ const PaymentAccountsList = () => {
         valA = new Date(a.date).getTime();
         valB = new Date(b.date).getTime();
       }
-
       if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
       if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
-
     return filtered;
   };
 
-  // Dynamic methods options based on current tab
+  // Get unique payment methods based on the selected tab
   const getMethodsOptions = () => {
     if (!selectedAccount) return [];
     const payments = tab === 'in' ? selectedAccount.paymentsIn : selectedAccount.paymentsOut;
-    const uniqueMethods = [...new Set(payments.map(p => p.method))];
-    return uniqueMethods;
+    return [...new Set(payments.map((p) => p.method))];
   };
 
-  // Render Skeletons
+  // Handle individual account checkbox selection
+  const handleAccountSelectionChange = (accountId) => {
+    let updatedSelections;
+    if (selectedAccountIds.includes(accountId)) {
+      updatedSelections = selectedAccountIds.filter((id) => id !== accountId);
+    } else {
+      updatedSelections = [...selectedAccountIds, accountId];
+    }
+    setSelectedAccountIds(updatedSelections);
+    localStorage.setItem('selectedAccountIds', JSON.stringify(updatedSelections));
+  };
+
+  // Handle "Select All" checkbox in the filter sidebar
+  const handleSelectAll = (isChecked) => {
+    if (isChecked) {
+      const allIds = accounts.map((acc) => acc._id);
+      setSelectedAccountIds(allIds);
+      localStorage.setItem('selectedAccountIds', JSON.stringify(allIds));
+    } else {
+      setSelectedAccountIds([]);
+      localStorage.setItem('selectedAccountIds', JSON.stringify([]));
+    }
+  };
+
+  // Clear all filter inputs in the sidebar
+  const clearFilters = () => {
+    setAccountSearch('');
+    setFilterMethod('');
+    setStartDate('');
+    setEndDate('');
+  };
+
+  // Render loading skeletons
   const renderSkeleton = () => {
     const skeletonRows = Array.from({ length: itemsPerPage }, (_, index) => index);
     return (
@@ -319,16 +344,15 @@ const PaymentAccountsList = () => {
             </tbody>
           </table>
         </div>
-
         {/* Mobile Cards Skeleton */}
         <div className="md:hidden flex flex-col space-y-4">
           {skeletonRows.map((row) => (
             <div key={row} className="bg-white p-4 rounded shadow">
-              <Skeleton height={10} width={`60%`} className="mb-2" />
-              <Skeleton height={10} width={`80%`} className="mb-2" />
-              <Skeleton height={10} width={`40%`} className="mb-2" />
-              <Skeleton height={10} width={`90%`} className="mb-2" />
-              <Skeleton height={10} width={`50%`} />
+              <Skeleton height={10} width="60%" className="mb-2" />
+              <Skeleton height={10} width="80%" className="mb-2" />
+              <Skeleton height={10} width="40%" className="mb-2" />
+              <Skeleton height={10} width="90%" className="mb-2" />
+              <Skeleton height={10} width="50%" />
             </div>
           ))}
         </div>
@@ -336,20 +360,19 @@ const PaymentAccountsList = () => {
     );
   };
 
-  // Pagination Handler
+  // Pagination handler
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
     }
   };
 
+  // Render payments table or cards for the modal
   const renderPayments = (payments, type) => {
     const filteredPayments = filterAndSortPayments(payments);
-
     if (filteredPayments.length === 0) {
       return <p className="text-xs text-gray-500">No payments available.</p>;
     }
-
     return (
       <>
         <div className="hidden sm:block overflow-x-auto mt-4">
@@ -369,11 +392,7 @@ const PaymentAccountsList = () => {
               {filteredPayments.map((payment, index) => (
                 <tr key={payment._id || index} className="bg-white border-b hover:bg-gray-50">
                   <td className="px-4 py-2 text-xs">{index + 1}</td>
-                  <td
-                    className={`px-4 py-2 text-xs font-semibold ${
-                      type === 'in' ? 'text-green-600' : 'text-red-600'
-                    }`}
-                  >
+                  <td className={`px-4 py-2 text-xs font-semibold ${type === 'in' ? 'text-green-600' : 'text-red-600'}`}>
                     ₹{payment.amount.toFixed(2)}
                   </td>
                   <td className="px-4 py-2 text-xs">{payment.method}</td>
@@ -393,8 +412,7 @@ const PaymentAccountsList = () => {
             </tbody>
           </table>
         </div>
-
-        {/* Cards view for mobile */}
+        {/* Mobile Cards for payments */}
         <div className="sm:hidden flex flex-col space-y-4 mt-4">
           {filteredPayments.map((payment, index) => (
             <div key={payment._id || index} className="bg-white p-4 rounded shadow">
@@ -421,29 +439,24 @@ const PaymentAccountsList = () => {
     );
   };
 
-  // Handle checkbox selection for accounts in the sidebar
-  const handleAccountSelectionChange = (accountId) => {
-    let updatedSelections;
-    if (selectedAccountIds.includes(accountId)) {
-      // remove it
-      updatedSelections = selectedAccountIds.filter((id) => id !== accountId);
-    } else {
-      // add it
-      updatedSelections = [...selectedAccountIds, accountId];
-    }
-    setSelectedAccountIds(updatedSelections);
-    localStorage.setItem('selectedAccountIds', JSON.stringify(updatedSelections));
-  };
-
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-gray-50">
-      {/* Sidebar for Filters - Visible on Desktop, Overlay on Mobile */}
+      {/* Filter Sidebar (visible on desktop; on mobile, toggled by a button) */}
       <div
         className={`fixed inset-y-0 left-0 transform ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } md:translate-x-0 md:static md:inset-auto md:w-1/4 lg:w-1/5 bg-white p-4 shadow-md transition-transform duration-300 ease-in-out z-50`}
       >
         <h2 className="text-md font-bold text-red-600 mb-4 text-center">Filter Accounts</h2>
+        {/* Mobile Close Button for Sidebar */}
+        <div className="md:hidden flex justify-end mb-2">
+          <button
+            onClick={() => setIsSidebarOpen(false)}
+            className="text-red-500 text-xl"
+          >
+            &times;
+          </button>
+        </div>
         {/* Search by Account Name */}
         <div className="mb-4">
           <input
@@ -453,9 +466,18 @@ const PaymentAccountsList = () => {
             className="border text-xs p-2 rounded w-full focus:outline-none focus:ring-1 focus:ring-red-500"
           />
         </div>
-        {/* Select Accounts */}
+        {/* Select Accounts with "Select All" */}
         <div className="mb-4">
           <h3 className="text-sm font-semibold text-gray-700 mb-2">Select Accounts</h3>
+          <div className="flex items-center mb-2">
+            <input
+              type="checkbox"
+              checked={accounts.length > 0 && selectedAccountIds.length === accounts.length}
+              onChange={(e) => handleSelectAll(e.target.checked)}
+              className="mr-2"
+            />
+            <span className="text-xs text-gray-700">Select All</span>
+          </div>
           <div className="max-h-60 overflow-auto border p-2 rounded">
             {accounts.map((acc) => (
               <div key={acc._id} className="flex items-center mb-2">
@@ -481,9 +503,16 @@ const PaymentAccountsList = () => {
             className="border text-xs p-2 rounded w-full focus:outline-none focus:ring-1 focus:ring-red-500"
           >
             <option value="">All Methods</option>
-            {/* Dynamically populate methods */}
-            {Array.from(new Set(accounts.flatMap(acc => acc.paymentsIn.map(p => p.method).concat(acc.paymentsOut.map(p => p.method))))).map(method => (
-              <option key={method} value={method}>{method}</option>
+            {Array.from(
+              new Set(
+                accounts.flatMap((acc) =>
+                  acc.paymentsIn.map((p) => p.method).concat(acc.paymentsOut.map((p) => p.method))
+                )
+              )
+            ).map((method) => (
+              <option key={method} value={method}>
+                {method}
+              </option>
             ))}
           </select>
         </div>
@@ -527,15 +556,31 @@ const PaymentAccountsList = () => {
             </select>
           </div>
         </div>
-        {/* Apply Filters Button */}
-        <div className="flex justify-end">
+        {/* Clear & Apply Filters Buttons */}
+        <div className="flex justify-between">
+          <button
+            onClick={clearFilters}
+            className="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400 text-xs font-bold w-1/2 mr-1"
+          >
+            Clear Filters
+          </button>
           <button
             onClick={() => setIsSidebarOpen(false)}
-            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 text-xs font-bold w-full"
+            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 text-xs font-bold w-1/2 ml-1"
           >
             Apply Filters
           </button>
         </div>
+      </div>
+
+      {/* Mobile Filter Toggle Button */}
+      <div className="md:hidden flex justify-end p-2">
+        <button
+          onClick={() => setIsSidebarOpen(true)}
+          className="bg-red-500 text-white px-4 py-2 rounded shadow"
+        >
+          Open Filters
+        </button>
       </div>
 
       {/* Overlay for Mobile Sidebar */}
@@ -547,20 +592,19 @@ const PaymentAccountsList = () => {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 p-4 md:p-6 lg:p-8">
-
-        {/* Totals */}
-        <div className="flex justify-between items-center shadow-md rounded-lg p-4 mb-4 space-y-4 sm:space-y-0">
-          <div className=" bg-white p-4 rounded shadow">
-            <h3 className="text-sm font-bold text-gray-600">In</h3>
+      <div className="flex-1 p-4 md:p-6 lg:p-8 text-center">
+        {/* Totals Section */}
+        <div className="flex flex-col sm:flex-row justify-between items-center shadow-md rounded-lg p-4 mb-4 space-y-4 sm:space-y-0">
+          <div className="bg-white p-4 rounded shadow w-full sm:w-auto">
+            <h3 className="text-sm font-bold text-gray-600">Total Payment In</h3>
             <p className="text-sm sm:text-xs font-extrabold text-green-600">₹{totalIn.toFixed(2)}</p>
           </div>
-          <div className=" bg-white p-4 rounded shadow">
-            <h3 className="text-sm font-bold text-gray-600">Out</h3>
+          <div className="bg-white p-4 rounded shadow w-full sm:w-auto">
+            <h3 className="text-sm font-bold text-gray-600">Total Payment Out</h3>
             <p className="text-sm sm:text-xs font-extrabold text-red-600">₹{totalOut.toFixed(2)}</p>
           </div>
-          <div className="bg-white p-4 rounded shadow">
-            <h3 className="text-sm font-bold text-gray-600">Balance</h3>
+          <div className="bg-white p-4 rounded shadow w-full sm:w-auto">
+            <h3 className="text-sm font-bold text-gray-600">Total Balance</h3>
             <p className="text-sm sm:text-xs font-extrabold text-gray-900">₹{totalBalance.toFixed(2)}</p>
           </div>
         </div>
@@ -576,20 +620,15 @@ const PaymentAccountsList = () => {
         )}
 
         {/* Error Message */}
-        {error && (
-          <p className="text-red-500 text-center mb-4 text-xs">{error}</p>
-        )}
+        {error && <p className="text-red-500 text-center mb-4 text-xs">{error}</p>}
 
-        {/* Loading Skeletons */}
+        {/* Content Loading */}
         {loading ? (
           renderSkeleton()
         ) : (
           <>
-            {/* Accounts Table/Card View */}
             {filteredAccounts.length === 0 ? (
-              <p className="text-center text-gray-500 text-xs">
-                No payment accounts available.
-              </p>
+              <p className="text-center text-gray-500 text-xs">No payment accounts available.</p>
             ) : (
               <>
                 {/* Desktop Table */}
@@ -606,22 +645,11 @@ const PaymentAccountsList = () => {
                     </thead>
                     <tbody>
                       {paginateAccounts().map((account) => (
-                        <tr
-                          key={account._id}
-                          className="hover:bg-gray-100 divide-y divide-x"
-                        >
-                          <td className="px-4 py-2 text-xs font-bold text-red-600">
-                            {account.accountId}
-                          </td>
-                          <td className="px-2 py-2 text-xs">
-                            {account.accountName}
-                          </td>
-                          <td className="px-2 py-2 text-xs">
-                            ₹{account.balanceAmount.toFixed(2)}
-                          </td>
-                          <td className="px-2 py-2 text-xs">
-                            {new Date(account.createdAt).toLocaleDateString()}
-                          </td>
+                        <tr key={account._id} className="hover:bg-gray-100 divide-y divide-x">
+                          <td className="px-4 py-2 text-xs font-bold text-red-600">{account.accountId}</td>
+                          <td className="px-2 py-2 text-xs">{account.accountName}</td>
+                          <td className="px-2 py-2 text-xs">₹{account.balanceAmount.toFixed(2)}</td>
+                          <td className="px-2 py-2 text-xs">{new Date(account.createdAt).toLocaleDateString()}</td>
                           <td className="px-2 py-2 text-xs">
                             <div className="flex space-x-2">
                               <button
@@ -716,136 +744,159 @@ const PaymentAccountsList = () => {
             )}
           </>
         )}
+      </div>
 
-        {/* Full Transactions Modal */}
-        {selectedAccount && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 overflow-auto">
-            <div className="bg-white w-full h-full p-4 sm:p-6 relative rounded-none">
-              {/* Close Button */}
-              <button
-                className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-3xl"
-                onClick={closeModal}
-                aria-label="Close Modal"
-              >
-                &times;
-              </button>
-
-              {/* Modal Header */}
-              <div className="mt-8 sm:mt-0">
-                <h2 className="text-lg font-bold text-red-600 mb-4">
-                  Transactions for Account ID: {selectedAccount.accountId}
-                </h2>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0 mb-4">
-                  <div>
-                    <p className="text-sm font-semibold">
-                      Balance Amount:{' '}
-                      <span className="text-gray-900 font-bold">
-                        ₹{selectedAccount.balanceAmount.toFixed(2)}
-                      </span>
-                    </p>
-                  </div>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => setTab('in')}
-                      className={`px-3 py-1 text-xs font-bold rounded ${
-                        tab === 'in'
-                          ? 'bg-green-500 text-white'
-                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      }`}
-                    >
-                      Payments In
-                    </button>
-                    <button
-                      onClick={() => setTab('out')}
-                      className={`px-3 py-1 text-xs font-bold rounded ${
-                        tab === 'out'
-                          ? 'bg-red-500 text-white'
-                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      }`}
-                    >
-                      Payments Out
-                    </button>
-                  </div>
-                </div>
+      {/* Full Transactions Modal using MUI Dialog (Sticky at Bottom) */}
+      <Dialog
+        open={Boolean(selectedAccount)}
+        TransitionComponent={Transition}
+        keepMounted
+        onClose={closeModal}
+        fullWidth
+        maxWidth="md"
+        sx={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          margin: 0,
+          '& .MuiDialog-container': {
+            display: 'flex',
+            alignItems: 'flex-end',
+          },
+        }}
+        PaperProps={{
+          sx: {
+            width: '100%',
+            height: '80vh',
+            borderTopLeftRadius: 12,
+            borderTopRightRadius: 12,
+            overflowY: 'auto',
+            boxShadow: 'none',
+          },
+        }}
+      >
+        <DialogTitle sx={{ m: 0, p: 2, fontWeight: 'bold' }}>
+          Transactions for Account ID: {selectedAccount?.accountId}
+          <IconButton
+            aria-label="close"
+            onClick={closeModal}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: (theme) => theme.palette.grey[500],
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ overflowY: 'auto', maxHeight: '60vh' }}>
+          <div className="mt-2">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0 mb-4">
+              <div>
+                <p className="text-sm font-semibold">
+                  Balance Amount:{' '}
+                  <span className="text-gray-900 font-bold">
+                    ₹{selectedAccount?.balanceAmount.toFixed(2)}
+                  </span>
+                </p>
               </div>
-
-              {/* Filters and Search */}
-              <div className="bg-gray-50 p-3 rounded mb-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-2 sm:space-y-0">
-                  <input
-                    type="text"
-                    placeholder="Search by Remark/Method/Submitted By"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="border text-xs p-2 rounded focus:outline-none focus:ring-1 focus:ring-red-500 flex-1"
-                  />
-                  <select
-                    value={filterMethod}
-                    onChange={(e) => setFilterMethod(e.target.value)}
-                    className="border text-xs p-2 rounded focus:outline-none focus:ring-1 focus:ring-red-500"
-                  >
-                    <option value="">All Methods</option>
-                    {getMethodsOptions().map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="border text-xs p-2 rounded focus:outline-none focus:ring-1 focus:ring-red-500"
-                    />
-                    <span className="text-xs">to</span>
-                    <input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="border text-xs p-2 rounded focus:outline-none focus:ring-1 focus:ring-red-500"
-                    />
-                  </div>
-                  <select
-                    value={sortField}
-                    onChange={(e) => setSortField(e.target.value)}
-                    className="border text-xs p-2 rounded focus:outline-none focus:ring-1 focus:ring-red-500"
-                  >
-                    <option value="date">Sort by Date</option>
-                    <option value="amount">Sort by Amount</option>
-                  </select>
-                  <select
-                    value={sortDirection}
-                    onChange={(e) => setSortDirection(e.target.value)}
-                    className="border text-xs p-2 rounded focus:outline-none focus:ring-1 focus:ring-red-500"
-                  >
-                    <option value="desc">Desc</option>
-                    <option value="asc">Asc</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Payments Lists */}
-              <div className="mt-4">
-                {tab === 'in' ? (
-                  <>
-                    <h3 className="text-md font-semibold text-green-600 mb-2">Payments In</h3>
-                    {renderPayments(selectedAccount.paymentsIn, 'in')}
-                  </>
-                ) : (
-                  <>
-                    <h3 className="text-md font-semibold text-red-600 mb-2">Payments Out</h3>
-                    {renderPayments(selectedAccount.paymentsOut, 'out')}
-                  </>
-                )}
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setTab('in')}
+                  className={`px-3 py-1 text-xs font-bold rounded ${
+                    tab === 'in'
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  Payments In
+                </button>
+                <button
+                  onClick={() => setTab('out')}
+                  className={`px-3 py-1 text-xs font-bold rounded ${
+                    tab === 'out'
+                      ? 'bg-red-500 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  Payments Out
+                </button>
               </div>
             </div>
+            {/* Filters and Search within Modal */}
+            <div className="bg-gray-50 p-3 rounded mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-2 sm:space-y-0">
+                <input
+                  type="text"
+                  placeholder="Search by Remark/Method/Submitted By"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="border text-xs p-2 rounded focus:outline-none focus:ring-1 focus:ring-red-500 flex-1"
+                />
+                <select
+                  value={filterMethod}
+                  onChange={(e) => setFilterMethod(e.target.value)}
+                  className="border text-xs p-2 rounded focus:outline-none focus:ring-1 focus:ring-red-500"
+                >
+                  <option value="">All Methods</option>
+                  {getMethodsOptions().map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="border text-xs p-2 rounded focus:outline-none focus:ring-1 focus:ring-red-500"
+                  />
+                  <span className="text-xs">to</span>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="border text-xs p-2 rounded focus:outline-none focus:ring-1 focus:ring-red-500"
+                  />
+                </div>
+                <select
+                  value={sortField}
+                  onChange={(e) => setSortField(e.target.value)}
+                  className="border text-xs p-2 rounded focus:outline-none focus:ring-1 focus:ring-red-500"
+                >
+                  <option value="date">Sort by Date</option>
+                  <option value="amount">Sort by Amount</option>
+                </select>
+                <select
+                  value={sortDirection}
+                  onChange={(e) => setSortDirection(e.target.value)}
+                  className="border text-xs p-2 rounded focus:outline-none focus:ring-1 focus:ring-red-500"
+                >
+                  <option value="desc">Desc</option>
+                  <option value="asc">Asc</option>
+                </select>
+              </div>
+            </div>
+            {/* Payments List */}
+            <div className="mt-4">
+              {tab === 'in' ? (
+                <>
+                  <h3 className="text-md font-semibold text-green-600 mb-2">Payments In</h3>
+                  {renderPayments(selectedAccount?.paymentsIn, 'in')}
+                </>
+              ) : (
+                <>
+                  <h3 className="text-md font-semibold text-red-600 mb-2">Payments Out</h3>
+                  {renderPayments(selectedAccount?.paymentsOut, 'out')}
+                </>
+              )}
+            </div>
           </div>
-        )}
-
-        {/* Accounts Selection Sidebar */}
-        {/* This section is handled by the sidebar on desktop and the overlay on mobile */}
-      </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

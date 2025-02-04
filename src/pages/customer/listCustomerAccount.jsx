@@ -4,24 +4,40 @@ import React, { useState, useEffect, useCallback } from 'react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { useNavigate } from 'react-router-dom';
-import api from '../api'; 
+import api from '../api';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
-import debounce from 'lodash.debounce'; // for debouncing search input
+import debounce from 'lodash.debounce';
 import useAuth from 'hooks/useAuth';
+
+// Material-UI Imports for Modal
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import IconButton from '@mui/material/IconButton';
+import Slide from '@mui/material/Slide';
+import CloseIcon from '@mui/icons-material/Close';
+
+// Transition for MUI Dialog (slide up animation)
+const Transition = React.forwardRef(function Transition(props, ref) {
+  return <Slide direction="up" ref={ref} {...props} />;
+});
 
 const CustomerAccountList = () => {
   const navigate = useNavigate();
+  const { user: userInfo } = useAuth();
+
+  // Main states
   const [accounts, setAccounts] = useState([]);
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [loading, setLoading] = useState(true);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [error, setError] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // For mobile sidebar
   const itemsPerPage = 15;
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // For mobile sidebar
 
-  // States for global filtering and sorting
+  // Global filter and sorting states
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('');
   const [billAmountMin, setBillAmountMin] = useState('');
   const [billAmountMax, setBillAmountMax] = useState('');
@@ -30,12 +46,8 @@ const CustomerAccountList = () => {
   const [sortField, setSortField] = useState('createdAt');
   const [sortDirection, setSortDirection] = useState('desc');
 
-  // Sidebar search for accounts
+  // Sidebar search and account selection
   const [accountSearch, setAccountSearch] = useState('');
-
-  const { user: userInfo } = useAuth();
-
-  // Load selected accounts from localStorage or default select all
   const [selectedAccountIds, setSelectedAccountIds] = useState([]);
 
   // Fetch all customer accounts
@@ -50,7 +62,7 @@ const CustomerAccountList = () => {
       }));
       setAccounts(formattedAccounts);
 
-      // After fetching, set default selection if not set
+      // Set default account selection (either from localStorage or select all)
       const storedSelection = localStorage.getItem('selectedCustomerAccountIds');
       if (storedSelection) {
         setSelectedAccountIds(JSON.parse(storedSelection));
@@ -71,11 +83,11 @@ const CustomerAccountList = () => {
     fetchAccounts();
   }, []);
 
-  // Debounced search handler to optimize performance
+  // Debounced search handler for sidebar search
   const debouncedSearch = useCallback(
     debounce((query) => {
       setAccountSearch(query);
-      setCurrentPage(1); 
+      setCurrentPage(1);
     }, 300),
     []
   );
@@ -84,24 +96,24 @@ const CustomerAccountList = () => {
     debouncedSearch(e.target.value);
   };
 
-  // Filter accounts based on selectedAccountIds and accountSearch
+  // Filter accounts based on the selectedAccountIds and accountSearch
   const filteredAccounts = accounts.filter((acc) =>
     selectedAccountIds.includes(acc._id) &&
     (acc.accountId.toLowerCase().includes(accountSearch.toLowerCase()) ||
-     acc.customerName.toLowerCase().includes(accountSearch.toLowerCase()))
+      acc.customerName.toLowerCase().includes(accountSearch.toLowerCase()))
   );
 
-  // Apply additional global filters/sorting here if needed
+  // Apply additional filters for payment status and amount ranges
   const fullyFilteredAccounts = filteredAccounts.filter((acc) => {
     // Payment status filter
     if (paymentStatusFilter === 'Paid' && acc.pendingAmount !== 0) return false;
     if (paymentStatusFilter === 'Pending' && acc.pendingAmount === 0) return false;
 
-    // Bill amount range
+    // Bill amount range filter
     if (billAmountMin && acc.totalBillAmount < parseFloat(billAmountMin)) return false;
     if (billAmountMax && acc.totalBillAmount > parseFloat(billAmountMax)) return false;
 
-    // Pending amount range
+    // Pending amount range filter
     if (pendingAmountMin && acc.pendingAmount < parseFloat(pendingAmountMin)) return false;
     if (pendingAmountMax && acc.pendingAmount > parseFloat(pendingAmountMax)) return false;
 
@@ -130,12 +142,12 @@ const CustomerAccountList = () => {
     return fullyFilteredAccounts.slice(start, start + itemsPerPage);
   };
 
-  // Calculate totals based on selected accounts
+  // Totals Calculation
   const totalBill = fullyFilteredAccounts.reduce((acc, account) => acc + account.totalBillAmount, 0);
   const totalPaid = fullyFilteredAccounts.reduce((acc, account) => acc + account.paidAmount, 0);
   const totalPending = fullyFilteredAccounts.reduce((acc, account) => acc + account.pendingAmount, 0);
 
-  // PDF generation
+  // PDF Generation
   const generatePDF = (account) => {
     setPdfLoading(true);
     const doc = new jsPDF();
@@ -150,7 +162,7 @@ const CustomerAccountList = () => {
     doc.text(`Pending Amount: ₹${account.pendingAmount.toFixed(2)}`, 14, 64);
     doc.text(`Created At: ${new Date(account.createdAt).toLocaleString()}`, 14, 72);
 
-    // Bills
+    // Bills Table
     doc.setFontSize(14);
     doc.text('Bills', 14, 86);
     const billsData = account.bills.map((bill, index) => [
@@ -170,7 +182,7 @@ const CustomerAccountList = () => {
       headStyles: { fillColor: [46, 204, 113] },
     });
 
-    // Payments
+    // Payments Table
     const finalY = doc.lastAutoTable.finalY + 10;
     doc.setFontSize(14);
     doc.text('Payments', 14, finalY);
@@ -194,17 +206,17 @@ const CustomerAccountList = () => {
 
     const pdfBlobUrl = doc.output('bloburl');
     window.open(pdfBlobUrl, '_blank', 'width=800,height=600');
-
     setPdfLoading(false);
   };
 
+  // Remove a customer account
   const handleRemove = async (id) => {
     if (window.confirm('Are you sure you want to remove this customer account?')) {
       try {
         await api.delete(`/api/customer/${id}/delete`);
         alert('Successfully deleted');
         setAccounts(accounts.filter((account) => account._id !== id));
-        const updatedSelection = selectedAccountIds.filter(aid => aid !== id);
+        const updatedSelection = selectedAccountIds.filter((aid) => aid !== id);
         setSelectedAccountIds(updatedSelection);
         localStorage.setItem('selectedCustomerAccountIds', JSON.stringify(updatedSelection));
       } catch (error) {
@@ -214,16 +226,28 @@ const CustomerAccountList = () => {
     }
   };
 
+  // Open account details (modal)
   const handleView = (account) => {
     setSelectedAccount(account);
-    // Reset filters inside modal if needed
   };
 
   const closeModal = () => {
     setSelectedAccount(null);
   };
 
-  // Render Skeletons
+  // Handle account selection checkbox in the sidebar
+  const handleAccountSelectionChange = (accountId) => {
+    let updatedSelections;
+    if (selectedAccountIds.includes(accountId)) {
+      updatedSelections = selectedAccountIds.filter((id) => id !== accountId);
+    } else {
+      updatedSelections = [...selectedAccountIds, accountId];
+    }
+    setSelectedAccountIds(updatedSelections);
+    localStorage.setItem('selectedCustomerAccountIds', JSON.stringify(updatedSelections));
+  };
+
+  // Render loading skeletons
   const renderSkeleton = () => {
     const skeletonRows = Array.from({ length: itemsPerPage }, (_, index) => index);
     return (
@@ -271,16 +295,15 @@ const CustomerAccountList = () => {
             </tbody>
           </table>
         </div>
-
         {/* Mobile Cards Skeleton */}
         <div className="md:hidden flex flex-col space-y-4">
           {skeletonRows.map((row) => (
             <div key={row} className="bg-white p-4 rounded shadow">
-              <Skeleton height={10} width={`60%`} className="mb-2" />
-              <Skeleton height={10} width={`80%`} className="mb-2" />
-              <Skeleton height={10} width={`40%`} className="mb-2" />
-              <Skeleton height={10} width={`90%`} className="mb-2" />
-              <Skeleton height={10} width={`50%`} />
+              <Skeleton height={10} width="60%" className="mb-2" />
+              <Skeleton height={10} width="80%" className="mb-2" />
+              <Skeleton height={10} width="40%" className="mb-2" />
+              <Skeleton height={10} width="90%" className="mb-2" />
+              <Skeleton height={10} width="50%" />
             </div>
           ))}
         </div>
@@ -288,38 +311,29 @@ const CustomerAccountList = () => {
     );
   };
 
-  // Pagination Handler
+  // Pagination handler
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
     }
   };
 
-  // Handle checkbox selection for accounts in the sidebar
-  const handleAccountSelectionChange = (accountId) => {
-    let updatedSelections;
-    if (selectedAccountIds.includes(accountId)) {
-      // remove it
-      updatedSelections = selectedAccountIds.filter((id) => id !== accountId);
-    } else {
-      // add it
-      updatedSelections = [...selectedAccountIds, accountId];
-    }
-    setSelectedAccountIds(updatedSelections);
-    localStorage.setItem('selectedCustomerAccountIds', JSON.stringify(updatedSelections));
-  };
-
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-gray-50">
-      {/* Sidebar for Filters */}
+      {/* Filter Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 transform ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } md:translate-x-0 md:static md:inset-auto md:w-1/4 lg:w-1/5 bg-white p-4 shadow-md transition-transform duration-300 ease-in-out z-50`}
       >
         <h2 className="text-md font-bold text-red-600 mb-4 text-center">Filter Accounts</h2>
-
-        {/* Search by Account or Customer Name */}
+        {/* Mobile Close Button */}
+        <div className="md:hidden flex justify-end mb-2">
+          <button onClick={() => setIsSidebarOpen(false)} className="text-red-500 text-xl">
+            &times;
+          </button>
+        </div>
+        {/* Search Input */}
         <div className="mb-4">
           <input
             type="text"
@@ -328,30 +342,31 @@ const CustomerAccountList = () => {
             className="border text-xs p-2 rounded w-full focus:outline-none focus:ring-1 focus:ring-red-500"
           />
         </div>
-
         {/* Select Accounts */}
         <div className="mb-4">
           <h3 className="text-sm font-semibold text-gray-700 mb-2">Select Accounts</h3>
           <div className="max-h-60 overflow-auto border p-2 rounded">
-            {accounts.filter(acc =>
-              acc.accountId.toLowerCase().includes(accountSearch.toLowerCase()) ||
-              acc.customerName.toLowerCase().includes(accountSearch.toLowerCase())
-            ).map((acc) => (
-              <div key={acc._id} className="flex items-center mb-2">
-                <input
-                  type="checkbox"
-                  checked={selectedAccountIds.includes(acc._id)}
-                  onChange={() => handleAccountSelectionChange(acc._id)}
-                  className="mr-2"
-                />
-                <span className="text-xs text-gray-700">
-                  {acc.accountId} - {acc.customerName}
-                </span>
-              </div>
-            ))}
+            {accounts
+              .filter(
+                (acc) =>
+                  acc.accountId.toLowerCase().includes(accountSearch.toLowerCase()) ||
+                  acc.customerName.toLowerCase().includes(accountSearch.toLowerCase())
+              )
+              .map((acc) => (
+                <div key={acc._id} className="flex items-center mb-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedAccountIds.includes(acc._id)}
+                    onChange={() => handleAccountSelectionChange(acc._id)}
+                    className="mr-2"
+                  />
+                  <span className="text-xs text-gray-700">
+                    {acc.accountId} - {acc.customerName}
+                  </span>
+                </div>
+              ))}
           </div>
         </div>
-
         {/* Payment Status Filter */}
         <div className="mb-4">
           <h3 className="text-sm font-semibold text-gray-700 mb-2">Payment Status</h3>
@@ -365,8 +380,7 @@ const CustomerAccountList = () => {
             <option value="Pending">Pending</option>
           </select>
         </div>
-
-        {/* Bill Amount Range */}
+        {/* Bill Amount Range Filter */}
         <div className="mb-4">
           <h3 className="text-sm font-semibold text-gray-700 mb-2">Bill Amount Range (₹)</h3>
           <div className="flex space-x-2">
@@ -388,8 +402,7 @@ const CustomerAccountList = () => {
             />
           </div>
         </div>
-
-        {/* Pending Amount Range */}
+        {/* Pending Amount Range Filter */}
         <div className="mb-4">
           <h3 className="text-sm font-semibold text-gray-700 mb-2">Pending Amount Range (₹)</h3>
           <div className="flex space-x-2">
@@ -411,7 +424,6 @@ const CustomerAccountList = () => {
             />
           </div>
         </div>
-
         {/* Sorting Options */}
         <div className="mb-4">
           <h3 className="text-sm font-semibold text-gray-700 mb-2">Sort By</h3>
@@ -436,7 +448,6 @@ const CustomerAccountList = () => {
             </select>
           </div>
         </div>
-
         {/* Apply Filters Button */}
         <div className="flex justify-end">
           <button
@@ -446,6 +457,16 @@ const CustomerAccountList = () => {
             Apply Filters
           </button>
         </div>
+      </div>
+
+      {/* Mobile Filter Toggle Button */}
+      <div className="md:hidden flex justify-end p-2">
+        <button
+          onClick={() => setIsSidebarOpen(true)}
+          className="bg-red-500 text-white px-4 py-2 rounded shadow"
+        >
+          Open Filters
+        </button>
       </div>
 
       {/* Overlay for Mobile Sidebar */}
@@ -458,19 +479,17 @@ const CustomerAccountList = () => {
 
       {/* Main Content */}
       <div className="flex-1 p-4 md:p-6 lg:p-8">
-
-
-        {/* Totals */}
-        <div className="flex justify-between items-center shadow-md rounded-lg p-4 mb-4 space-y-4 sm:space-y-0">
-          <div className=" bg-white p-4 rounded shadow">
+        {/* Totals Section */}
+        <div className="flex flex-col sm:flex-row justify-between items-center shadow-md rounded-lg p-4 mb-4 space-y-4 sm:space-y-0">
+          <div className="bg-white p-4 rounded shadow w-full sm:w-auto">
             <h3 className="text-sm font-bold text-gray-600">Total Bill</h3>
             <p className="text-sm sm:text-xs font-extrabold text-green-600">₹{totalBill.toFixed(2)}</p>
           </div>
-          <div className=" bg-white p-4 rounded shadow">
+          <div className="bg-white p-4 rounded shadow w-full sm:w-auto">
             <h3 className="text-sm font-bold text-gray-600">Total Paid</h3>
             <p className="text-sm sm:text-xs font-extrabold text-blue-600">₹{totalPaid.toFixed(2)}</p>
           </div>
-          <div className="bg-white p-4 rounded shadow">
+          <div className="bg-white p-4 rounded shadow w-full sm:w-auto">
             <h3 className="text-sm font-bold text-gray-600">Total Pending</h3>
             <p className="text-sm sm:text-xs font-extrabold text-red-600">₹{totalPending.toFixed(2)}</p>
           </div>
@@ -487,11 +506,9 @@ const CustomerAccountList = () => {
         )}
 
         {/* Error Message */}
-        {error && (
-          <p className="text-red-500 text-center mb-4 text-xs">{error}</p>
-        )}
+        {error && <p className="text-red-500 text-center mb-4 text-xs">{error}</p>}
 
-        {/* Loading Skeletons or Accounts */}
+        {/* Content Loading */}
         {loading ? (
           renderSkeleton()
         ) : (
@@ -579,7 +596,9 @@ const CustomerAccountList = () => {
                   {paginateAccounts().map((account) => (
                     <div key={account._id} className="bg-white p-4 rounded shadow">
                       <div className="flex justify-between items-center mb-2">
-                        <h3 className="text-sm font-bold text-red-600">Account ID: {account.accountId}</h3>
+                        <h3 className="text-sm font-bold text-red-600">
+                          Account ID: {account.accountId}
+                        </h3>
                         <div className="flex space-x-2">
                           <button
                             onClick={() => handleView(account)}
@@ -607,11 +626,26 @@ const CustomerAccountList = () => {
                           </button>
                         </div>
                       </div>
-                      <p className="text-xs"><span className="font-semibold">Name: </span>{account.customerName}</p>
-                      <p className="text-xs"><span className="font-semibold">Total Bill: </span>₹{account.totalBillAmount.toFixed(2)}</p>
-                      <p className="text-xs"><span className="font-semibold">Paid Amount: </span>₹{account.paidAmount.toFixed(2)}</p>
-                      <p className="text-xs"><span className="font-semibold">Pending Amount: </span>₹{account.pendingAmount.toFixed(2)}</p>
-                      <p className="text-xs"><span className="font-semibold">Created At: </span>{new Date(account.createdAt).toLocaleDateString()}</p>
+                      <p className="text-xs">
+                        <span className="font-semibold">Name: </span>
+                        {account.customerName}
+                      </p>
+                      <p className="text-xs">
+                        <span className="font-semibold">Total Bill: </span>
+                        ₹{account.totalBillAmount.toFixed(2)}
+                      </p>
+                      <p className="text-xs">
+                        <span className="font-semibold">Paid Amount: </span>
+                        ₹{account.paidAmount.toFixed(2)}
+                      </p>
+                      <p className="text-xs">
+                        <span className="font-semibold">Pending Amount: </span>
+                        ₹{account.pendingAmount.toFixed(2)}
+                      </p>
+                      <p className="text-xs">
+                        <span className="font-semibold">Created At: </span>
+                        {new Date(account.createdAt).toLocaleDateString()}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -648,124 +682,158 @@ const CustomerAccountList = () => {
             )}
           </>
         )}
+      </div>
 
-        {/* Full Transactions Modal (if needed, can be expanded) */}
-        {selectedAccount && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 overflow-auto">
-            <div className="bg-white w-full h-full p-4 sm:p-6 relative rounded-none">
-              <button
-                className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-3xl"
-                onClick={closeModal}
-                aria-label="Close Modal"
-              >
-                &times;
-              </button>
-              <div className="mt-8 sm:mt-0">
-                <h2 className="text-lg font-bold text-red-600 mb-4">
-                  Transactions for Account ID: {selectedAccount.accountId}
-                </h2>
+      {/* Full Transactions Modal using MUI Dialog */}
+      <Dialog
+        open={Boolean(selectedAccount)}
+        TransitionComponent={Transition}
+        keepMounted
+        onClose={closeModal}
+        fullWidth
+        maxWidth="md"
+        sx={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          margin: 0,
+          '& .MuiDialog-container': {
+            display: 'flex',
+            alignItems: 'flex-end',
+          },
+        }}
+        PaperProps={{
+          sx: {
+            width: '100%',
+            height: '80vh',
+            borderTopLeftRadius: 12,
+            borderTopRightRadius: 12,
+            overflowY: 'auto',
+            boxShadow: 'none',
+          },
+        }}
+      >
+        <DialogTitle sx={{ m: 0, p: 2, fontWeight: 'bold' }}>
+          Transactions for Account ID: {selectedAccount?.accountId}
+          <IconButton
+            aria-label="close"
+            onClick={closeModal}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: (theme) => theme.palette.grey[500],
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ overflowY: 'auto', maxHeight: '60vh' }}>
+          <div className="mt-2">
+            {/* Account Details */}
+            <div className="flex flex-col sm:flex-row justify-between items-center mb-4">
+              <div>
                 <p className="text-sm font-semibold">
-                  Customer Name: <span className="font-bold">{selectedAccount.customerName}</span>
+                  Customer Name: <span className="text-gray-900 font-bold">{selectedAccount?.customerName}</span>
                 </p>
                 <p className="text-sm font-semibold">
-                  Total Bill Amount: <span className="font-bold">₹{selectedAccount.totalBillAmount.toFixed(2)}</span>
+                  Total Bill Amount: <span className="text-gray-900 font-bold">₹{selectedAccount?.totalBillAmount.toFixed(2)}</span>
                 </p>
                 <p className="text-sm font-semibold">
-                  Paid Amount: <span className="font-bold text-blue-600">₹{selectedAccount.paidAmount.toFixed(2)}</span>
+                  Paid Amount: <span className="text-blue-600 font-bold">₹{selectedAccount?.paidAmount.toFixed(2)}</span>
                 </p>
                 <p className="text-sm font-semibold">
-                  Pending Amount: <span className="font-bold text-red-600">₹{selectedAccount.pendingAmount.toFixed(2)}</span>
+                  Pending Amount: <span className="text-red-600 font-bold">₹{selectedAccount?.pendingAmount.toFixed(2)}</span>
                 </p>
                 <p className="text-sm font-semibold">
-                  Created At: {new Date(selectedAccount.createdAt).toLocaleDateString()}
+                  Created At: {new Date(selectedAccount?.createdAt).toLocaleDateString()}
                 </p>
-
-                {/* Bills */}
-                <h3 className="text-md font-semibold text-green-600 mt-6 mb-2">Bills</h3>
-                <div className="overflow-x-auto mb-6">
-                  <table className="min-w-full text-xs text-gray-500">
-                    <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-2">#</th>
-                        <th className="px-4 py-2">Invoice No.</th>
-                        <th className="px-4 py-2">Bill Amount (₹)</th>
-                        <th className="px-4 py-2">Invoice Date</th>
-                        <th className="px-4 py-2">Delivery Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedAccount.bills && selectedAccount.bills.length > 0 ? (
-                        selectedAccount.bills.map((bill, index) => (
-                          <tr key={index} className="bg-white border-b hover:bg-gray-100">
-                            <td className="px-4 py-2 text-xs">{index + 1}</td>
-                            <td className="px-4 py-2 text-xs">{bill.invoiceNo}</td>
-                            <td className="px-4 py-2 text-xs">₹{bill.billAmount.toFixed(2)}</td>
-                            <td className="px-4 py-2 text-xs">{new Date(bill.invoiceDate).toLocaleDateString()}</td>
-                            <td className="px-4 py-2 text-xs">
-                              <span
-                                className={`px-2 py-1 rounded text-xs ${
-                                  bill.deliveryStatus === 'Delivered'
-                                    ? 'bg-green-200 text-green-800'
-                                    : 'bg-yellow-200 text-yellow-800'
-                                }`}
-                              >
-                                {bill.deliveryStatus}
-                              </span>
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan="5" className="px-4 py-2 text-xs text-center text-gray-500">
-                            No bills available.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Payments */}
-                <h3 className="text-md font-semibold text-red-600 mb-2">Payments</h3>
-                <div className="overflow-x-auto mb-6">
-                  <table className="min-w-full text-xs text-gray-500">
-                    <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-2">Amount (₹)</th>
-                        <th className="px-4 py-2">Submitted By</th>
-                        <th className="px-4 py-2">Remark</th>
-                        <th className="px-4 py-2">Date</th>
-                        <th className="px-4 py-2">Method</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedAccount.payments && selectedAccount.payments.length > 0 ? (
-                        selectedAccount.payments.map((payment, index) => (
-                          <tr key={index} className="bg-white border-b hover:bg-gray-100">
-                            <td className={`px-4 py-2 text-xs ${payment.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                              ₹{payment.amount.toFixed(2)}
-                            </td>
-                            <td className="px-4 py-2 text-xs">{payment.submittedBy}</td>
-                            <td className="px-4 py-2 text-xs">{payment.remark || '-'}</td>
-                            <td className="px-4 py-2 text-xs">{new Date(payment.date).toLocaleDateString()}</td>
-                            <td className="px-4 py-2 text-xs">{payment.method}</td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan="5" className="px-4 py-2 text-xs text-center text-gray-500">
-                            No payments available.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
               </div>
             </div>
+            {/* Bills Table */}
+            <h3 className="text-md font-semibold text-green-600 mb-2">Bills</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-xs text-gray-500">
+                <thead className="text-xs uppercase bg-gray-100 text-gray-700">
+                  <tr>
+                    <th className="px-4 py-2">#</th>
+                    <th className="px-4 py-2">Invoice No.</th>
+                    <th className="px-4 py-2">Bill Amount (₹)</th>
+                    <th className="px-4 py-2">Invoice Date</th>
+                    <th className="px-4 py-2">Delivery Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedAccount?.bills && selectedAccount.bills.length > 0 ? (
+                    selectedAccount.bills.map((bill, index) => (
+                      <tr key={index} className="bg-white border-b hover:bg-gray-50">
+                        <td className="px-4 py-2 text-xs">{index + 1}</td>
+                        <td className="px-4 py-2 text-xs">{bill.invoiceNo}</td>
+                        <td className="px-4 py-2 text-xs">₹{bill.billAmount.toFixed(2)}</td>
+                        <td className="px-4 py-2 text-xs">{new Date(bill.invoiceDate).toLocaleDateString()}</td>
+                        <td className="px-4 py-2 text-xs">
+                          <span
+                            className={`px-2 py-1 rounded text-xs ${
+                              bill.deliveryStatus === 'Delivered'
+                                ? 'bg-green-200 text-green-800'
+                                : 'bg-yellow-200 text-yellow-800'
+                            }`}
+                          >
+                            {bill.deliveryStatus}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="5" className="px-4 py-2 text-xs text-center text-gray-500">
+                        No bills available.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {/* Payments Table */}
+            <h3 className="text-md font-semibold text-red-600 mb-2 mt-4">Payments</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-xs text-gray-500">
+                <thead className="text-xs uppercase bg-gray-100 text-gray-700">
+                  <tr>
+                    <th className="px-4 py-2">Amount (₹)</th>
+                    <th className="px-4 py-2">Submitted By</th>
+                    <th className="px-4 py-2">Remark</th>
+                    <th className="px-4 py-2">Date</th>
+                    <th className="px-4 py-2">Method</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedAccount?.payments && selectedAccount.payments.length > 0 ? (
+                    selectedAccount.payments.map((payment, index) => (
+                      <tr key={index} className="bg-white border-b hover:bg-gray-50">
+                        <td className={`px-4 py-2 text-xs ${payment.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          ₹{payment.amount.toFixed(2)}
+                        </td>
+                        <td className="px-4 py-2 text-xs">{payment.submittedBy}</td>
+                        <td className="px-4 py-2 text-xs">{payment.remark || '-'}</td>
+                        <td className="px-4 py-2 text-xs">{new Date(payment.date).toLocaleDateString()}</td>
+                        <td className="px-4 py-2 text-xs">{payment.method}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="5" className="px-4 py-2 text-xs text-center text-gray-500">
+                        No payments available.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        )}
-      </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

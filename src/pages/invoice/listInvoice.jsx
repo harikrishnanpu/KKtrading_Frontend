@@ -1,24 +1,97 @@
+// BillingList.js
+// =============================================================================
+// Importing React and supporting libraries
+// =============================================================================
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import { FaUser } from 'react-icons/fa';
+import { motion, AnimatePresence } from 'framer-motion';
+import { format } from 'date-fns';
 import useAuth from 'hooks/useAuth';
+import { useGetMenuMaster } from 'api/menu';
 
+// =============================================================================
+// MUI Imports
+// =============================================================================
+import Dialog from '@mui/material/Dialog';
+import Slide from '@mui/material/Slide';
+import DialogContent from '@mui/material/DialogContent';
+import IconButton from '@mui/material/IconButton';
+import CloseIcon from '@mui/icons-material/Close';
+
+// =============================================================================
+// Transition Component for Dialog (Slide Up Animation)
+// =============================================================================
+const Transition = React.forwardRef(function Transition(props, ref) {
+  return <Slide direction="up" ref={ref} {...props} />;
+});
+
+// =============================================================================
+// Helper Components: StatusIndicator and ProfitBadge
+// =============================================================================
+
+/**
+ * StatusIndicator
+ * Renders an animated colored dot based on the billing’s delivery and payment statuses.
+ */
+const StatusIndicator = ({ billing }) => {
+  let colorClass = 'bg-red-500';
+  if (billing.deliveryStatus === 'Delivered' && billing.paymentStatus === 'Paid') {
+    colorClass = 'bg-green-500';
+  } else if (
+    (billing.deliveryStatus === 'Delivered' && billing.paymentStatus !== 'Paid') ||
+    (billing.deliveryStatus !== 'Delivered' && billing.paymentStatus === 'Paid')
+  ) {
+    colorClass = 'bg-yellow-500';
+  }
+  return (
+    <motion.div
+      className={`w-3 h-3 rounded-full ${colorClass}`}
+      animate={{ scale: [1, 1.2, 1] }}
+      transition={{ duration: 1.5, repeat: Infinity }}
+    />
+  );
+};
+
+/**
+ * ProfitBadge
+ * Renders a small badge indicating the profit percentage with color coding.
+ */
+const ProfitBadge = ({ value }) => (
+  <span
+    className={`px-2 py-1 rounded-full text-xs font-semibold ${
+      value >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+    }`}
+  >
+    {value >= 0 ? '+' : ''}
+    {value.toFixed(2)}%
+  </span>
+);
+
+// =============================================================================
+// BillingList Component
+// =============================================================================
 const BillingList = () => {
   const navigate = useNavigate();
+  const { user: userInfo } = useAuth();
+  const { menuMaster } = useGetMenuMaster();
+
+  // ---------------------------------------------------------------------------
+  // State Variables
+  // ---------------------------------------------------------------------------
   const [billings, setBillings] = useState([]);
   const [selectedBilling, setSelectedBilling] = useState(null);
   const [loading, setLoading] = useState(true);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [error, setError] = useState('');
+  const [products, setProducts] = useState([]);
 
-  // Pagination
+  // Pagination & Filtering State
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
-
-  // Filters & Sorting
   const [searchTerm, setSearchTerm] = useState('');
   const [invoiceStartDate, setInvoiceStartDate] = useState('');
   const [invoiceEndDate, setInvoiceEndDate] = useState('');
@@ -26,115 +99,133 @@ const BillingList = () => {
   const [deliveryEndDate, setDeliveryEndDate] = useState('');
   const [sortField, setSortField] = useState('');
   const [sortOrder, setSortOrder] = useState('asc');
-
-  // Tab filters: All, Paid, Pending, Unapproved
   const [statusTab, setStatusTab] = useState('All');
-
-  // Sidebar for filters in mobile
   const [showSidebar, setShowSidebar] = useState(false);
 
-  const { user: userInfo } = useAuth();
-
-  const fetchBillings = async () => {
-    setLoading(true);
-    try {
-      const response = await api.get('/api/billing');
-      setBillings(response.data);
-    } catch (err) {
-      setError('Failed to fetch billings.');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // ---------------------------------------------------------------------------
+  // Data Fetching: Billings and Products
+  // ---------------------------------------------------------------------------
   useEffect(() => {
-    fetchBillings();
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Fetch both billing and product data concurrently
+        const [billingRes, productRes] = await Promise.all([
+          api.get('/api/billing'),
+          api.get('/api/products/product/all'),
+        ]);
+        setBillings(billingRes.data);
+        setProducts(productRes.data);
+      } catch (err) {
+        setError('Failed to fetch data');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
 
-  // Compute filtered data
+  // ---------------------------------------------------------------------------
+  // Build a mapping for product details (keyed by item_id)
+  // ---------------------------------------------------------------------------
+  const productMap = useMemo(() => {
+    const map = {};
+    products.forEach((prod) => {
+      map[prod.item_id] = prod;
+    });
+    return map;
+  }, [products]);
+
+  // ---------------------------------------------------------------------------
+  // Profit Calculation Function
+  // ----------------------------------------------------------------------------
+  /**
+   * calculateProfit
+   * For a given billing, computes:
+   * - Total Cost (based on product cost and quantity)
+   * - Total Revenue (selling price * quantity)
+   * - Total Profit = Total Revenue – Total Cost
+   * - Profit Percentage = (Total Profit / Total Cost) * 100
+   */
+  const calculateProfit = (billing) => {
+    let totalCost = 0;
+    let totalRevenue = 0;
+
+    billing.products.forEach((p) => {
+      const product = productMap[p.item_id];
+      const cost = parseFloat(product?.price || 0);
+      const revenue = p.sellingPrice * p.quantity;
+      totalCost += cost * p.quantity;
+      totalRevenue += revenue;
+    });
+
+    const totalProfit = totalRevenue - totalCost;
+    const profitPercentage = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
+
+    return { totalCost, totalRevenue, totalProfit, profitPercentage };
+  };
+
+  // ---------------------------------------------------------------------------
+  // Filter and Sort the Billings
+  // ---------------------------------------------------------------------------
   const filteredBillings = useMemo(() => {
     let data = [...billings];
 
-    // Filter based on user role: non-admin can see only approved or their own submitted
+    // Non-admin users see only their submitted and unapproved billings
     if (!userInfo.isAdmin) {
-      data = data.filter(
-        (billing) =>  billing.submittedBy === userInfo._id && !billing.isApproved
-      );
+      data = data.filter((b) => b.submittedBy === userInfo._id && !b.isApproved);
     }
 
-    // Search
+    // Search Filter: check invoiceNo, customerName, salesmanName, etc.
     if (searchTerm) {
       const lowerSearch = searchTerm.toLowerCase();
-      data = data.filter(
-        (billing) =>
-          billing.invoiceNo.toLowerCase().includes(lowerSearch) ||
-          billing.customerName.toLowerCase().includes(lowerSearch) ||
-          billing.salesmanName.toLowerCase().includes(lowerSearch) ||
-          billing.marketedBy?.toLowerCase()?.includes(lowerSearch) ||
-          billing.showroom?.toLowerCase()?.includes(lowerSearch)
+      data = data.filter((b) =>
+        Object.values(b)
+          .filter((val) => val !== null && typeof val === 'string')
+          .some((val) => val.toLowerCase().includes(lowerSearch))
       );
     }
 
-    // Invoice Date Range Filter
-    if (invoiceStartDate && invoiceEndDate) {
-      const start = new Date(invoiceStartDate);
-      const end = new Date(invoiceEndDate);
-      data = data.filter((billing) => {
-        const invoiceDate = new Date(billing.invoiceDate);
-        return invoiceDate >= start && invoiceDate <= end;
-      });
-    }
+    // Date Range Filters: Invoice Date and Expected Delivery Date
+    const dateFilter = (date, start, end) =>
+      (!start || new Date(date) >= new Date(start)) &&
+      (!end || new Date(date) <= new Date(end));
 
-    // Expected Delivery Date Range Filter
-    if (deliveryStartDate && deliveryEndDate) {
-      const start = new Date(deliveryStartDate);
-      const end = new Date(deliveryEndDate);
-      data = data.filter((billing) => {
-        const deliveryDate = new Date(billing.expectedDeliveryDate);
-        return deliveryDate >= start && deliveryDate <= end;
-      });
-    }
+    data = data.filter(
+      (b) =>
+        dateFilter(b.invoiceDate, invoiceStartDate, invoiceEndDate) &&
+        dateFilter(b.expectedDeliveryDate, deliveryStartDate, deliveryEndDate)
+    );
 
-    const now = new Date();
-    const isUnapproved = (b) => !b.isApproved;
-    const isPaid = (b) => b.paymentStatus === 'Paid';
-    // Now we combine pending and what was previously overdue into a single category: Pending
-    // Pending means: not paid and not unapproved (regardless of due date)
-    const isPending = (b) => !isPaid(b) && !isUnapproved(b);
+    // Status Filter
+    const statusFilters = {
+      All: () => true,
+      Paid: (b) => b.paymentStatus === 'Paid',
+      Pending: (b) => b.paymentStatus !== 'Paid' && b.isApproved,
+      Unapproved: (b) => !b.isApproved,
+    };
+    data = data.filter(statusFilters[statusTab]);
 
-    data = data.filter((billing) => {
-      const unapproved = isUnapproved(billing);
-      const paid = isPaid(billing);
-      const pending = isPending(billing);
-
-      if (statusTab === 'All') return true;
-      if (statusTab === 'Paid' && paid) return true;
-      if (statusTab === 'Pending' && pending) return true;
-      if (statusTab === 'Unapproved' && unapproved) return true;
-      return false;
-    });
-
-    // Sorting
+    // Sorting Logic
     if (sortField) {
       data.sort((a, b) => {
-        let aField = a[sortField];
-        let bField = b[sortField];
+        let aVal = a[sortField];
+        let bVal = b[sortField];
 
-        // Nested fields
+        // Support nested fields (e.g., "products.length")
         if (sortField.includes('.')) {
           const fields = sortField.split('.');
-          aField = fields.reduce((acc, curr) => acc[curr], a);
-          bField = fields.reduce((acc, curr) => acc[curr], b);
+          aVal = fields.reduce((acc, curr) => acc[curr], a);
+          bVal = fields.reduce((acc, curr) => acc[curr], b);
         }
 
-        if (typeof aField === 'string') {
-          aField = aField.toLowerCase();
-          bField = bField.toLowerCase();
+        if (typeof aVal === 'string') {
+          aVal = aVal.toLowerCase();
+          bVal = bVal.toLowerCase();
         }
-
-        if (aField < bField) return sortOrder === 'asc' ? -1 : 1;
-        if (aField > bField) return sortOrder === 'asc' ? 1 : -1;
+        if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
         return 0;
       });
     }
@@ -150,79 +241,90 @@ const BillingList = () => {
     sortField,
     sortOrder,
     statusTab,
-    userInfo.isAdmin,
-    userInfo._id,
+    userInfo,
   ]);
 
+  // ---------------------------------------------------------------------------
+  // Pagination Calculations
+  // ---------------------------------------------------------------------------
   const totalPages = Math.ceil(filteredBillings.length / itemsPerPage);
-
   const paginatedBillings = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredBillings.slice(start, start + itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredBillings.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredBillings, currentPage]);
 
-  // Calculate top stats based on filtered data
+  // ---------------------------------------------------------------------------
+  // Stats Calculation across all filtered billings (including pending amount)
+  // ---------------------------------------------------------------------------
   const stats = useMemo(() => {
-    let totalAmount = 0;
-    let paidInvoices = 0;
-    let paidAmount = 0;
-    let pendingInvoices = 0;
-    let pendingAmount = 0;
-    let unapprovedInvoices = 0;
-    let unapprovedAmount = 0;
+    return filteredBillings.reduce(
+      (acc, b) => {
+        const profit = calculateProfit(b);
+        const billingAmount = parseFloat(b.billingAmount) || 0;
+        const received = parseFloat(b.billingAmountReceived) || 0;
+        const pending = billingAmount - received;
 
-    filteredBillings.forEach((b) => {
-      const amount = b.grandTotal || 0;
-      totalAmount += amount;
-
-      const unapproved = !b.isApproved;
-      const paid = b.paymentStatus === 'Paid';
-      const pending = !paid && !unapproved; // includes previously overdue
-
-      if (paid) {
-        paidInvoices += 1;
-        paidAmount += amount;
-      } else if (unapproved) {
-        unapprovedInvoices += 1;
-        unapprovedAmount += amount;
-      } else if (pending) {
-        pendingInvoices += 1;
-        pendingAmount += amount;
+        acc.totalInvoices += 1;
+        acc.totalRevenue += billingAmount;
+        acc.totalProfit += profit.totalProfit;
+        acc.totalCost += profit.totalCost;
+        if (b.paymentStatus !== 'Paid') {
+          acc.totalPending += pending;
+        }
+        return acc;
+      },
+      {
+        totalInvoices: 0,
+        totalRevenue: 0,
+        totalProfit: 0,
+        totalCost: 0,
+        totalPending: 0,
       }
-    });
-
-    return {
-      totalInvoices: filteredBillings.length,
-      totalAmount,
-      paidInvoices,
-      paidAmount,
-      pendingInvoices,
-      pendingAmount,
-      unapprovedInvoices,
-      unapprovedAmount,
-    };
+    );
   }, [filteredBillings]);
 
+  // ---------------------------------------------------------------------------
+  // Event Handlers for Admin Actions and Modal Controls
+  // ---------------------------------------------------------------------------
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
     }
   };
 
-  // PDF and Print functions
+  const handleView = (billing) => {
+    setSelectedBilling(billing);
+  };
+
+  const closeModal = () => {
+    setSelectedBilling(null);
+  };
+
+  const resetFilters = () => {
+    setSearchTerm('');
+    setInvoiceStartDate('');
+    setInvoiceEndDate('');
+    setDeliveryStartDate('');
+    setDeliveryEndDate('');
+    setSortField('');
+    setSortOrder('asc');
+    setStatusTab('All');
+  };
+
+  const toggleSidebar = () => {
+    setShowSidebar((prev) => !prev);
+  };
+
+  // ---------------------------------------------------------------------------
+  // Admin Functions: Generate PDF, Print Invoice, Remove Billing, Approve Billing
+  // ---------------------------------------------------------------------------
   const generatePDF = async (bill) => {
     setPdfLoading(true);
     try {
       const transformedProducts = bill.products.map((product) => {
         const { quantity, psRatio = '1', deliveredQuantity = 0 } = product;
-        return {
-          ...product,
-          quantity,
-          psRatio,
-          deliveredQuantity,
-        };
+        return { ...product, quantity, psRatio, deliveredQuantity };
       });
-
       const formData = {
         invoiceNo: bill.invoiceNo,
         customerName: bill.customerName,
@@ -239,31 +341,38 @@ const BillingList = () => {
         products: transformedProducts,
       };
 
-      const response = await api.post('/api/print/generate-loading-slip-pdf', formData);
+      const response = await api.post(
+        '/api/print/generate-loading-slip-pdf',
+        formData
+      );
       const htmlContent = response.data;
-
       const printWindow = window.open('', '', 'height=800,width=600');
       if (printWindow) {
         printWindow.document.write(htmlContent);
         printWindow.document.close();
-        setPdfLoading(false);
       } else {
-        setPdfLoading(false);
         alert('Popup blocked! Please allow popups for this website.');
       }
     } catch (err) {
-      setPdfLoading(false);
       setError('Failed to generate PDF.');
       console.error(err);
+    } finally {
+      setPdfLoading(false);
     }
   };
 
   const printInvoice = async (bill) => {
     setPdfLoading(true);
     try {
-      const cgst = ((parseFloat(bill.billingAmount) - parseFloat(bill.billingAmount / 1.18)) / 2).toFixed(2);
-      const sgst = ((parseFloat(bill.billingAmount) - parseFloat(bill.billingAmount / 1.18)) / 2).toFixed(2);
-      const subTotal = (parseFloat(bill.billingAmount) - parseFloat(cgst) - parseFloat(sgst)).toFixed(2);
+      const cgst = (
+        (parseFloat(bill.billingAmount) -
+          parseFloat(bill.billingAmount / 1.18)) /
+        2
+      ).toFixed(2);
+      const sgst = cgst;
+      const subTotal = (
+        parseFloat(bill.billingAmount) - parseFloat(cgst) - parseFloat(sgst)
+      ).toFixed(2);
 
       const formData = {
         invoiceNo: bill.invoiceNo,
@@ -301,7 +410,6 @@ const BillingList = () => {
 
       const response = await api.post('/generate-invoice-html', formData);
       const htmlContent = response.data;
-
       const printWindow = window.open('', '', 'height=800,width=600');
       if (printWindow) {
         printWindow.document.write(htmlContent);
@@ -345,197 +453,27 @@ const BillingList = () => {
     }
   };
 
-  const handleView = (billing) => {
-    setSelectedBilling(billing);
-  };
+  // =============================================================================
+  // Render Functions for Skeleton Loaders, Desktop Table, and Mobile Cards
+  // =============================================================================
 
-  const closeModal = () => {
-    setSelectedBilling(null);
-  };
-
-  const resetFilters = () => {
-    setSearchTerm('');
-    setInvoiceStartDate('');
-    setInvoiceEndDate('');
-    setDeliveryStartDate('');
-    setDeliveryEndDate('');
-    setSortField('');
-    setSortOrder('asc');
-    setStatusTab('All');
-  };
-
-  const toggleSidebar = () => {
-    setShowSidebar((prev) => !prev);
-  };
-
-  const renderStatusIndicator = (billing) => {
-    const { deliveryStatus, paymentStatus } = billing;
-    // For the indicator, we can decide:
-    // green if fully delivered and paid,
-    // yellow if one of them is done and the other not,
-    // red if neither delivered nor paid
-    let color = 'red';
-    if (deliveryStatus === 'Delivered' && paymentStatus === 'Paid') {
-      color = 'green';
-    } else if (
-      (deliveryStatus === 'Delivered' && paymentStatus !== 'Paid') ||
-      (deliveryStatus !== 'Delivered' && paymentStatus === 'Paid')
-    ) {
-      color = 'yellow';
-    }
-
-    return (
-      <span className="relative flex h-3 w-3 mx-auto">
-        <span
-          className={`animate-ping absolute inline-flex h-full w-full rounded-full bg-${color}-400 opacity-75`}
-        ></span>
-        <span
-          className={`relative inline-flex rounded-full h-3 w-3 bg-${color}-500`}
-        ></span>
-      </span>
-    );
-  };
-
-  const renderCard = (billing) => (
-    <div
-      key={billing.invoiceNo}
-      className="bg-white rounded-lg shadow-md p-6 mb-4 transition-transform transform hover:scale-100 duration-200"
-    >
-      <div className="flex justify-between items-center">
-        <p
-          onClick={() => navigate(`/invoice/details/${billing._id}`)}
-          className={`text-md flex cursor-pointer font-bold ${
-            billing.isApproved ? 'text-red-600' : 'text-yellow-600'
-          }`}
-        >
-          {billing.invoiceNo}{' '}
-          {billing.isApproved && (
-            <img
-              className="h-4 w-4 ml-1 mt-1"
-              src="/images/tick.svg"
-              alt="Approved"
-            />
-          )}
-        </p>
-        <div className="flex items-center">
-          {renderStatusIndicator(billing)}
-        </div>
-      </div>
-      <p className="text-gray-600 text-xs mt-2">Customer: {billing.customerName}</p>
-      <p className="text-gray-600 text-xs mt-1">Showroom: {billing.showroom}</p>
-      <p className="text-gray-600 text-xs mt-1">
-        Expected Delivery: {new Date(billing.expectedDeliveryDate).toLocaleString()}
-      </p>
-      <p className="text-gray-600 text-xs mt-1">Payment: {billing.paymentStatus}</p>
-      <p className="text-gray-600 text-xs mt-1">Delivery: {billing.deliveryStatus}</p>
-      <div className="flex justify-between">
-        <p className="text-gray-600 text-xs font-bold mt-1">
-          Total Products: {billing.products.length}
-        </p>
-        <p className="text-gray-400 italic text-xs mt-1">
-          Last Edited:{' '}
-          {new Date(
-            billing.updatedAt ? billing.updatedAt : billing.createdAt
-          ).toLocaleDateString()}
-        </p>
-      </div>
-      <div className="flex mt-4 text-xs space-x-2">
-        <button
-          disabled={!userInfo.isAdmin && billing.isApproved}
-          onClick={() => navigate(`/invoice/edit/${billing._id}`)}
-          className={`${
-            billing.isApproved && !userInfo.isAdmin
-              ? 'bg-gray-300 cursor-not-allowed'
-              : 'bg-red-500 hover:bg-red-600'
-          } text-white px-3 font-bold py-1 rounded flex items-center`}
-        >
-          <i className="fa fa-pen mr-2"></i> Edit
-        </button>
-        {userInfo.isAdmin && (
-          <button
-            onClick={() => generatePDF(billing)}
-            className="bg-red-500 hover:bg-red-600 text-white px-3 font-bold py-1 rounded flex items-center"
-          >
-            <i className="fa fa-truck mr-2"></i>
-          </button>
-        )}
-        <button
-          onClick={() => handleView(billing)}
-          className="bg-red-500 hover:bg-red-600 text-white px-3 font-bold py-1 rounded flex items-center"
-        >
-          <i className="fa fa-eye mr-2"></i> View
-        </button>
-        {userInfo.isAdmin && <button
-          onClick={() => handleRemove(billing._id)}
-          className="bg-red-500 hover:bg-red-600 text-white px-3 font-bold py-1 rounded flex items-center"
-        >
-          <i className="fa fa-trash mr-2"></i>
-        </button> }
-        {userInfo.isAdmin && (
-          <>
-            {/* <button
-              onClick={() => printInvoice(billing)}
-              className="bg-red-500 hover:bg-red-600 text-white px-3 font-bold py-1 rounded flex items-center"
-            >
-              <i className="fa fa-print mr-2"></i>
-            </button> */}
-            {!billing.isApproved && (
-              <button
-                onClick={() => handleApprove(billing)}
-                className="bg-green-500 hover:bg-green-600 text-white px-3 font-bold py-1 rounded flex items-center"
-              >
-                Approve
-              </button>
-            )}
-          </>
-        )}
-      </div>
-    </div>
+  // Skeleton Loader for Table View
+  const TableSkeleton = () => (
+    <>
+      {[...Array(itemsPerPage)].map((_, i) => (
+        <tr key={i} className="hover:bg-gray-50">
+          {[...Array(10)].map((_, j) => (
+            <td key={j} className="p-4">
+              <Skeleton height={20} />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
   );
 
-  const renderTableSkeleton = () => {
-    const skeletonRows = Array.from({ length: itemsPerPage }, (_, index) => index);
-    return (
-      <table className="w-full text-xs text-gray-500 bg-white shadow-md rounded-lg overflow-hidden">
-        <thead className="bg-gray-200">
-          <tr className="divide-y">
-            <th className="px-4 py-2 text-left">Invoice No</th>
-            <th className="px-2 py-2">Customer</th>
-            <th className="px-2 py-2">Payment Status</th>
-            <th className="px-2 py-2">Delivery Status</th>
-            <th className="px-2 py-2">Amount</th>
-            <th className="px-2 py-2">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {skeletonRows.map((row) => (
-            <tr key={row} className="hover:bg-gray-100 divide-y">
-              <td className="px-2 py-2">
-                <Skeleton height={10} />
-              </td>
-              <td className="px-2 py-2">
-                <Skeleton height={10} />
-              </td>
-              <td className="px-2 py-2">
-                <Skeleton height={10} />
-              </td>
-              <td className="px-2 py-2">
-                <Skeleton height={10} />
-              </td>
-              <td className="px-2 py-2">
-                <Skeleton height={10} />
-              </td>
-              <td className="px-2 py-2">
-                <Skeleton height={10} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    );
-  };
-
-  const renderCardSkeleton = () => {
+  // Skeleton Loader for Mobile Card View
+  const CardSkeleton = () => {
     const skeletonCards = Array.from({ length: itemsPerPage }, (_, index) => index);
     return skeletonCards.map((card) => (
       <div
@@ -556,9 +494,119 @@ const BillingList = () => {
     ));
   };
 
+  // Render Mobile Card for each Billing
+  const renderCard = (billing) => {
+    const profit = calculateProfit(billing);
+    return (
+      <div
+        key={billing.invoiceNo}
+        className="bg-white rounded-lg shadow-md p-6 mb-4 transition-transform transform hover:scale-105 duration-200"
+      >
+        <div className="flex justify-between items-center">
+          <p
+            onClick={() => navigate(`/invoice/details/${billing._id}`)}
+            className={`text-md cursor-pointer font-bold ${
+              billing.isApproved ? 'text-red-600' : 'text-yellow-600'
+            }`}
+          >
+            {billing.invoiceNo}{' '}
+            {billing.isApproved && (
+              <img
+                className="h-4 w-4 ml-1 mt-1"
+                src="/images/tick.svg"
+                alt="Approved"
+              />
+            )}
+          </p>
+          <div className="flex items-center">
+            <StatusIndicator billing={billing} />
+          </div>
+        </div>
+        <p className="text-gray-600 text-xs mt-2">
+          Customer: {billing.customerName}
+        </p>
+        <p className="text-gray-600 text-xs mt-1">
+          Showroom: {billing.showroom}
+        </p>
+        <p className="text-gray-600 text-xs mt-1">
+          Expected Delivery:{' '}
+          {new Date(billing.expectedDeliveryDate).toLocaleString()}
+        </p>
+        <p className="text-gray-600 text-xs mt-1">
+          Payment: {billing.paymentStatus}
+        </p>
+        {userInfo.isAdmin && profit && (
+          <p className="text-gray-600 text-xs mt-1">
+            Profit/Loss:{' '}
+            <span className={profit.profitPercentage >= 0 ? 'text-green-600' : 'text-red-600'}>
+              {profit.profitPercentage.toFixed(2)}%
+            </span>
+          </p>
+        )}
+        <div className="flex justify-between">
+          <p className="text-gray-600 text-xs font-bold mt-1">
+            Total Products: {billing.products.length}
+          </p>
+          <p className="text-gray-400 italic text-xs mt-1">
+            Last Edited:{' '}
+            {new Date(billing.updatedAt || billing.createdAt).toLocaleDateString()}
+          </p>
+        </div>
+        <div className="flex mt-4 text-xs space-x-2">
+          <button
+            disabled={!userInfo.isAdmin && billing.isApproved}
+            onClick={() => navigate(`/invoice/edit/${billing._id}`)}
+            className={`${
+              billing.isApproved && !userInfo.isAdmin
+                ? 'bg-gray-300 cursor-not-allowed'
+                : 'bg-red-500 hover:bg-red-600'
+            } text-white px-3 font-bold py-1 rounded flex items-center`}
+          >
+            <i className="fa fa-pen mr-2"></i> Edit
+          </button>
+          {userInfo.isAdmin && (
+            <button
+              onClick={() => generatePDF(billing)}
+              className="bg-red-500 hover:bg-red-600 text-white px-3 font-bold py-1 rounded flex items-center"
+            >
+              <i className="fa fa-truck mr-2"></i>
+            </button>
+          )}
+          <button
+            onClick={() => handleView(billing)}
+            className="bg-red-500 hover:bg-red-600 text-white px-3 font-bold py-1 rounded flex items-center"
+          >
+            <i className="fa fa-eye mr-2"></i> View
+          </button>
+          {userInfo.isAdmin && (
+            <button
+              onClick={() => handleRemove(billing._id)}
+              className="bg-red-500 hover:bg-red-600 text-white px-3 font-bold py-1 rounded flex items-center"
+            >
+              <i className="fa fa-trash mr-2"></i>
+            </button>
+          )}
+          {userInfo.isAdmin && !billing.isApproved && (
+            <button
+              onClick={() => handleApprove(billing)}
+              className="bg-green-500 hover:bg-green-600 text-white px-3 font-bold py-1 rounded flex items-center"
+            >
+              Approve
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // =============================================================================
+  // Main Render Return
+  // =============================================================================
   return (
-    <>
-      {/* PDF Loading Spinner */}
+    <div className="p-6 bg-gray-50 min-h-screen">
+      {/* -------------------------------------------------------------------------
+          PDF Loading Overlay
+      ------------------------------------------------------------------------- */}
       {pdfLoading && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="flex flex-col items-center">
@@ -568,11 +616,24 @@ const BillingList = () => {
         </div>
       )}
 
-      {/* Sidebar for mobile filters */}
-      <div className={`fixed z-50 inset-0 bg-black bg-opacity-50 ${showSidebar ? 'block' : 'hidden'} md:hidden`} onClick={() => setShowSidebar(false)}></div>
-      <div className={`fixed top-0 left-0 h-full bg-white shadow-md p-4 w-64 z-50 transform ${showSidebar ? 'translate-x-0' : '-translate-x-full'} transition-transform md:translate-x-0 md:static md:hidden md:p-0`}>
-        <h2 className="text-md font-bold text-red-600 mb-4">Filters & Sorting</h2>
-        {/* Search */}
+      {/* -------------------------------------------------------------------------
+          Mobile Sidebar for Filters (Overlay)
+      ------------------------------------------------------------------------- */}
+      <div
+        className={`fixed z-50 inset-0 bg-black bg-opacity-50 ${
+          showSidebar ? 'block' : 'hidden'
+        } md:hidden`}
+        onClick={() => setShowSidebar(false)}
+      ></div>
+      <div
+        className={`fixed top-0 left-0 h-full bg-white shadow-md p-4 w-64 z-50 transform ${
+          showSidebar ? 'translate-x-0' : '-translate-x-full'
+        } transition-transform md:translate-x-0 md:static md:hidden md:p-0`}
+      >
+        <h2 className="text-md font-bold text-red-600 mb-4">
+          Filters & Sorting
+        </h2>
+        {/* Search Input */}
         <div className="mb-4">
           <label className="block text-xs font-bold mb-1" htmlFor="search">
             Search
@@ -586,10 +647,12 @@ const BillingList = () => {
             className="w-full border border-red-300 rounded px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-red-400"
           />
         </div>
-
-        {/* Invoice Start/End Date */}
+        {/* Invoice Date Range */}
         <div className="mb-4">
-          <label className="block text-xs font-bold mb-1" htmlFor="invoiceStartDate">
+          <label
+            className="block text-xs font-bold mb-1"
+            htmlFor="invoiceStartDate"
+          >
             Invoice Start Date
           </label>
           <input
@@ -601,7 +664,10 @@ const BillingList = () => {
           />
         </div>
         <div className="mb-4">
-          <label className="block text-xs font-bold mb-1" htmlFor="invoiceEndDate">
+          <label
+            className="block text-xs font-bold mb-1"
+            htmlFor="invoiceEndDate"
+          >
             Invoice End Date
           </label>
           <input
@@ -612,10 +678,12 @@ const BillingList = () => {
             className="w-full border border-red-300 rounded px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-red-400"
           />
         </div>
-
-        {/* Delivery Start/End Date */}
+        {/* Delivery Date Range */}
         <div className="mb-4">
-          <label className="block text-xs font-bold mb-1" htmlFor="deliveryStartDate">
+          <label
+            className="block text-xs font-bold mb-1"
+            htmlFor="deliveryStartDate"
+          >
             Delivery Start Date
           </label>
           <input
@@ -627,7 +695,10 @@ const BillingList = () => {
           />
         </div>
         <div className="mb-4">
-          <label className="block text-xs font-bold mb-1" htmlFor="deliveryEndDate">
+          <label
+            className="block text-xs font-bold mb-1"
+            htmlFor="deliveryEndDate"
+          >
             Delivery End Date
           </label>
           <input
@@ -638,75 +709,114 @@ const BillingList = () => {
             className="w-full border border-red-300 rounded px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-red-400"
           />
         </div>
-
         <div className="flex justify-end mt-4">
           <button
             onClick={resetFilters}
             className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded text-xs font-bold"
           >
-          <i className='fa fa-refresh' />
+            <i className="fa fa-refresh" />
           </button>
         </div>
       </div>
 
-
-      {/* Error Message */}
+      {/* -------------------------------------------------------------------------
+          Error Message Display
+      ------------------------------------------------------------------------- */}
       {error && (
         <p className="text-red-500 text-center mb-4 text-xs">{error}</p>
       )}
 
-      {/* Page Header and Stats */}
-    {userInfo.isAdmin &&  <div className="mb-6 space-y-4">
-        {/* Stats bar */}
-        <div className="flex flex-wrap justify-center sm:justify-start gap-4">
-          <div className="bg-white p-4 rounded-lg shadow-md flex-1 min-w-[200px]">
-            <p className="text-xs font-bold text-red-600">Total</p>
-            <p className="text-xs text-gray-500">{stats.totalInvoices} invoices</p>
-            <p className="text-sm font-bold text-gray-700">Rs. {stats.totalAmount.toFixed(2)}</p>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-md flex-1 min-w-[200px]">
-            <p className="text-xs font-bold text-green-600">Paid</p>
-            <p className="text-xs text-gray-500">{stats.paidInvoices} invoices</p>
-            <p className="text-sm font-bold text-gray-700">Rs. {stats.paidAmount.toFixed(2)}</p>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-md flex-1 min-w-[200px]">
-            <p className="text-xs font-bold text-yellow-600">Pending</p>
-            <p className="text-xs text-gray-500">{stats.pendingInvoices} invoices</p>
-            <p className="text-sm font-bold text-gray-700">Rs. {stats.pendingAmount.toFixed(2)}</p>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-md flex-1 min-w-[200px]">
-            <p className="text-xs font-bold text-blue-600">Unapproved</p>
-            <p className="text-xs text-gray-500">{stats.unapprovedInvoices} invoices</p>
-            <p className="text-sm font-bold text-gray-700">Rs. {stats.unapprovedAmount.toFixed(2)}</p>
+      {/* -------------------------------------------------------------------------
+          Desktop Header and Stats (For Admin Users)
+      ------------------------------------------------------------------------- */}
+      {userInfo.isAdmin && (
+        <div className="mb-6 space-y-4">
+          <div className="flex flex-wrap justify-center sm:justify-start gap-4">
+            <motion.div
+              className="bg-white p-4 rounded-lg shadow-md flex-1 min-w-[200px]"
+              whileHover={{ scale: 1.02 }}
+            >
+              <p className="text-xs font-bold text-red-600">Total Invoices</p>
+              <p className="text-xs text-gray-500">{stats.totalInvoices} invoices</p>
+              <p className="text-sm font-bold text-gray-700">
+                ₹{stats.totalRevenue.toLocaleString()}
+              </p>
+            </motion.div>
+            <motion.div
+              className="bg-white p-4 rounded-lg shadow-md flex-1 min-w-[200px]"
+              whileHover={{ scale: 1.02 }}
+            >
+              <p className="text-xs font-bold text-green-600">Total Revenue</p>
+              <p className="text-xs text-gray-500">{stats.totalInvoices} invoices</p>
+              <p className="text-sm font-bold text-gray-700">
+                ₹{stats.totalRevenue.toLocaleString()}
+              </p>
+            </motion.div>
+            <motion.div
+              className="bg-white p-4 rounded-lg shadow-md flex-1 min-w-[200px]"
+              whileHover={{ scale: 1.02 }}
+            >
+              <p className="text-xs font-bold text-purple-600">Total Profit</p>
+              <p className="text-xs text-gray-500">
+                Margin: {stats.totalCost > 0 ? ((stats.totalProfit / stats.totalCost) * 100).toFixed(2) : '0.00'}%
+              </p>
+              <p className="text-sm font-bold text-gray-700">
+                ₹{stats.totalProfit.toLocaleString()}
+              </p>
+            </motion.div>
+            <motion.div
+              className="bg-white p-4 rounded-lg shadow-md flex-1 min-w-[200px]"
+              whileHover={{ scale: 1.02 }}
+            >
+              <p className="text-xs font-bold text-blue-600">Avg. Profit/Invoice</p>
+              <p className="text-sm font-bold text-gray-700">
+                ₹{(stats.totalProfit / stats.totalInvoices || 0).toLocaleString()}
+              </p>
+            </motion.div>
+            {/* New Stat Card: Total Pending Amount */}
+            <motion.div
+              className="bg-white p-4 rounded-lg shadow-md flex-1 min-w-[200px]"
+              whileHover={{ scale: 1.02 }}
+            >
+              <p className="text-xs font-bold text-orange-600">Total Pending</p>
+              <p className="text-xs text-gray-500">
+                {stats.totalInvoices} invoices
+              </p>
+              <p className="text-sm font-bold text-gray-700">
+                ₹{stats.totalPending.toLocaleString()}
+              </p>
+            </motion.div>
           </div>
         </div>
-      </div> }
+      )}
 
-      {/* Tabs for Status Filter */}
+      {/* -------------------------------------------------------------------------
+          Tabs for Status Filter (Desktop)
+      ------------------------------------------------------------------------- */}
       <div className="flex flex-wrap justify-center sm:justify-start space-x-2 mb-4">
         {['All', 'Paid', 'Pending', 'Unapproved'].map((tab) => (
           <button
             key={tab}
-            onClick={() => { setStatusTab(tab); setCurrentPage(1); }}
+            onClick={() => {
+              setStatusTab(tab);
+              setCurrentPage(1);
+            }}
             className={`px-3 py-1 rounded text-xs font-bold ${
               statusTab === tab
                 ? 'bg-red-600 text-white'
                 : 'bg-gray-50 text-red-700 hover:bg-red-100'
             }`}
           >
-            {tab} 
-            {tab !== 'All' && tab === 'Paid' && ` (${stats.paidInvoices})`}
-            {tab !== 'All' && tab === 'Pending' && ` (${stats.pendingInvoices})`}
-            {tab !== 'All' && tab === 'Unapproved' && ` (${stats.unapprovedInvoices})`}
+            {tab}
           </button>
         ))}
       </div>
 
-      {/* On desktop, filters are shown inline, on mobile they are in sidebar */}
+      {/* -------------------------------------------------------------------------
+          Desktop Filters
+      ------------------------------------------------------------------------- */}
       <div className="hidden md:block bg-white p-4 rounded-lg shadow-md mb-6">
-        {/* Desktop Filters and Sorting */}
         <div className="flex flex-col space-y-4 sm:flex-row sm:flex-wrap sm:space-y-0 sm:space-x-4">
-          {/* Search */}
           <div className="flex-1 min-w-[200px]">
             <label className="block text-xs font-bold mb-1" htmlFor="search">
               Search
@@ -720,8 +830,6 @@ const BillingList = () => {
               className="w-full border border-red-300 rounded px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-red-400"
             />
           </div>
-
-          {/* Invoice Start/End Date */}
           <div className="min-w-[150px]">
             <label className="block text-xs font-bold mb-1" htmlFor="invoiceStartDate">
               Invoice Start Date
@@ -746,8 +854,6 @@ const BillingList = () => {
               className="w-full border border-red-300 rounded px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-red-400"
             />
           </div>
-
-          {/* Delivery Start/End Date */}
           <div className="min-w-[150px]">
             <label className="block text-xs font-bold mb-1" htmlFor="deliveryStartDate">
               Delivery Start Date
@@ -772,26 +878,31 @@ const BillingList = () => {
               className="w-full border border-red-300 rounded px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-red-400"
             />
           </div>
-
           <div className="flex justify-end mt-4">
             <button
               onClick={resetFilters}
               className="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded text-xs font-bold"
             >
-            <i className='fa fa-refresh' />
+              <i className="fa fa-refresh" />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Loading state */}
+      {/* -------------------------------------------------------------------------
+          Main Content: Desktop Table or Mobile Cards
+      ------------------------------------------------------------------------- */}
       {loading ? (
         <div>
           <div className="hidden md:block">
-            {renderTableSkeleton()}
+            <table className="table w-full">
+              <tbody>
+                <TableSkeleton />
+              </tbody>
+            </table>
           </div>
           <div className="md:hidden">
-            {renderCardSkeleton()}
+            <CardSkeleton />
           </div>
         </div>
       ) : filteredBillings.length === 0 ? (
@@ -800,7 +911,7 @@ const BillingList = () => {
         </p>
       ) : (
         <>
-          {/* Table view for large screens */}
+          {/* Desktop Table View */}
           <div className="hidden md:block">
             <table className="w-full text-xs text-gray-500 bg-white shadow-md rounded-lg overflow-hidden">
               <thead className="bg-red-600 text-xs text-white">
@@ -833,183 +944,131 @@ const BillingList = () => {
                   >
                     Delivery Date {sortField === 'expectedDeliveryDate' && (sortOrder === 'asc' ? '↑' : '↓')}
                   </th>
-
-                  <th
-                    className="px-2 py-2 cursor-pointer"
-                    onClick={() => {
-                      setSortField('showroom');
-                      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-                    }}
-                  >
-                    Showroom {sortField === 'showroom' && (sortOrder === 'asc' ? '↑' : '↓')}
-                  </th>
-
-                  <th
-                    className="px-2 py-2 cursor-pointer"
-                    onClick={() => {
-                      setSortField('salesmanName');
-                      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-                    }}
-                  >
-                    Salesman Name {sortField === 'salesmanName' && (sortOrder === 'asc' ? '↑' : '↓')}
-                  </th>
-
-                  <th
-                    className="px-2 py-2 cursor-pointer"
-                    onClick={() => {
-                      setSortField('customerName');
-                      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-                    }}
-                  >
-                    Customer Name {sortField === 'customerName' && (sortOrder === 'asc' ? '↑' : '↓')}
-                  </th>
-
-                  <th
-                    className="px-2 py-2 cursor-pointer"
-                    onClick={() => {
-                      setSortField('products.length');
-                      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-                    }}
-                  >
-                    Products {sortField === 'products.length' && (sortOrder === 'asc' ? '↑' : '↓')}
-                  </th>
-
-                  <th
-                    className="px-2 py-2 cursor-pointer"
-                    onClick={() => {
-                      setSortField('paymentStatus');
-                      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-                    }}
-                  >
-                    Payment Status {sortField === 'paymentStatus' && (sortOrder === 'asc' ? '↑' : '↓')}
-                  </th>
-                  
-                  <th
-                    className="px-2 py-2 cursor-pointer"
-                    onClick={() => {
-                      setSortField('deliveryStatus');
-                      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-                    }}
-                  >
-                    Delivery Status {sortField === 'deliveryStatus' && (sortOrder === 'asc' ? '↑' : '↓')}
-                  </th>
-
+                  <th className="px-2 py-2">Showroom</th>
+                  <th className="px-2 py-2">Salesman</th>
+                  <th className="px-2 py-2">Customer</th>
+                  <th className="px-2 py-2">Products</th>
+                  <th className="px-2 py-2">Payment</th>
+                  <th className="px-2 py-2">Delivery</th>
+                  {userInfo.isAdmin && <th className="px-2 py-2">Profit/Loss (%)</th>}
                   <th className="px-2 py-2">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {paginatedBillings.map((billing) => (
-                  <tr
-                    key={billing.invoiceNo}
-                    className="hover:bg-gray-100 divide-y divide-x"
-                  >
-                    <td className="px-4 py-2 text-center">
-                      {renderStatusIndicator(billing)}
-                    </td>
-                    <td
-                      onClick={() => navigate(`/invoice/details/${billing._id}`)}
-                      className={`px-2 cursor-pointer flex text-xs font-bold py-2 ${
-                        billing.isApproved ? 'text-red-600' : 'text-yellow-600'
-                      }`}
+                {paginatedBillings.map((billing) => {
+                  const profit = calculateProfit(billing);
+                  return (
+                    <motion.tr
+                      key={billing.invoiceNo}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="hover:bg-gray-100 divide-y divide-x"
                     >
-                      {billing.invoiceNo}{' '}
-                      {billing.isApproved && (
-                        <img
-                          className="h-2 w-2 ml-1 mt-1"
-                          src="/images/tick.svg"
-                          alt="Approved"
-                        />
+                      <td className="px-4 py-2 text-center">
+                        <StatusIndicator billing={billing} />
+                      </td>
+                      <td
+                        onClick={() => navigate(`/invoice/details/${billing._id}`)}
+                        className={`px-2 cursor-pointer flex text-xs font-bold py-2 ${
+                          billing.isApproved ? 'text-red-600' : 'text-yellow-600'
+                        }`}
+                      >
+                        {billing.invoiceNo}{' '}
+                        {billing.isApproved && (
+                          <img
+                            className="h-2 w-2 ml-1 mt-1"
+                            src="/images/tick.svg"
+                            alt="Approved"
+                          />
+                        )}
+                      </td>
+                      <td className="px-2 text-xs py-2">
+                        {format(new Date(billing.invoiceDate), 'dd MMM yyyy')}
+                      </td>
+                      <td className="px-2 text-xs py-2">
+                        {format(new Date(billing.expectedDeliveryDate), 'dd MMM yyyy, HH:mm')}
+                      </td>
+                      <td className="px-2 text-xs py-2">
+                        {billing.showroom}
+                      </td>
+                      <td className="px-2 text-xs py-2">
+                        {billing.salesmanName}
+                      </td>
+                      <td className="px-2 text-xs py-2">
+                        {billing.customerName}
+                      </td>
+                      <td className="px-2 text-xs py-2">
+                        {billing.products.length}
+                      </td>
+                      <td className="px-2 text-xs py-2">
+                        {billing.paymentStatus}
+                      </td>
+                      <td className="px-2 text-xs py-2">
+                        {billing.deliveryStatus}
+                      </td>
+                      {userInfo.isAdmin && (
+                        <td className="px-2 text-xs py-2">
+                          {profit ? (
+                            <ProfitBadge value={profit.profitPercentage} />
+                          ) : (
+                            'N/A'
+                          )}
+                        </td>
                       )}
-                    </td>
-                    <td className="px-2 text-xs py-2">
-                      {new Date(billing.invoiceDate).toLocaleDateString()}
-                    </td>
-
-                    <td className="px-2 text-xs py-2">
-                      {new Date(billing.expectedDeliveryDate).toLocaleString()}
-                    </td>
-
-                    <td className="px-2 text-xs py-2">
-                      {billing.showroom}
-                    </td>
-
-                    <td className="px-2 text-xs py-2">
-                      {billing.salesmanName}
-                    </td>
-                    <td className="px-2 text-xs py-2">
-                      {billing.customerName}
-                    </td>
-                    <td className="px-2 text-xs py-2">
-                      {billing.products.length}
-                    </td>
-                    <td className="px-2 text-xs py-2">
-                      {billing.paymentStatus}
-                    </td>
-                    <td className="px-2 text-xs py-2">
-                      {billing.deliveryStatus}
-                    </td>
-                    <td className="px-2 text-xs py-2">
-                      <div className="flex mt-2 text-xs space-x-1">
-                        {userInfo.isAdmin && (
-                          <button
-                            onClick={() => navigate(`/invoice/edit/${billing._id}`)}
-                            className="bg-red-500 hover:bg-red-600 text-white px-2 font-bold py-1 rounded flex items-center"
-                          >
-                            <i className="fa fa-pen mr-1"></i> Edit
-                          </button>
-                        )}
-                        {userInfo.isAdmin && (
-                          <button
-                            onClick={() => generatePDF(billing)}
-                            className="bg-red-500 hover:bg-red-600 text-white px-2 font-bold py-1 rounded flex items-center"
-                          >
-                            <i className="fa fa-truck mr-1"></i>
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleView(billing)}
-                          className="bg-red-500 hover:bg-red-600 text-white px-2 font-bold py-1 rounded flex items-center"
-                        >
-                          <i className="fa fa-eye mr-1"></i> View
-                        </button>
-                       {userInfo.isAdmin && <button
-                          onClick={() => handleRemove(billing._id)}
-                          className="bg-red-500 hover:bg-red-600 text-white px-2 font-bold py-1 rounded flex items-center"
-                        >
-                          <i className="fa fa-trash mr-1"></i> Delete
-                        </button> }
-                        {userInfo.isAdmin && (
-                          <>
-                            {/* <button
-                              onClick={() => printInvoice(billing)}
+                      <td className="px-2 text-xs py-2">
+                        <div className="flex mt-2 text-xs space-x-1">
+                          {userInfo.isAdmin && (
+                            <button
+                              onClick={() => navigate(`/invoice/edit/${billing._id}`)}
                               className="bg-red-500 hover:bg-red-600 text-white px-2 font-bold py-1 rounded flex items-center"
                             >
-                              <i className="fa fa-print mr-1"></i> Print
-                            </button> */}
-                            {!billing.isApproved && (
-                              <button
-                                onClick={() => handleApprove(billing)}
-                                className="bg-green-500 hover:bg-green-600 text-white px-2 font-bold py-1 rounded flex items-center"
-                              >
-                                Approve
-                              </button>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                              <i className="fa fa-pen mr-1"></i> Edit
+                            </button>
+                          )}
+                          {userInfo.isAdmin && (
+                            <button
+                              onClick={() => generatePDF(billing)}
+                              className="bg-red-500 hover:bg-red-600 text-white px-2 font-bold py-1 rounded flex items-center"
+                            >
+                              <i className="fa fa-truck mr-1"></i>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleView(billing)}
+                            className="bg-red-500 hover:bg-red-600 text-white px-2 font-bold py-1 rounded flex items-center"
+                          >
+                            <i className="fa fa-eye mr-1"></i> View
+                          </button>
+                          {userInfo.isAdmin && (
+                            <button
+                              onClick={() => handleRemove(billing._id)}
+                              className="bg-red-500 hover:bg-red-600 text-white px-2 font-bold py-1 rounded flex items-center"
+                            >
+                              <i className="fa fa-trash mr-1"></i> Delete
+                            </button>
+                          )}
+                          {userInfo.isAdmin && !billing.isApproved && (
+                            <button
+                              onClick={() => handleApprove(billing)}
+                              className="bg-green-500 hover:bg-green-600 text-white px-2 font-bold py-1 rounded flex items-center"
+                            >
+                              Approve
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </motion.tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
-          {/* Card view for small screens */}
-          <div className="md:hidden">
-            {paginatedBillings.map(renderCard)}
-          </div>
+          {/* Mobile Card View */}
+          <div className="md:hidden">{paginatedBillings.map(renderCard)}</div>
 
-          {/* Pagination */}
+          {/* Pagination Controls */}
           <div className="flex justify-between items-center mt-4">
             <button
               onClick={() => handlePageChange(currentPage - 1)}
@@ -1040,253 +1099,264 @@ const BillingList = () => {
         </>
       )}
 
-      {/* Full-screen Modal for Viewing Billing Details */}
-      {selectedBilling && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white w-full h-full overflow-auto relative p-4 sm:p-8">
-            <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-2xl"
-              onClick={closeModal}
-            >
-              ×
-            </button>
-            <div className="p-6">
-              <h2 className="text-lg font-bold text-red-600 mb-4 flex items-center space-x-2">
-                <FaUser className="text-red-600" />
-                <span>Invoice Details - {selectedBilling.invoiceNo}</span>
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="mb-1">
-                    Salesman Name:{' '}
-                    <span className="text-gray-700">{selectedBilling.salesmanName}</span>
-                  </p>
-                  <p className="mb-1">
-                    Marketed By:{' '}
-                    <span className="text-gray-700">{selectedBilling.marketedBy}</span>
-                  </p>
-                  <p className="mb-1 flex items-center">
-                    <FaUser className="text-gray-400 mr-1" />
-                    Customer Name: <span className="text-gray-700 ml-1">{selectedBilling.customerName}</span>
-                  </p>
-                  <p className="mb-1">
-                    Customer Address:{' '}
-                    <span className="text-gray-700">{selectedBilling.customerAddress}</span>
-                  </p>
-                  <p className="mb-1">
-                    Customer Contact:{' '}
-                    <span className="text-gray-700">{selectedBilling.customerContactNumber}</span>
-                  </p>
-                  <p className="mb-1">
-                    Showroom:{' '}
-                    <span className="text-gray-700">{selectedBilling.showroom}</span>
-                  </p>
+      {/* -------------------------------------------------------------------------
+          Full-screen Modal for Viewing Detailed Billing Information
+      ------------------------------------------------------------------------- */}
+      <Dialog
+        open={Boolean(selectedBilling)}
+        onClose={closeModal}
+        fullScreen
+        TransitionComponent={Transition}
+        sx={{
+          zIndex: 1300,
+          width: '100%',
+          height: '100%',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+        }}
+      >
+        <DialogContent className="relative p-4 sm:p-8">
+          <IconButton
+            onClick={closeModal}
+            sx={{ position: 'absolute', top: 8, right: 8, color: 'gray' }}
+          >
+            <CloseIcon fontSize="large" />
+          </IconButton>
+          <AnimatePresence exitBeforeEnter>
+            {selectedBilling && (
+              <motion.div
+                key="billingModal"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                transition={{ duration: 0.4 }}
+                className="bg-white rounded-xl p-8 shadow-lg"
+              >
+                {/* Modal Header */}
+                <div className="flex justify-between items-start mb-6">
+                  <h2 className="text-2xl font-bold text-red-600">
+                    Invoice #{selectedBilling.invoiceNo}
+                  </h2>
                 </div>
-                <div>
-                  <p className="mb-1">
-                    Invoice Date:{' '}
-                    <span className="text-gray-700">{new Date(selectedBilling.invoiceDate).toLocaleString()}</span>
-                  </p>
-                  <p className="mb-1">
-                    Expected Delivery:{' '}
-                    <span className="text-gray-700">{new Date(selectedBilling.expectedDeliveryDate).toLocaleString()}</span>
-                  </p>
-                  <p className="mb-1">
-                    Delivery Status:{' '}
-                    <span
-                      className={`px-2 py-1 rounded text-white text-xs ${
-                        selectedBilling.deliveryStatus === 'Delivered'
-                          ? 'bg-green-500'
-                          : selectedBilling.deliveryStatus === 'Partially Delivered'
+
+                {/* ---------------------------------------------------------------------
+                    Billing Basic Information
+                --------------------------------------------------------------------- */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-6">
+                  <div>
+                    <p className="mb-1">
+                      <span className="font-bold">Salesman:</span>{' '}
+                      <span className="text-gray-700">{selectedBilling.salesmanName}</span>
+                    </p>
+                    <p className="mb-1">
+                      <span className="font-bold">Marketed By:</span>{' '}
+                      <span className="text-gray-700">{selectedBilling.marketedBy}</span>
+                    </p>
+                    <p className="mb-1 flex items-center">
+                      <FaUser className="text-gray-400 mr-1" />
+                      <span className="font-bold">Customer:</span>{' '}
+                      <span className="text-gray-700 ml-1">{selectedBilling.customerName}</span>
+                    </p>
+                    <p className="mb-1">
+                      <span className="font-bold">Address:</span>{' '}
+                      <span className="text-gray-700">{selectedBilling.customerAddress}</span>
+                    </p>
+                    <p className="mb-1">
+                      <span className="font-bold">Contact:</span>{' '}
+                      <span className="text-gray-700">{selectedBilling.customerContactNumber}</span>
+                    </p>
+                    <p className="mb-1">
+                      <span className="font-bold">Showroom:</span>{' '}
+                      <span className="text-gray-700">{selectedBilling.showroom}</span>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="mb-1">
+                      <span className="font-bold">Invoice Date:</span>{' '}
+                      <span className="text-gray-700">
+                        {format(new Date(selectedBilling.invoiceDate), 'dd MMM yyyy, HH:mm')}
+                      </span>
+                    </p>
+                    <p className="mb-1">
+                      <span className="font-bold">Expected Delivery:</span>{' '}
+                      <span className="text-gray-700">
+                        {format(new Date(selectedBilling.expectedDeliveryDate), 'dd MMM yyyy, HH:mm')}
+                      </span>
+                    </p>
+                    <p className="mb-1">
+                      <span className="font-bold">Delivery Status:</span>{' '}
+                      <span
+                        className={`px-2 py-1 rounded text-white text-xs ${
+                          selectedBilling.deliveryStatus === 'Delivered'
+                            ? 'bg-green-500'
+                            : selectedBilling.deliveryStatus === 'Partially Delivered'
                             ? 'bg-yellow-500'
                             : 'bg-red-500'
-                      }`}
-                    >
-                      {selectedBilling.deliveryStatus}
-                    </span>
-                  </p>
-                  <p className="mb-1">
-                    Payment Status:{' '}
+                        }`}
+                      >
+                        {selectedBilling.deliveryStatus}
+                      </span>
+                    </p>
+                    <p className="mb-1">
+                      <span className="font-bold">Payment Status:</span>{' '}
+                      <span
+                        className={`px-2 py-1 rounded text-white text-xs ${
+                          selectedBilling.paymentStatus === 'Paid'
+                            ? 'bg-green-500'
+                            : selectedBilling.paymentStatus === 'Partial'
+                            ? 'bg-yellow-500'
+                            : 'bg-red-500'
+                        }`}
+                      >
+                        {selectedBilling.paymentStatus}
+                      </span>
+                    </p>
+                    <p className="mb-1">
+                      <span className="font-bold">Remark:</span>{' '}
+                      <span className="text-gray-700">{selectedBilling.remark}</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* ---------------------------------------------------------------------
+                    Product Table with Profit Calculations
+                    (Profit columns are rendered only for admin users)
+                --------------------------------------------------------------------- */}
+                <h3 className="text-lg font-bold text-red-600 mb-4">
+                  Products ({selectedBilling.products.length})
+                </h3>
+                <div className="overflow-x-auto mb-6">
+                  <table className="w-full text-sm text-gray-500">
+                    <thead className="bg-gray-100 text-xs uppercase text-gray-700">
+                      <tr>
+                        <th className="px-4 py-3">Product</th>
+                        <th className="px-4 py-3">Cost Price</th>
+                        <th className="px-4 py-3">Selling Price</th>
+                        <th className="px-4 py-3">Qty</th>
+                        {userInfo.isAdmin && (
+                          <>
+                            <th className="px-4 py-3">Profit %</th>
+                            <th className="px-4 py-3">Total Profit</th>
+                          </>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedBilling.products.map((product, index) => {
+                        const prodDetails = productMap[product.item_id];
+                        const cost = parseFloat(prodDetails?.price || 0);
+                        const selling = product.sellingPrice;
+                        const qty = product.quantity;
+                        const profitPerUnit = selling - cost;
+                        const totalProfit = profitPerUnit * qty;
+                        const profitPercent = cost > 0 ? (profitPerUnit / cost) * 100 : 0;
+                        return (
+                          <tr
+                            key={index}
+                            className="hover:bg-gray-50 text-center border-b"
+                          >
+                            <td className="px-4 py-3 font-semibold">{product.name}</td>
+                            <td className="px-4 py-3">₹{cost.toFixed(2)}</td>
+                            <td className="px-4 py-3">₹{selling.toFixed(2)}</td>
+                            <td className="px-4 py-3">{qty}</td>
+                            {userInfo.isAdmin && (
+                              <>
+                                <td className="px-4 py-3">
+                                  <ProfitBadge value={profitPercent} />
+                                </td>
+                                <td className="px-4 py-3 font-semibold">
+                                  ₹{totalProfit.toFixed(2)}
+                                </td>
+                              </>
+                            )}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* ---------------------------------------------------------------------
+                    Summary Cards: Revenue, Cost, Profit, and Margin (Admin only)
+                --------------------------------------------------------------------- */}
+                {userInfo.isAdmin && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="stats bg-green-50 shadow p-4 rounded-lg">
+                      <div className="stat">
+                        <div className="stat-title">Total Revenue</div>
+                        <div className="stat-value text-green-600">
+                          ₹{selectedBilling.grandTotal?.toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="stats bg-blue-50 shadow p-4 rounded-lg">
+                      <div className="stat">
+                        <div className="stat-title">Total Cost</div>
+                        <div className="stat-value text-blue-600">
+                          ₹{calculateProfit(selectedBilling).totalCost.toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="stats bg-purple-50 shadow p-4 rounded-lg">
+                      <div className="stat">
+                        <div className="stat-title">Net Profit</div>
+                        <div className="stat-value text-purple-600">
+                          ₹{calculateProfit(selectedBilling).totalProfit.toLocaleString()}
+                        </div>
+                        <div className="stat-desc">
+                          {calculateProfit(selectedBilling).totalCost > 0
+                            ? ((calculateProfit(selectedBilling).totalProfit /
+                                calculateProfit(selectedBilling).totalCost) *
+                              100
+                            ).toFixed(2)
+                            : '0.00'}
+                          % Margin
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ---------------------------------------------------------------------
+                    Payments & Deliveries Section
+                --------------------------------------------------------------------- */}
+                <div className="flex justify-between items-center bg-gray-100 p-4 rounded-lg">
+                  <div>
+                    <h3 className="font-semibold mb-2">Payment Status</h3>
                     <span
-                      className={`px-2 py-1 rounded text-white text-xs ${
+                      className={`badge ${
                         selectedBilling.paymentStatus === 'Paid'
-                          ? 'bg-green-500'
+                          ? 'badge-success'
                           : selectedBilling.paymentStatus === 'Partial'
-                            ? 'bg-yellow-500'
-                            : 'bg-red-500'
+                          ? 'badge-warning'
+                          : 'badge-error'
                       }`}
                     >
                       {selectedBilling.paymentStatus}
                     </span>
-                  </p>
-                  <p className="mb-1">
-                    Remark: <span className="text-gray-700">{selectedBilling.remark}</span>
-                  </p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-2">Delivery Status</h3>
+                    <span
+                      className={`badge ${
+                        selectedBilling.deliveryStatus === 'Delivered'
+                          ? 'badge-success'
+                          : selectedBilling.deliveryStatus === 'Partially Delivered'
+                          ? 'badge-warning'
+                          : 'badge-error'
+                      }`}
+                    >
+                      {selectedBilling.deliveryStatus}
+                    </span>
+                  </div>
                 </div>
-              </div>
-
-              <hr className="my-4" />
-
-              <h3 className="text-md font-bold text-red-600 mb-2">
-                Products ({selectedBilling.products.length})
-              </h3>
-              <div className="overflow-x-auto mb-4">
-                <table className="w-full text-sm text-gray-500">
-                  <thead className="bg-gray-100 text-xs uppercase text-gray-700">
-                    <tr>
-                      <th className="px-4 py-3">Sl</th>
-                      <th className="px-4 py-3">Product</th>
-                      <th className="px-4 py-3">ID</th>
-                      <th className="px-4 py-3">Qty</th>
-                      <th className="px-4 py-3">Gst%</th>
-                      <th className="px-4 py-3">Del.Qty</th>
-                      <th className="px-4 py-3">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedBilling.products.map((product, index) => (
-                      <tr key={index} className="border-b text-center hover:bg-gray-50">
-                        <td className="px-2 py-4 text-xs font-medium text-gray-900 whitespace-nowrap">
-                          {index + 1}
-                        </td>
-                        <td className="px-2 py-4 text-xs text-gray-900 flex items-center space-x-1">
-                          <FaUser className="text-gray-400" />
-                          <span>{product.name}</span>
-                        </td>
-                        <td className="px-2 py-4 text-xs">{product.item_id}</td>
-                        <td className="px-2 py-4 text-xs">{product.quantity}</td>
-                        <td className="px-2 py-4 text-xs">{product.gstRate}%</td>
-                        <td className="px-2 py-4 text-xs">{product.deliveredQuantity}</td>
-                        <td className="px-2 py-4 text-xs">
-                          <span
-                            className={`px-2 py-1 rounded text-white text-xs ${
-                              product.deliveryStatus === 'Delivered'
-                                ? 'bg-green-500'
-                                : product.deliveryStatus === 'Partially Delivered'
-                                  ? 'bg-yellow-500'
-                                  : 'bg-red-500'
-                            }`}
-                          >
-                            {product.deliveryStatus}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="text-right">
-                <p className="text-sm mb-1">
-                  Sub Total:{' '}
-                  <span className="text-gray-600">
-                    Rs. {(parseFloat(selectedBilling.billingAmount)).toFixed(2)}
-                  </span>
-                </p>
-                <p className="text-sm mb-1">
-                  Discount:{' '}
-                  <span className="text-gray-600">
-                    Rs. {parseFloat(selectedBilling.discount).toFixed(2)}
-                  </span>
-                </p>
-                <p className="text-sm mb-1">
-                  Round Off:{' '}
-                  <span className="text-gray-600">
-                    Rs. {parseFloat(selectedBilling.roundOff).toFixed(2)}
-                  </span>
-                </p>
-                <p className="text-md font-bold mb-1">
-                  Grand Total:{' '}
-                  <span className="text-gray-800">
-                    Rs. {parseFloat(selectedBilling.grandTotal).toFixed(2)}
-                  </span>
-                </p>
-                <p className="text-sm mb-1">
-                  Amount Received:{' '}
-                  <span className="text-green-500 font-bold">
-                    Rs. {parseFloat(selectedBilling.billingAmountReceived).toFixed(2)}
-                  </span>
-                </p>
-              </div>
-
-              <hr className="my-4" />
-
-              {/* Payments */}
-              {selectedBilling.payments && selectedBilling.payments.length > 0 && (
-                <>
-                  <h3 className="text-md font-bold text-red-600 mb-2">
-                    Payments ({selectedBilling.payments.length})
-                  </h3>
-                  <div className="overflow-x-auto mb-4">
-                    <table className="w-full text-sm text-gray-500">
-                      <thead className="bg-gray-100 text-xs uppercase text-gray-700">
-                        <tr>
-                          <th className="px-4 py-3">Amount</th>
-                          <th className="px-4 py-3">Method</th>
-                          <th className="px-4 py-3">Reference</th>
-                          <th className="px-4 py-3">Date</th>
-                          <th className="px-4 py-3">Remark</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedBilling.payments.map((pay, i) => (
-                          <tr key={i} className="border-b hover:bg-gray-50">
-                            <td className="px-2 py-4 text-xs">Rs. {pay.amount}</td>
-                            <td className="px-2 py-4 text-xs">{pay.method}</td>
-                            <td className="px-2 py-4 text-xs">{pay.referenceId}</td>
-                            <td className="px-2 py-4 text-xs">{new Date(pay.date).toLocaleString()}</td>
-                            <td className="px-2 py-4 text-xs">{pay.remark}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
-              )}
-
-              {/* Deliveries */}
-              {selectedBilling.deliveries && selectedBilling.deliveries.length > 0 && (
-                <>
-                  <h3 className="text-md font-bold text-red-600 mb-2">
-                    Deliveries ({selectedBilling.deliveries.length})
-                  </h3>
-                  <div className="overflow-x-auto mb-4">
-                    <table className="w-full text-sm text-gray-500">
-                      <thead className="bg-gray-100 text-xs uppercase text-gray-700">
-                        <tr>
-                          <th className="px-4 py-3">Delivery ID</th>
-                          <th className="px-4 py-3">Driver Name</th>
-                          <th className="px-4 py-3">Delivery Status</th>
-                          <th className="px-4 py-3">Fuel Charge</th>
-                          <th className="px-4 py-3">Other Expenses</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedBilling.deliveries.map((d, i) => (
-                          <tr key={i} className="border-b hover:bg-gray-50">
-                            <td className="px-2 py-4 text-xs">{d.deliveryId}</td>
-                            <td className="px-2 py-4 text-xs">{d.driverName}</td>
-                            <td className="px-2 py-4 text-xs">{d.deliveryStatus}</td>
-                            <td className="px-2 py-4 text-xs">Rs. {d.fuelCharge}</td>
-                            <td className="px-2 py-4 text-xs">
-                              {d.otherExpenses && d.otherExpenses.length > 0 ? d.otherExpenses.map((oe, idx) => (
-                                <div key={idx}>
-                                  Amount: Rs. {oe.amount}, Remark: {oe.remark}
-                                </div>
-                              )) : 'N/A'}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 
