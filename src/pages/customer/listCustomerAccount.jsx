@@ -50,6 +50,18 @@ const CustomerAccountList = () => {
   const [accountSearch, setAccountSearch] = useState('');
   const [selectedAccountIds, setSelectedAccountIds] = useState([]);
 
+
+  const handleSelectAll = (isChecked) => {
+    if (isChecked) {
+      const allIds = accounts.map((acc) => acc._id);
+      setSelectedAccountIds(allIds);
+      localStorage.setItem('selectedCustomerAccountIds', JSON.stringify(allIds));
+    } else {
+      setSelectedAccountIds([]);
+      localStorage.setItem('selectedCustomerAccountIds', JSON.stringify([]));
+    }
+  };
+
   // Fetch all customer accounts
   const fetchAccounts = async () => {
     setLoading(true);
@@ -345,6 +357,15 @@ const CustomerAccountList = () => {
         {/* Select Accounts */}
         <div className="mb-4">
           <h3 className="text-sm font-semibold text-gray-700 mb-2">Select Accounts</h3>
+          <div className="flex items-center mb-2">
+            <input
+              type="checkbox"
+              checked={accounts.length > 0 && selectedAccountIds.length === accounts.length}
+              onChange={(e) => handleSelectAll(e.target.checked)}
+              className="mr-2"
+            />
+            <span className="text-xs text-gray-700">Select All</span>
+          </div>
           <div className="max-h-60 overflow-auto border p-2 rounded">
             {accounts
               .filter(

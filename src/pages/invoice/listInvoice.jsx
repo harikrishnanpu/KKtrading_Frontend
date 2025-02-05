@@ -154,14 +154,15 @@ const BillingList = () => {
 
     billing.products.forEach((p) => {
       const product = productMap[p.item_id];
+      const ItemSellingPrice = billing.total
       const cost = parseFloat(product?.price || 0);
-      const revenue = p.sellingPrice * p.quantity;
+      const revenue = p.sellingPriceinQty * p.quantity;
       totalCost += cost * p.quantity;
       totalRevenue += revenue;
     });
 
     const totalProfit = totalRevenue - totalCost;
-    const profitPercentage = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
+    const profitPercentage = totalCost > 0 ? ( totalRevenue - totalCost ) / totalRevenue * 100 : 0;
 
     return { totalCost, totalRevenue, totalProfit, profitPercentage };
   };
@@ -537,7 +538,7 @@ const BillingList = () => {
         </p>
         {userInfo.isAdmin && profit && (
           <p className="text-gray-600 text-xs mt-1">
-            Profit/Loss:{' '}
+            P/L:{' '}
             <span className={profit.profitPercentage >= 0 ? 'text-green-600' : 'text-red-600'}>
               {profit.profitPercentage.toFixed(2)}%
             </span>
@@ -758,7 +759,7 @@ const BillingList = () => {
             >
               <p className="text-xs font-bold text-purple-600">Total Profit</p>
               <p className="text-xs text-gray-500">
-                Margin: {stats.totalCost > 0 ? ((stats.totalProfit / stats.totalCost) * 100).toFixed(2) : '0.00'}%
+                Margin: {stats.totalCost > 0 ? ((stats.totalRevenue - stats.totalCost) / stats.totalRevenue * 100).toFixed(2) : '0.00'}%
               </p>
               <p className="text-sm font-bold text-gray-700">
                 ₹{stats.totalProfit.toLocaleString()}
@@ -950,7 +951,7 @@ const BillingList = () => {
                   <th className="px-2 py-2">Products</th>
                   <th className="px-2 py-2">Payment</th>
                   <th className="px-2 py-2">Delivery</th>
-                  {userInfo.isAdmin && <th className="px-2 py-2">Profit/Loss (%)</th>}
+                  {userInfo.isAdmin && <th className="px-2 py-2">P/L (%)</th>}
                   <th className="px-2 py-2">Actions</th>
                 </tr>
               </thead>
@@ -1245,19 +1246,20 @@ const BillingList = () => {
                     <tbody>
                       {selectedBilling.products.map((product, index) => {
                         const prodDetails = productMap[product.item_id];
-                        const cost = parseFloat(prodDetails?.price || 0);
-                        const selling = product.sellingPrice;
+                        const cost = parseFloat(prodDetails?.price || 0).toFixed(2);
+                        const selling = product.sellingPriceinQty;
                         const qty = product.quantity;
                         const profitPerUnit = selling - cost;
                         const totalProfit = profitPerUnit * qty;
-                        const profitPercent = cost > 0 ? (profitPerUnit / cost) * 100 : 0;
+                        const profitPercent = cost > 0 ? ( (selling * qty ) - ( cost * qty ) ) / (selling * qty ) * 100  : 0;
+
                         return (
                           <tr
                             key={index}
                             className="hover:bg-gray-50 text-center border-b"
                           >
                             <td className="px-4 py-3 font-semibold">{product.name}</td>
-                            <td className="px-4 py-3">₹{cost.toFixed(2)}</td>
+                            <td className="px-4 py-3">₹{cost}</td>
                             <td className="px-4 py-3">₹{selling.toFixed(2)}</td>
                             <td className="px-4 py-3">{qty}</td>
                             {userInfo.isAdmin && (
@@ -1306,10 +1308,7 @@ const BillingList = () => {
                         </div>
                         <div className="stat-desc">
                           {calculateProfit(selectedBilling).totalCost > 0
-                            ? ((calculateProfit(selectedBilling).totalProfit /
-                                calculateProfit(selectedBilling).totalCost) *
-                              100
-                            ).toFixed(2)
+                            ?  (( calculateProfit(selectedBilling).totalRevenue - calculateProfit(selectedBilling).totalCost ) / calculateProfit(selectedBilling).totalRevenue * 100).toFixed(2)
                             : '0.00'}
                           % Margin
                         </div>

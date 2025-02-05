@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../api";
+import api from "pages/api";
 import BillingSuccess from "components/invoice/billingsuccess";
 import { useGetMenuMaster } from "api/menu";
 import useAuth from "hooks/useAuth";
+import ErrorModal from "components/ErrorModal";
 
 export default function PurchasePage() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -711,8 +712,8 @@ export default function PurchasePage() {
 
     try {
       setLoading(true);
-    //   const returnData = await dispatch(createPurchase(purchaseData));
-      setReturnInvoice(returnData);
+      const returnData = await api.post("/api/products/purchase", purchaseData);
+      setReturnInvoice(returnData.data);
       alert("Purchase submitted successfully!");
       // Reset form fields
       setCurrentStep(1);
@@ -751,24 +752,47 @@ export default function PurchasePage() {
     }
   };
 
+
+  const itemIdChange = async (e) => {
+    const newValue = e.target.value;
+    setItemId(newValue); // Update the item ID as the user types
+
+    if (!newValue.trim()) {
+      setSuggestions([]);
+      setError('');
+      return; // Skip empty input to prevent unnecessary API calls
+    }
+
+    try {
+      const { data } = await api.get(
+        `/api/products/search/itemId?query=${newValue}`
+      );
+      setSuggestions(data);
+      setError(''); // Clear errors on successful fetch
+    } catch (err) {
+      console.error('Error fetching suggestions:', err);
+      setSuggestions([]);
+      setError('Error fetching product suggestions.');
+    }
+  };
+
   return (
     <div>
       {/* Loading Indicator */}
-      {(loading || itemLoading) && (
-        <></>
-        // <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
-        //   <div className="bg-white p-4 rounded-md shadow-md">
-        //     <p className="text-sm font-bold">Loading...</p>
-        //   </div>
-        // </div>
-      )}
+      {/* {(loading || itemLoading) && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
+          <div className="bg-white p-4 rounded-md shadow-md">
+            <p className="text-sm font-bold">Loading...</p>
+          </div>
+        </div>
+      )} */}
 
       {/* Error Modal */}
       {showErrorModal && (
-        <>
-        </>
-        // <ErrorModal message={error} onClose={() => setShowErrorModal(false)} />
-      )}
+        <ErrorModal 
+        message={error || 'error'}
+        onClose={() => setShowErrorModal(false)}
+      />      )}
 
       {/* Main Content */}
       <div
@@ -795,7 +819,7 @@ export default function PurchasePage() {
           <div className="text-right">
             {currentStep === 4 ? (
               <button
-                onClick={submitHandler}
+                onClick={()=> submitHandler()}
                 className="py-2 font-bold px-4 bg-red-600 text-white rounded-md hover:bg-red-700 text-xs"
               >
                 Submit

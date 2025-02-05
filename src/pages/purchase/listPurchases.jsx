@@ -6,6 +6,15 @@ import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import { FaUser, FaFilter } from 'react-icons/fa';
 import useAuth from 'hooks/useAuth';
+import { Dialog, DialogContent, IconButton, Slide } from '@mui/material';
+
+import CloseIcon from '@mui/icons-material/Close';
+
+
+const Transition = React.forwardRef(function Transition(props, ref) {
+  return <Slide direction="up" ref={ref} {...props} />;
+});
+
 
 const PurchaseList = () => {
   const navigate = useNavigate();
@@ -978,14 +987,27 @@ const PurchaseList = () => {
 
       {/* Modal for Viewing Purchase Details */}
       {selectedPurchase && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 overflow-y-auto">
-          <div className="bg-white rounded-lg p-6 max-w-4xl w-full relative">
-            <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-2xl"
-              onClick={closeModal}
-            >
-              &times;
-            </button>
+      <Dialog
+        open={Boolean(selectedPurchase)}
+        onClose={closeModal}
+        fullScreen
+        TransitionComponent={Transition}
+        sx={{
+          zIndex: 1300,
+          width: '100%',
+          height: '100%',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+        }}
+      >        
+        <DialogContent className="relative p-4 sm:p-8">
+        <IconButton
+            onClick={closeModal}
+            sx={{ position: 'absolute', top: 8, right: 8, color: 'gray' }}
+          >
+            <CloseIcon fontSize="large" />
+          </IconButton>
             <div className="mt-2">
               <h2 className="text-lg font-bold text-red-600 mb-4 flex items-center space-x-2">
                 <FaUser className="text-red-600" />
@@ -1218,8 +1240,8 @@ const PurchaseList = () => {
                 </p>
               </div>
             </div>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
     </>
   );

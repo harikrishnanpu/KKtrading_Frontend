@@ -65,7 +65,7 @@ export default function AuthLogin({ forgot }) {
             if (scriptedRef.current) {
               setStatus({ success: true });
               setSubmitting(false);
-              // preload('api/menu/dashboard', fetcher); // load menu on login success
+              preload('/api/chart/dashboard/dashboard-stats', fetcher); 
             }
           } catch (err) {
             console.error(err);

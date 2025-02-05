@@ -54,6 +54,17 @@ const SupplierAccountList = () => {
   // Load selected accounts from localStorage or select all by default
   const [selectedAccountIds, setSelectedAccountIds] = useState([]);
 
+  const handleSelectAll = (isChecked) => {
+    if (isChecked) {
+      const allIds = accounts.map((acc) => acc._id);
+      setSelectedAccountIds(allIds);
+      localStorage.setItem('selectedSupplierAccountIds', JSON.stringify(allIds));
+    } else {
+      setSelectedAccountIds([]);
+      localStorage.setItem('selectedSupplierAccountIds', JSON.stringify([]));
+    }
+  };
+
   // Fetch all supplier accounts
   const fetchAccounts = async () => {
     setLoading(true);

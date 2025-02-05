@@ -57,6 +57,7 @@
     "react-slick": "^0.30.2",
     "react-timer-hook": "^3.0.7",
     "react-to-print": "^3.0.5",
+    "react-toastify": "^11.0.3",
     "react18-input-otp": "^1.1.4",
     "simplebar": "^6.2.5",
     "simplebar-react": "^3.2.4",
