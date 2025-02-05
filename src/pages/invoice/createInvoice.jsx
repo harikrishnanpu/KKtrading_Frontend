@@ -679,7 +679,7 @@ useEffect(() => {
   const parsedDiscount = parseFloat(discount) || 0;
   const parsedTransportation = parseFloat(transportation) || 0;
   const parsedUnloading = parseFloat(unloading) || 0;
-  const parsedHandling = parseFloat(handlingCharge) || 0;
+  const parsedHandling = parseFloat(handlingcharge) || 0;
 
   let newSubTotal = 0; // Base subtotal (sum of all product amounts without GST)
   let newTotalGST = 0; // Total GST for all products
