@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Initialize axios instance
 const api = axios.create({
-  baseURL: 'https://kk-back-end-kappa.vercel.app/', // https://kk-back-end-kappa.vercel.app/
+  baseURL: 'http://localhost:4000/', // https://kk-back-end-kappa.vercel.app/
 });
 
 const userData = JSON.parse(localStorage.getItem('userInfo'));

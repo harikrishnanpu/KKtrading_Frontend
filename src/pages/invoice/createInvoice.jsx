@@ -675,73 +675,83 @@ export default function BillingScreen() {
   const [perItemDiscount, setPerItemDiscount] = useState(0);
   const [grandTotal, setGrandTotal] = useState(0);
 
-  useEffect(() => {
-    const parsedDiscount = parseFloat(discount) || 0;
-    const parsedTransportation = parseFloat(transportation) || 0;
-    const parsedUnloading = parseFloat(unloading) || 0;
-    const parsedHandling = parseFloat(handlingcharge) || 0;
-  
-    let newSubTotal = 0; // Base subtotal (sum of all product amounts without GST)
-    let newTotalGST = 0; // Total GST for all products
-  
-    products.forEach((product) => {
-      const productQty = parseFloat(product.quantity) || 0;
-      const productPricePerUnit = parseFloat(product.sellingPriceinQty) || 0;
-      const productGSTRate = parseFloat(product.gstRate) || 0;
-      const perItemDis = parsedDiscount / (products.length || 1);
-  
-      // Calculate base amount for the product
-      const baseAmount = productQty * productPricePerUnit;
-  
-  
-    const productDiscount = product.quantity * perItemDis
-  
-    const gstRate = parseFloat(product.gstRate) || 0; // e.g., 18 means 18%
-    const rateWithoutGST = ( baseAmount / (1 + gstRate / 100) ) - productDiscount; // Derive rate without GST
-  
-    const rateAfterDiscount = rateWithoutGST;
-    const gstAmount = rateWithoutGST * (gstRate / 100); // GST component of the base total
-  
-    // Split GST equally between CGST and SGST
-    const cgst = gstAmount / 2;
-    const sgst = gstAmount / 2;
-  
-  
-      // Calculate GST for the product
-      const gstForProduct = baseAmount * (productGSTRate / 100);
-  
-      const netAmount = rateAfterDiscount + gstAmount;
-   
-      // Accumulate totals
-      newSubTotal += netAmount;
-      newTotalGST += gstForProduct;
-    });
-  
-    // Calculate totals
-    const discountedSubTotal = newSubTotal; // Subtotal after discount
-    const netWithoutOtherCharges = discountedSubTotal; // Net total before additional charges
-    const finalGrandTotal =
-      netWithoutOtherCharges +
-      parsedTransportation +
-      parsedUnloading +
-      parsedHandling - roundOff;
-  
-    // Set calculated values
-    setAmountWithoutGST(newSubTotal.toFixed(2)); // Total base amount
-    setGSTAmount(newTotalGST.toFixed(2)); // Total GST
-    setTotalAmount(netWithoutOtherCharges.toFixed(2)); // Net total (Subtotal + GST - Discount)
-    setGrandTotal(finalGrandTotal.toFixed(2)); // Final grand total (including charges)
-    setPerItemDiscount(parsedDiscount / (products.length || 1)); // Discount per item
-  
-    // Reset values if no products
-    if (products.length === 0) {
-      setAmountWithoutGST(0);
-      setGSTAmount(0);
-      setTotalAmount(0);
-      setGrandTotal(0);
-      setPerItemDiscount(0);
-    }
-  }, [discount, products, unloading, transportation, handlingcharge, roundOff]);
+useEffect(() => {
+  const parsedDiscount = parseFloat(discount) || 0;
+  const parsedTransportation = parseFloat(transportation) || 0;
+  const parsedUnloading = parseFloat(unloading) || 0;
+  const parsedHandling = parseFloat(handlingCharge) || 0;
+
+  let newSubTotal = 0; // Base subtotal (sum of all product amounts without GST)
+  let newTotalGST = 0; // Total GST for all products
+
+  products.forEach((product) => {
+    const productQty = parseFloat(product.quantity) || 0;
+    const productPricePerUnit = parseFloat(product.sellingPriceinQty) || 0;
+    const productGSTRate = parseFloat(product.gstRate) || 0;
+    // const perItemDis = parsedDiscount / (products.length || 1);
+
+    // Calculate base amount for the product
+    const baseAmount = productQty * productPricePerUnit;
+
+
+    const itemBase = productQty * productPricePerUnit;
+
+// This row's discount portion: "itemBase / sumOfBase * discount"
+let sumOfBase = 0;
+products.forEach((p) => {
+  sumOfBase += (parseFloat(p.quantity) || 0) * (parseFloat(p.sellingPriceinQty) || 0);
+});
+const discountRatio = sumOfBase > 0 ? (parseFloat(discount) || 0) / sumOfBase : 0;
+const itemDiscount = itemBase * discountRatio;
+
+  const productDiscount = itemBase * discountRatio;
+
+  const gstRate = parseFloat(product.gstRate) || 0; // e.g., 18 means 18%
+  const rateWithoutGST = ( baseAmount / (1 + gstRate / 100) ) - productDiscount; // Derive rate without GST
+
+  const rateAfterDiscount = rateWithoutGST;
+  const gstAmount = rateWithoutGST * (gstRate / 100); // GST component of the base total
+
+  // Split GST equally between CGST and SGST
+  const cgst = gstAmount / 2;
+  const sgst = gstAmount / 2;
+
+
+    // Calculate GST for the product
+    const gstForProduct = baseAmount * (productGSTRate / 100);
+
+    const netAmount = rateAfterDiscount + gstAmount;
+
+    // Accumulate totals
+    newSubTotal += netAmount;
+    newTotalGST += gstForProduct;
+  });
+
+  // Calculate totals
+  const discountedSubTotal = newSubTotal; // Subtotal after discount
+  const netWithoutOtherCharges = discountedSubTotal; // Net total before additional charges
+  const finalGrandTotal =
+    netWithoutOtherCharges +
+    parsedTransportation +
+    parsedUnloading +
+    parsedHandling - roundOff;
+
+  // Set calculated values
+  setAmountWithoutGST(newSubTotal.toFixed(2)); // Total base amount
+  setGSTAmount(newTotalGST.toFixed(2)); // Total GST
+  setTotalAmount(netWithoutOtherCharges.toFixed(2)); // Net total (Subtotal + GST - Discount)
+  setGrandTotal(finalGrandTotal.toFixed(2)); // Final grand total (including charges)
+  // setPerItemDiscount(parsedDiscount / (products.length || 1)); // Discount per item
+
+  // Reset values if no products
+  if (products.length === 0) {
+    setAmountWithoutGST(0);
+    setGSTAmount(0);
+    setTotalAmount(0);
+    setGrandTotal(0);
+    setPerItemDiscount(0);
+  }
+}, [discount, products, unloading, transportation, handlingcharge, roundOff]);
 
   // Handle Billing Submission
   const handleBillingSubmit = async () => {
@@ -1516,23 +1526,33 @@ export default function BillingScreen() {
                                     .includes(filterText.toLowerCase())
                               )
                               .map((product, index) => {
-                                const baseTotal =
-                                  product.quantity * product.sellingPriceinQty
+          // UPDATED item row calculation:
+const qty = parseFloat(product.quantity) || 0;
+const priceInQty = parseFloat(product.sellingPriceinQty) || 0;
+const gstRate = parseFloat(product.gstRate) || 0;
 
-                                const productDiscount = product.quantity * perItemDiscount
+// Base
+const itemBase = qty * priceInQty;
 
-                                const gstRate = parseFloat(product.gstRate) || 0; // e.g., 18 means 18%
-                                const rateWithoutGST = ( baseTotal / (1 + gstRate / 100) ) - productDiscount; // Derive rate without GST
+// This row's discount portion: "itemBase / sumOfBase * discount"
+let sumOfBase = 0;
+products.forEach((p) => {
+  sumOfBase += (parseFloat(p.quantity) || 0) * (parseFloat(p.sellingPriceinQty) || 0);
+});
+const discountRatio = sumOfBase > 0 ? (parseFloat(discount) || 0) / sumOfBase : 0;
+const itemDiscount = itemBase * discountRatio;
 
-                                const rateAfterDiscount = rateWithoutGST;
-                                const gstAmount = rateWithoutGST * (gstRate / 100); // GST component of the base total
-                              
-                                // Split GST equally between CGST and SGST
-                                const cgst = gstAmount / 2;
-                                const sgst = gstAmount / 2;
-                              
-                                // Final net amount after discount and adding GST
-                                const netAmount = rateAfterDiscount + gstAmount;
+const rateWithoutGST = itemBase / (1 + gstRate / 100) - itemDiscount;
+
+// After discount
+const netBase = itemBase - itemDiscount;
+
+// GST on discounted base
+const gstAmount = rateWithoutGST * (1 + gstRate / 100) - rateWithoutGST;
+
+// Final net per item
+const netTotal = rateWithoutGST + gstAmount;
+
 
                                 return (
                                   <tr
@@ -1605,21 +1625,14 @@ export default function BillingScreen() {
                                       />
                                     </td>
                                     {/* GST Amt */}
-                                    <td className="px-2 py-2 text-xs text-center">
-                                      ₹{gstAmount.toFixed(2)} 
-                                    </td>
+
                                     {/* Base Total */}
                                     {/* <td className="px-2 py-2 text-xs">
                                       ₹{baseTotal.toFixed(2)}
                                     </td> */}
-                                    <td className="px-2 py-2 text-xs text-center">
-                                      {(
-                                        productDiscount
-                                      ).toFixed(2)}
-                                    </td>
-                                    <td className="px-2 py-2 text-xs">
-                                      ₹{netAmount.toFixed(2)}
-                                    </td>
+<td> ₹{gstAmount.toFixed(2)}</td>
+              <td> ₹{itemDiscount.toFixed(2)}</td>
+<td>₹{netTotal.toFixed(2)}</td>
                                     <td className="px-3 py-2 text-xs text-center">
                                       <button
                                         onClick={() => {
