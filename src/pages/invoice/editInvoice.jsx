@@ -2094,14 +2094,9 @@ const netTotal = rateWithoutGST + gstAmount;
                           <input
                             type="text"
                             ref={mobileitemRemarkRef}
-                            value={p.itemRemark}
-                            onChange={(e) =>
-                              handleEditProduct(
-                                index,
-                                'itemRemark',
-                                e.target.value
-                              )
-                            }                            className="w-full border border-gray-300 px-2 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
+                            value={itemRemark}
+                            onChange={(e) => setItemRemark(e.target.value)}
+                            className="w-full border border-gray-300 px-2 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
                             placeholder="remark"
                           />
                         </div>
