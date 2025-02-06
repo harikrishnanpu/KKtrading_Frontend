@@ -536,7 +536,7 @@ const BillingList = () => {
         <p className="text-gray-600 text-xs mt-1">
           Payment: {billing.paymentStatus}
         </p>
-        {userInfo.isAdmin && profit && (
+        {userInfo.isSuper && profit && (
           <p className="text-gray-600 text-xs mt-1">
             P/L:{' '}
             <span className={profit.profitPercentage >= 0 ? 'text-green-600' : 'text-red-600'}>
@@ -730,7 +730,7 @@ const BillingList = () => {
       {/* -------------------------------------------------------------------------
           Desktop Header and Stats (For Admin Users)
       ------------------------------------------------------------------------- */}
-      {userInfo.isAdmin && (
+      {userInfo.isSuper && (
         <div className="mb-6 space-y-4">
           <div className="flex flex-wrap justify-center sm:justify-start gap-4">
             <motion.div
@@ -951,7 +951,7 @@ const BillingList = () => {
                   <th className="px-2 py-2">Products</th>
                   <th className="px-2 py-2">Payment</th>
                   <th className="px-2 py-2">Delivery</th>
-                  {userInfo.isAdmin && <th className="px-2 py-2">P/L (%)</th>}
+                  {userInfo.isSuper && <th className="px-2 py-2">P/L (%)</th>}
                   <th className="px-2 py-2">Actions</th>
                 </tr>
               </thead>
@@ -1008,7 +1008,7 @@ const BillingList = () => {
                       <td className="px-2 text-xs py-2">
                         {billing.deliveryStatus}
                       </td>
-                      {userInfo.isAdmin && (
+                      {userInfo.isSuper && (
                         <td className="px-2 text-xs py-2">
                           {profit ? (
                             <ProfitBadge value={profit.profitPercentage} />
@@ -1235,7 +1235,7 @@ const BillingList = () => {
                         <th className="px-4 py-3">Cost Price</th>
                         <th className="px-4 py-3">Selling Price</th>
                         <th className="px-4 py-3">Qty</th>
-                        {userInfo.isAdmin && (
+                        {userInfo.isSuper && (
                           <>
                             <th className="px-4 py-3">Profit %</th>
                             <th className="px-4 py-3">Total Profit</th>
@@ -1262,7 +1262,7 @@ const BillingList = () => {
                             <td className="px-4 py-3">₹{cost}</td>
                             <td className="px-4 py-3">₹{selling.toFixed(2)}</td>
                             <td className="px-4 py-3">{qty}</td>
-                            {userInfo.isAdmin && (
+                            {userInfo.isSuper && (
                               <>
                                 <td className="px-4 py-3">
                                   <ProfitBadge value={profitPercent} />
@@ -1282,7 +1282,7 @@ const BillingList = () => {
                 {/* ---------------------------------------------------------------------
                     Summary Cards: Revenue, Cost, Profit, and Margin (Admin only)
                 --------------------------------------------------------------------- */}
-                {userInfo.isAdmin && (
+                {userInfo.isSuper && (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div className="stats bg-green-50 shadow p-4 rounded-lg">
                       <div className="stat">

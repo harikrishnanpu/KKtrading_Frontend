@@ -2,7 +2,7 @@
 import { FormattedMessage } from 'react-intl';
 
 // assets
-import { Menu, MoneyRecive , BoxSearch, NotificationStatus, MenuBoard, Calendar, Messages2, Notification1} from 'iconsax-react';
+import { Menu, MoneyRecive , BoxSearch, NotificationStatus, MenuBoard, Calendar, Messages2, Notification1, Profile2User} from 'iconsax-react';
 
 // type
 
@@ -16,7 +16,8 @@ const icons = {
   task: MenuBoard,
   calendar: Calendar,
   chat: Messages2,
-  notify: Notification1
+  notify: Notification1,
+  users: Profile2User
 };
 
 // ==============================|| MENU ITEMS - PAGES ||============================== //
@@ -118,6 +119,16 @@ const dashboard = {
       link: '/notifications/all',
       target: false,
       breadcrumbs: false
+    },
+    {
+      id: 'allUsers',
+      title: <FormattedMessage id="All Users" />,
+      type: 'item',
+      url: '/admin/allusers',
+      icon: icons.users,
+      link: '/admin/allusers',
+      target: false,
+      breadcrumbs: true
     },
   ]
 };

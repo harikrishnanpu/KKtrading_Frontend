@@ -41,7 +41,7 @@ export function useGetSnackbar() {
 export function openSnackbar(snackbar) {
   // to update local state based on key
 
-  const { action, open, message, anchorOrigin, variant, alert, transition, close, actionButton } = snackbar;
+  const { action, open, message, anchorOrigin, variant, alert, transition, close, actionButton, autoHideDuration } = snackbar;
 
   mutate(
     endpoints.key,
@@ -59,7 +59,8 @@ export function openSnackbar(snackbar) {
         },
         transition: transition || initialState.transition,
         close: close || initialState.close,
-        actionButton: actionButton || initialState.actionButton
+        actionButton: actionButton || initialState.actionButton,
+        autoHideDuration: autoHideDuration || 4000
       };
     },
     false

@@ -29,6 +29,7 @@ import { fetcher } from 'utils/axios';
 
 // assets
 import { Eye, EyeSlash } from 'iconsax-react';
+import { openSnackbar } from 'api/snackbar';
 
 // ============================|| JWT - LOGIN ||============================ //
 
@@ -62,18 +63,29 @@ export default function AuthLogin({ forgot }) {
         onSubmit={async (values, { setErrors, setStatus, setSubmitting }) => {
           try {
             await login(values.email, values.password);
-            if (scriptedRef.current) {
-              setStatus({ success: true });
-              setSubmitting(false);
-              preload('/api/chart/dashboard/dashboard-stats', fetcher); 
-            }
+            // For debugging, bypass the scriptedRef check
+            setStatus({ success: true });
+            setSubmitting(false);
+            preload('/api/chart/dashboard/dashboard-stats', fetcher);
           } catch (err) {
-            console.error(err);
-            if (scriptedRef.current) {
-              setStatus({ success: false });
-              setErrors({ submit: err.message });
-              setSubmitting(false);
-            }
+            console.error('Error in onSubmit:', err);
+            const errorMsg =
+              (err.response && err.response.data && err.response.data.message) ||
+              err.message ||
+              'An error occurred';
+            setErrors({ submit: errorMsg });
+            setSubmitting(false);       
+
+                        // Show error snackbar
+                        openSnackbar({
+                          open: true,
+                          message: errorMsg,
+                          variant: 'alert',
+                          alert: { color: 'error' },
+                         anchorOrigin: { vertical: 'top', horizontal: 'left' }, // Change position
+                         autoHideDuration: 6000 // Snackbar will disappear after 3 seconds
+            
+                        });
           }
         }}
       >
@@ -107,7 +119,7 @@ export default function AuthLogin({ forgot }) {
                   <OutlinedInput
                     fullWidth
                     error={Boolean(touched.password && errors.password)}
-                    id="-password-login"
+                    id="password-login"
                     type={showPassword ? 'text' : 'password'}
                     value={values.password}
                     name="password"
@@ -135,7 +147,6 @@ export default function AuthLogin({ forgot }) {
                   </FormHelperText>
                 )}
               </Grid>
-
               <Grid item xs={12} sx={{ mt: -1 }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
                   <FormControlLabel
@@ -150,20 +161,31 @@ export default function AuthLogin({ forgot }) {
                     }
                     label={<Typography variant="h6">Keep me sign in</Typography>}
                   />
-
-                  <Link variant="h6" component={RouterLink} to={isLoggedIn && forgot ? forgot : '/forgot-password'} color="text.primary">
+                  <Link
+                    variant="h6"
+                    component={RouterLink}
+                    to={isLoggedIn && forgot ? forgot : '/forgot-password'}
+                    color="text.primary"
+                  >
                     Forgot Password?
                   </Link>
                 </Stack>
               </Grid>
-              {errors.submit && (
-                <Grid item xs={12}>
-                  <FormHelperText error>{errors.submit}</FormHelperText>
-                </Grid>
-              )}
+
+              {/* Wrap the error in a Grid item */}
+
+
               <Grid item xs={12}>
                 <AnimateButton>
-                  <Button disableElevation disabled={isSubmitting} fullWidth size="large" type="submit" variant="outlined" color="primary">
+                  <Button
+                    disableElevation
+                    disabled={isSubmitting}
+                    fullWidth
+                    size="large"
+                    type="submit"
+                    variant="outlined"
+                    color="primary"
+                  >
                     Login
                   </Button>
                 </AnimateButton>

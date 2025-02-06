@@ -34,15 +34,16 @@ import { Eye, EyeSlash } from 'iconsax-react';
 
 export default function AuthRegister() {
   const { register } = useAuth();
-  const scriptedRef = useScriptRef();
   const navigate = useNavigate();
+  // Although we still import useScriptRef, we are no longer gating error handling with it.
+  const scriptedRef = useScriptRef();
 
   const [level, setLevel] = useState();
   const [showPassword, setShowPassword] = useState(false);
+  
   const handleClickShowPassword = () => {
     setShowPassword(!showPassword);
   };
-
   const handleMouseDownPassword = (event) => {
     event.preventDefault();
   };
@@ -76,47 +77,55 @@ export default function AuthRegister() {
         onSubmit={async (values, { setErrors, setStatus, setSubmitting }) => {
           try {
             await register(values.email, values.password, values.firstname, values.lastname);
-            if (scriptedRef.current) {
-              setStatus({ success: true });
-              setSubmitting(false);
-              openSnackbar({
-                open: true,
-                message: 'Your registration has been successfully completed.',
-                variant: 'alert',
-
-                alert: {
-                  color: 'success'
-                }
-              });
-
-              setTimeout(() => {
-                navigate('/login', { replace: true });
-              }, 1500);
-            }
+            setStatus({ success: true });
+            setSubmitting(false);
+            openSnackbar({
+              open: true,
+              message: 'Your registration has been successfully completed.',
+              variant: 'alert',
+              alert: { color: 'success' }
+            });
+            setTimeout(() => {
+              navigate('/login', { replace: true });
+            }, 1500);
           } catch (err) {
             console.error(err);
-            if (scriptedRef.current) {
-              setStatus({ success: false });
-              setErrors({ submit: err.message });
-              setSubmitting(false);
-            }
+            // Use err.response.data.message if available or fallback to err.message.
+            const errorMsg =
+              (err.response && err.response.data && err.response.data.message) ||
+              err.message ||
+              'An error occurred';
+            setErrors({ submit: errorMsg });
+            setStatus({ success: false });
+            setSubmitting(false);
+            
+            // Show error snackbar
+            openSnackbar({
+              open: true,
+              message: errorMsg,
+              variant: 'alert',
+              alert: { color: 'error' },
+             anchorOrigin: { vertical: 'top', horizontal: 'left' }, // Change position
+             autoHideDuration: 4000 // Snackbar will disappear after 3 seconds
+            });
           }
-        }}
+        }}        
       >
         {({ errors, handleBlur, handleChange, handleSubmit, isSubmitting, touched, values }) => (
           <form noValidate onSubmit={handleSubmit}>
             <Grid container spacing={3}>
+              {/* First Name */}
               <Grid item xs={12} md={6}>
                 <Stack spacing={1}>
                   <InputLabel htmlFor="firstname-signup">First Name*</InputLabel>
                   <OutlinedInput
-                    id="firstname-login"
-                    type="firstname"
+                    id="firstname-signup"
+                    type="text"
                     value={values.firstname}
                     name="firstname"
                     onBlur={handleBlur}
                     onChange={handleChange}
-                    placeholder="fname"
+                    placeholder="first name"
                     fullWidth
                     error={Boolean(touched.firstname && errors.firstname)}
                   />
@@ -127,6 +136,7 @@ export default function AuthRegister() {
                   </FormHelperText>
                 )}
               </Grid>
+              {/* Last Name */}
               <Grid item xs={12} md={6}>
                 <Stack spacing={1}>
                   <InputLabel htmlFor="lastname-signup">Last Name*</InputLabel>
@@ -134,13 +144,12 @@ export default function AuthRegister() {
                     fullWidth
                     error={Boolean(touched.lastname && errors.lastname)}
                     id="lastname-signup"
-                    type="lastname"
+                    type="text"
                     value={values.lastname}
                     name="lastname"
                     onBlur={handleBlur}
                     onChange={handleChange}
-                    placeholder="lname"
-                    inputProps={{}}
+                    placeholder="last name"
                   />
                 </Stack>
                 {touched.lastname && errors.lastname && (
@@ -149,41 +158,20 @@ export default function AuthRegister() {
                   </FormHelperText>
                 )}
               </Grid>
-              {/* <Grid item xs={12}>
-                <Stack spacing={1}>
-                  <InputLabel htmlFor="company-signup">Company</InputLabel>
-                  <OutlinedInput
-                    fullWidth
-                    error={Boolean(touched.company && errors.company)}
-                    id="company-signup"
-                    value={values.company}
-                    name="company"
-                    onBlur={handleBlur}
-                    onChange={handleChange}
-                    placeholder="Demo Inc."
-                    inputProps={{}}
-                  />
-                </Stack>
-                {touched.company && errors.company && (
-                  <FormHelperText error id="helper-text-company-signup">
-                    {errors.company}
-                  </FormHelperText>
-                )}
-              </Grid> */}
+              {/* Email / Username */}
               <Grid item xs={12}>
                 <Stack spacing={1}>
                   <InputLabel htmlFor="email-signup">Username*</InputLabel>
                   <OutlinedInput
                     fullWidth
                     error={Boolean(touched.email && errors.email)}
-                    id="email-login"
+                    id="email-signup"
                     type="email"
                     value={values.email}
                     name="email"
                     onBlur={handleBlur}
                     onChange={handleChange}
-                    placeholder="kk@trading.com"
-                    inputProps={{}}
+                    placeholder="email"
                   />
                 </Stack>
                 {touched.email && errors.email && (
@@ -192,6 +180,7 @@ export default function AuthRegister() {
                   </FormHelperText>
                 )}
               </Grid>
+              {/* Password */}
               <Grid item xs={12}>
                 <Stack spacing={1}>
                   <InputLabel htmlFor="password-signup">Password</InputLabel>
@@ -221,7 +210,6 @@ export default function AuthRegister() {
                       </InputAdornment>
                     }
                     placeholder="******"
-                    inputProps={{}}
                   />
                 </Stack>
                 {touched.password && errors.password && (
@@ -229,6 +217,7 @@ export default function AuthRegister() {
                     {errors.password}
                   </FormHelperText>
                 )}
+                {/* Password Strength Indicator */}
                 <FormControl fullWidth sx={{ mt: 2 }}>
                   <Grid container spacing={2} alignItems="center">
                     <Grid item>
@@ -242,9 +231,10 @@ export default function AuthRegister() {
                   </Grid>
                 </FormControl>
               </Grid>
-              {/* <Grid item xs={12}>
+              {/* Terms of Service */}
+              <Grid item xs={12}>
                 <Typography variant="body2">
-                  By Signing up, you agree to our &nbsp;
+                  By signing up, you agree to our &nbsp;
                   <Link variant="subtitle2" component={RouterLink} to="#">
                     Terms of Service
                   </Link>
@@ -253,15 +243,20 @@ export default function AuthRegister() {
                     Privacy Policy
                   </Link>
                 </Typography>
-              </Grid> */}
-              {errors.submit && (
-                <Grid item xs={12}>
-                  <FormHelperText error>{errors.submit}</FormHelperText>
-                </Grid>
-              )}
+              </Grid>
+              {/* Error Message */}
+              {/* Submit Button */}
               <Grid item xs={12}>
                 <AnimateButton>
-                  <Button disableElevation disabled={isSubmitting} fullWidth size="large" type="submit" variant="outlined" color="primary">
+                  <Button
+                    disableElevation
+                    disabled={isSubmitting}
+                    fullWidth
+                    size="large"
+                    type="submit"
+                    variant="outlined"
+                    color="primary"
+                  >
                     Create Account
                   </Button>
                 </AnimateButton>

@@ -1,12 +1,131 @@
 import React, { useEffect, useState } from 'react';
-import {Link} from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
+import { 
+  DataGrid, 
+  GridToolbarContainer,
+  GridToolbarFilterButton,
+  GridToolbarExport,
+  GridActionsCellItem 
+} from '@mui/x-data-grid';
+import {
+  Avatar,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Grid,
+  IconButton,
+  LinearProgress,
+  MenuItem,
+  Select,
+  Stack,
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
+  Typography
+} from '@mui/material';
+import {
+  Delete,
+  Edit,
+  Refresh,
+  PersonAdd,
+  ViewList,
+  GridView,
+  FilterList,
+  ImportExport,
+  Search
+} from '@mui/icons-material';
 import api from 'pages/api';
+import { styled } from '@mui/material/styles';
 
-const UsersPage = () => {
+const StyledDataGrid = styled(DataGrid)(({ theme }) => ({
+  '& .MuiDataGrid-columnHeaders': {
+    backgroundColor: theme.palette.grey[100],
+    borderRadius: 1
+  },
+  '& .MuiDataGrid-cell': {
+    borderBottom: `1px solid ${theme.palette.divider}`,
+  },
+  '& .MuiDataGrid-row:hover': {
+    backgroundColor: theme.palette.action.hover
+  },
+}));
+
+const UserStatusBadge = ({ status }) => (
+  <Chip 
+    label={status} 
+    color={status === 'Active' ? 'success' : 'error'} 
+    size="small" 
+    variant="outlined"
+  />
+);
+
+export default function UserListScreen() {
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [viewMode, setViewMode] = useState('table');
+  const [searchText, setSearchText] = useState('');
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    role: 'all',
+    status: 'all'
+  });
+
+  const columns = [
+    { 
+      field: 'name', 
+      headerName: 'User', 
+      flex: 1,
+      renderCell: (params) => (
+        <Stack direction="row" alignItems="center" spacing={2}>
+          <Avatar src={params.row.avatar} />
+          <Typography variant="body2">{params.value}</Typography>
+        </Stack>
+      )
+    },
+    { field: 'email', headerName: 'Email', flex: 1.5 },
+    { 
+      field: 'role', 
+      headerName: 'Role', 
+      renderCell: (params) => (
+        <Chip 
+          label={params.value} 
+          color={params.value === 'Admin' ? 'primary' : 'default'} 
+          size="small"
+        />
+      )
+    },
+    { 
+      field: 'status', 
+      headerName: 'Status', 
+      renderCell: (params) => <UserStatusBadge status={params.value} />
+    },
+    { 
+      field: 'actions', 
+      type: 'actions',
+      getActions: (params) => [
+        <GridActionsCellItem
+          icon={<Edit />}
+          label="Edit"
+          onClick={() => navigate(`/admin/edituser/${params._id}`)}
+        />,
+        <GridActionsCellItem
+          icon={<Delete />}
+          label="Delete"
+          onClick={() => handleOpenDeleteDialog([params.id])}
+        />
+      ]
+    }
+  ];
 
   useEffect(() => {
     fetchUsers();
@@ -14,115 +133,214 @@ const UsersPage = () => {
 
   const fetchUsers = async () => {
     try {
-      const { data } = await api.get('/api/users/');
-      setUsers(data);
-    } catch (error) {
-      toast.error('Failed to fetch users');
+      const { data } = await api.get('/api/users');
+      setUsers(data.map(user => ({
+        ...user,
+        status: user.isActive ? 'Active' : 'Inactive',
+        role: user.isAdmin ? 'Admin' : 'User'
+      })));
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDelete = async () => {
+  const handleDeleteUsers = async (ids) => {
     try {
-      await api.delete(`/api/users/${selectedUser._id}`);
-      toast.success('User deleted successfully');
-      fetchUsers();
-      setShowDeleteModal(false);
-    } catch (error) {
-      toast.error('Failed to delete user');
+      await Promise.all(ids.map(id => api.delete(`/api/users/${id}`)));
+      setUsers(users.filter(user => !ids.includes(user._id)));
+      setSelectedUsers([]);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
     }
   };
+
+  const handleOpenDeleteDialog = (ids) => {
+    setSelectedUsers(ids);
+    setDeleteDialogOpen(true);
+  };
+
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = user.name.toLowerCase().includes(searchText.toLowerCase()) ||
+                         user.email.toLowerCase().includes(searchText.toLowerCase());
+    const matchesRole = filters.role === 'all' || user.role === filters.role;
+    const matchesStatus = filters.status === 'all' || user.status === filters.status;
+    return matchesSearch && matchesRole && matchesStatus;
+  });
+
+  const CustomToolbar = () => (
+    <GridToolbarContainer>
+      <GridToolbarFilterButton />
+      <GridToolbarExport />
+      <Button 
+        startIcon={<Delete />}
+        onClick={() => handleOpenDeleteDialog(selectedUsers)}
+        disabled={!selectedUsers.length}
+      >
+        Delete Selected
+      </Button>
+    </GridToolbarContainer>
+  );
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">User Management</h1>
-        <Link href="/users/create" className="btn btn-primary">
-          Create New User
-        </Link>
-      </div>
+    <Box sx={{ p: 3 }}>
+      <Stack 
+        direction={{ xs: 'column', sm: 'row' }} 
+        spacing={2}
+        justifyContent="space-between"
+        sx={{ mb: 3 }}
+      >
+        <Typography variant="h4" component="h1">User Management</Typography>
+        
+        <Stack direction="row" spacing={2}>
+          <Button
+            variant="contained"
+            startIcon={<PersonAdd />}
+            onClick={() => navigate('/user/create')}
+          >
+            New User
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<Refresh />}
+            onClick={fetchUsers}
+          >
+            Refresh
+          </Button>
+        </Stack>
+      </Stack>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {users.map((user) => (
-              <tr key={user._id}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0 h-10 w-10">
-                      <img className="h-10 w-10 rounded-full" src={user.avatar || '/default-avatar.png'} alt="" />
-                    </div>
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                      <div className="text-sm text-gray-500">{user.contactNumber}</div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">{user.role}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                    {user.status || 'Active'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <Link to={`/admin/edituser/${user._id}`} className="text-indigo-600 hover:text-indigo-900 mr-4">
-                    Edit
-                  </Link>
-                  <Link to={`/users/update-password/${user._id}`} className="text-yellow-600 hover:text-yellow-900 mr-4">
-                    Password
-                  </Link>
-                  <button
-                    onClick={() => {
-                      setSelectedUser(user);
-                      setShowDeleteModal(true);
-                    }}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Stack 
+        direction={{ xs: 'column', sm: 'row' }} 
+        spacing={2}
+        sx={{ mb: 3 }}
+      >
+        <TextField
+          variant="outlined"
+          placeholder="Search users..."
+          InputProps={{ startAdornment: <Search sx={{ mr: 1 }} /> }}
+          fullWidth
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+        />
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-10 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-medium mb-4">Confirm Delete</h3>
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to delete user {selectedUser?.name}? This action cannot be undone.
-            </p>
-            <div className="flex justify-end space-x-4">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="btn btn-secondary"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                className="btn btn-danger"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
+        <Select
+          value={filters.role}
+          onChange={(e) => setFilters({ ...filters, role: e.target.value })}
+          sx={{ minWidth: 120 }}
+        >
+          <MenuItem value="all">All Roles</MenuItem>
+          <MenuItem value="Admin">Admin</MenuItem>
+          <MenuItem value="User">User</MenuItem>
+        </Select>
+
+        <Select
+          value={filters.status}
+          onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+          sx={{ minWidth: 120 }}
+        >
+          <MenuItem value="all">All Statuses</MenuItem>
+          <MenuItem value="Active">Active</MenuItem>
+          <MenuItem value="Inactive">Inactive</MenuItem>
+        </Select>
+
+        <ToggleButtonGroup
+          exclusive
+          value={viewMode}
+          onChange={(e, newMode) => setViewMode(newMode)}
+        >
+          <ToggleButton value="table" aria-label="Table view">
+            <ViewList />
+          </ToggleButton>
+          <ToggleButton value="grid" aria-label="Grid view">
+            <GridView />
+          </ToggleButton>
+        </ToggleButtonGroup>
+      </Stack>
+
+      {error && (
+        <Typography color="error" sx={{ mb: 2 }}>
+          Error: {error}
+        </Typography>
       )}
-    </div>
-  );
-};
 
-export default UsersPage;
+      {viewMode === 'table' ? (
+        <Box sx={{ height: 600, width: '100%' }}>
+          <StyledDataGrid
+            rows={filteredUsers}
+            columns={columns}
+            loading={loading}
+            checkboxSelection
+            disableSelectionOnClick
+            components={{
+              Toolbar: CustomToolbar,
+              LoadingOverlay: LinearProgress
+            }}
+            onSelectionModelChange={(newSelection) => {
+              setSelectedUsers(newSelection);
+            }}
+            selectionModel={selectedUsers}
+          />
+        </Box>
+      ) : (
+        <Grid container spacing={3}>
+          {filteredUsers.map((user) => (
+            <Grid item xs={12} sm={6} md={4} key={user._id}>
+              <Card sx={{ p: 2 }}>
+                <CardContent>
+                  <Stack direction="row" alignItems="center" spacing={2}>
+                    <Avatar src={user.avatar} sx={{ width: 56, height: 56 }} />
+                    <Box>
+                      <Typography variant="h6">{user.name}</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {user.email}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                  
+                  <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+                    <UserStatusBadge status={user.status} />
+                    <Chip label={user.role} size="small" variant="outlined" />
+                  </Stack>
+
+                  <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+                    <IconButton onClick={() => navigate(`/admin/edituser/${user._id}`)}>
+                      <Edit />
+                    </IconButton>
+                    <IconButton onClick={() => handleOpenDeleteDialog([user._id])}>
+                      <Delete />
+                    </IconButton>
+                  </Stack>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
+
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete {selectedUsers.length} 
+            {selectedUsers.length > 1 ? ' users' : ' user'}?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            color="error"
+            onClick={() => {
+              handleDeleteUsers(selectedUsers);
+              setDeleteDialogOpen(false);
+            }}
+          >
+            Confirm Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+}

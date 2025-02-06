@@ -64,6 +64,8 @@ export default function EditBillScreen() {
   const [outofStockProduct, setOutofstockProduct] = useState(null);
   const [displaysellingPrice, setDisplaysellingPrice] = useState('');
   const [fetchItemPrice, setFetchItemPrice] = useState('');
+    const [itemRemark, setItemRemark] = useState('');
+  
 
   // NEW: GST Rate for adding a product
   const [gstRateInput, setGstRateInput] = useState(18); // default 18
@@ -114,7 +116,8 @@ export default function EditBillScreen() {
   const showroomRef = useRef();
   const roundOffRef = useRef();
     const gstRateRef = useRef();
-  
+    const itemRemarkRef = useRef();
+    const mobileitemRemarkRef = useRef();
 
   const [billingsuggestions, setBillingSuggestions] = useState([]);
   const [selectedBillingSuggestions, setSelectedBillingSuggestions] = useState();
@@ -513,6 +516,7 @@ export default function EditBillScreen() {
       sellingPrice: parsedSellingPrice,
       sellingPriceinQty: adjustedSellingPrice,
       gstRate: parsedGstRate,
+      itemRemark: itemRemark
     };
 
     const updatedProducts = [productWithDetails, ...products];
@@ -579,7 +583,9 @@ export default function EditBillScreen() {
       }
     } else if (field === 'gstRate') {
       product.gstRate = parsedValue;
-    } else {
+    }else if(field === 'itemRemark'){
+      product.itemRemark = value.toString();
+    }  else {
       product[field] = parsedValue;
     }
 
@@ -722,6 +728,7 @@ const itemDiscount = itemBase * discountRatio;
         psRatio: p.psRatio || 0,
         // product-level GST
         gstRate: parseFloat(p.gstRate) || 0,
+        itemRemark: p.itemRemark,
       })),
     };
 
@@ -863,6 +870,7 @@ const itemDiscount = itemBase * discountRatio;
         unit: p.unit,
         size: p.size,
         gstRate: p.gstRate,
+        itemRemark: p.itemRemark
       })),
     };
 
@@ -1373,6 +1381,7 @@ const itemDiscount = itemBase * discountRatio;
                                 <i className="fa fa-cube" aria-hidden="true"></i>{' '}
                                 Name
                               </th>
+                              <th className='px-2 py-2 text-center'>Remark</th>
                               <th className="px-2 py-2 text-center">Quantity</th>
                               <th className="px-2 py-2 text-left">Unit</th>
                               <th className="px-2 py-2 text-center">
@@ -1443,6 +1452,20 @@ const netTotal = rateWithoutGST + gstAmount;
                                   >
                                     <td className="px-4 py-4 text-xs font-medium">
                                       {product.name} - {product.item_id}
+                                    </td>
+                                    <td className="px-2 py-2 text-center text-xs">
+                                      <input
+                                        type="text"
+                                        value={product.itemRemark}
+                                        onChange={(e) =>
+                                          handleEditProduct(
+                                            index,
+                                            'itemRemark',
+                                            e.target.value
+                                          )
+                                        }
+                                        className="w-16 text-center px-2 py-1 border rounded-md"
+                                      />
                                     </td>
                                     <td className="px-2 py-2 text-center text-xs">
                                       <input
@@ -1689,7 +1712,7 @@ const netTotal = rateWithoutGST + gstAmount;
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-7 gap-2 mt-2">
+                        <div className="grid grid-cols-8 gap-2 mt-2">
                           <div className="flex flex-col">
                             <label className="block text-gray-700 text-xs mb-1">
                               Unit
@@ -1745,7 +1768,7 @@ const netTotal = rateWithoutGST + gstAmount;
 
                           <div className="flex flex-col">
                             <label className="block text-gray-700 text-xs mb-1">
-                              Cus. Selling Price
+                              Cus. S Price
                             </label>
                             <input
                               type="number"
@@ -1769,15 +1792,30 @@ const netTotal = rateWithoutGST + gstAmount;
                               min={0}
                               value={gstRateInput}
                               onChange={(e) => setGstRateInput(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  handleAddProductWithQuantity();
-                                }
-                              }}
+                              onKeyDown={(e) => changeRef(e, itemRemarkRef)}
                               className="w-full border border-gray-300 px-2 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
                               placeholder="e.g. 18"
                             />
                           </div>
+
+                          <div className="flex flex-col">
+                          <label className="block text-gray-700 text-xs mb-1">
+                            Item Remark
+                          </label>
+                          <input
+                            type="text"
+                            ref={itemRemarkRef}
+                            value={itemRemark}
+                            onChange={(e) => setItemRemark(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleAddProductWithQuantity();
+                              }
+                            }}
+                            className="w-full border border-gray-300 px-2 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
+                            placeholder="remark"
+                          />
+                        </div>
 
                           <div
                             className={`flex flex-col items-center justify-center bg-gray-50 p-2 rounded-md ${
@@ -2048,6 +2086,26 @@ const netTotal = rateWithoutGST + gstAmount;
                         />
                       </div>
 
+
+                      <div className="mt-2 mb-2 text-xs font-bold text-gray-700">
+                          <label className="block">
+                            Item Remark
+                          </label>
+                          <input
+                            type="text"
+                            ref={mobileitemRemarkRef}
+                            value={p.itemRemark}
+                            onChange={(e) =>
+                              handleEditProduct(
+                                index,
+                                'itemRemark',
+                                e.target.value
+                              )
+                            }                            className="w-full border border-gray-300 px-2 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
+                            placeholder="remark"
+                          />
+                        </div>
+
                       <button
                         className="bg-red-500 text-xs w-full text-white font-bold py-2 px-4 rounded focus:outline-none hover:bg-red-600"
                         onClick={handleAddProductWithQuantity}
@@ -2206,6 +2264,24 @@ const netTotal = rateWithoutGST + gstAmount;
                                     className="w-20 border border-gray-300 px-2 py-1 rounded-md text-xs text-center bg-gray-100"
                                   />
                                 </div>
+                                <div className="mt-2 mb-2 text-xs font-bold text-gray-700">
+                          <label className="block">
+                            Item Remark
+                          </label>
+                          <input
+                            type="text"
+                            ref={mobileitemRemarkRef}
+                            value={product.itemRemark}
+                            onChange={(e) =>
+                              handleEditProduct(
+                                index,
+                                'itemRemark',
+                                e.target.value
+                              )
+                            }                            className="w-full border border-gray-300 px-2 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
+                            placeholder="remark"
+                          />
+                        </div>
                                 <div className="flex justify-between items-center">
                                   <span className="text-xs font-semibold">
                                     Base Total:

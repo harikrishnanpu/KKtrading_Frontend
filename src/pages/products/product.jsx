@@ -184,10 +184,7 @@ export default function ProductScreen() {
         <Container
           maxWidth="lg"
           sx={{
-            minHeight: '60vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            width: "100%"
           }}
         >
           <CircularProgress />
@@ -199,14 +196,12 @@ export default function ProductScreen() {
   if (error || !product) {
     return (
       <MinimalBackground>
-        <Container maxWidth="md" sx={{ py: 6 }}>
           <Alert severity="error" sx={{ mb: 2 }}>
             {error || 'Product not found'}
           </Alert>
           <Button variant="contained" color="error" onClick={() => navigate('/products/all')}>
             See All Products
           </Button>
-        </Container>
       </MinimalBackground>
     );
   }
@@ -225,7 +220,6 @@ export default function ProductScreen() {
   // ============== Main Render ==============
   return (
     <MinimalBackground>
-      <Container maxWidth="lg">
         <StyledPaper>
           <Grid container spacing={4}>
             {/* ================= Image Section ================= */}
@@ -469,7 +463,6 @@ export default function ProductScreen() {
             Search Another Product? Click here
           </Link>
         </Box>
-      </Container>
     </MinimalBackground>
   );
 }
