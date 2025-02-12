@@ -19,6 +19,8 @@ export default function EditPurchaseScreen() {
   const [sellerGst, setSellerGst] = useState("");
   const [sellerSuggestions, setSellerSuggestions] = useState([]);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
+    const [hsnCode, setHsnCode] = useState("");
+  
 
   // Purchase Information
   const [purchaseId, setPurchaseId] = useState("");
@@ -109,6 +111,8 @@ export default function EditPurchaseScreen() {
   const actLengthRef = useRef();
   const actBreadthRef = useRef();
   const itemGstRef = useRef();
+    const hsnCodeRef = useRef();
+  
 
   // ----------------------------
   // Auto-hide messages
@@ -447,6 +451,8 @@ export default function EditPurchaseScreen() {
       quantityInNumbers,
       billPriceInNumbers,
       cashPriceInNumbers,
+      hsnCode: hsnCode
+
     };
 
     setItems([newItem, ...items]);
@@ -471,6 +477,7 @@ export default function EditPurchaseScreen() {
     setActLength("");
     setActBreadth("");
     setItemStock("0");
+    setHsnCode("");
     setItemGst("18"); // reset GST to default or empty
   };
 
@@ -497,6 +504,7 @@ export default function EditPurchaseScreen() {
         setSUnit(data.sUnit);
         setItemUnit(data.pUnit);
         setItemStock(data.countInStock);
+        setHsnCode(data.hsnCode);
         setActLength(data.actLength);
         setActBreadth(data.actBreadth);
         // If your backend has an item GST field, use it; else default to "18"
@@ -727,6 +735,7 @@ export default function EditPurchaseScreen() {
         cashPartPrice: item.cashPrice,
         billPartPriceInNumbers: item.billPriceInNumbers,
         cashPartPriceInNumbers: item.cashPriceInNumbers,
+        hsnCode: item.hsnCode,
         gstPercent: item.gstPercent, // NEW: sending item-level GST
         allocatedOtherExpense: perItemOtherExpense * item.quantityInNumbers,
         totalPriceInNumbers:
@@ -1410,12 +1419,12 @@ export default function EditPurchaseScreen() {
                     {/* Left Section: Input Fields */}
                     <div className="flex-1">
                       <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
                           <div className="flex flex-col">
                             <label className="mb-1 flex items-center text-xs text-gray-700">
                               <span>Item ID</span>
                               <span className="italic ml-auto text-gray-300">
-                                Last Item: {lastItemId || "Not found"}
+                              {lastItemId || "Not found"}
                               </span>
                             </label>
                             <input
@@ -1443,11 +1452,28 @@ export default function EditPurchaseScreen() {
                               ref={itemNameRef}
                               value={itemName}
                               onChange={(e) => setItemName(e.target.value)}
+                              onKeyDown={(e) => changeRef(e, hsnCodeRef)}
+                              className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
+                              required
+                            />
+                          </div>
+
+                          <div className="flex flex-col">
+                            <label className="text-xs text-gray-700 mb-1">
+                             HsnCode
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="Enter Item Hsn"
+                              ref={hsnCodeRef}
+                              value={hsnCode}
+                              onChange={(e) => setHsnCode(e.target.value)}
                               onKeyDown={(e) => changeRef(e, itemBrandRef)}
                               className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
                               required
                             />
                           </div>
+
 
                           <div className="flex flex-col">
                             <label className="text-xs text-gray-700 mb-1">

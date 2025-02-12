@@ -36,6 +36,7 @@ export default function PurchasePage() {
   const [items, setItems] = useState([]);
   const [itemLoading, setItemLoading] = useState(false);
   const [itemId, setItemId] = useState("");
+  const [hsnCode, setHsnCode] = useState("");
   const [itemName, setItemName] = useState("");
   const [itemQuantity, setItemQuantity] = useState("");
   const [itemUnit, setItemUnit] = useState("");
@@ -89,6 +90,7 @@ export default function PurchasePage() {
   const sellerNameRef = useRef();
   const sellerAddressRef = useRef();
   const sellerGstRef = useRef();
+  const hsnCodeRef = useRef();
   const purchaseIdRef = useRef();
   const invoiceNoRef = useRef();
   const billingDateRef = useRef();
@@ -347,6 +349,7 @@ export default function PurchasePage() {
       billPriceInNumbers,
       cashPriceInNumbers,
       gstPercent: productGst, // <-- NEW FIELD
+      hsnCode: hsnCode
     };
 
     setItems([newItem, ...items]);
@@ -373,6 +376,7 @@ export default function PurchasePage() {
     setActLength("");
     setActBreadth("");
     setItemStock("0");
+    setHsnCode("");
     setItemGst("18"); // reset GST to default or empty
   };
 
@@ -399,6 +403,7 @@ export default function PurchasePage() {
         setSize(data.size);
         setSUnit(data.sUnit);
         setItemUnit(data.pUnit);
+        setHsnCode(data.hsnCode);
         setItemStock(data.countInStock);
         setActLength(data.actLength);
         setActBreadth(data.actBreadth);
@@ -665,6 +670,7 @@ export default function PurchasePage() {
         billPartPriceInNumbers: item.billPriceInNumbers,
         cashPartPriceInNumbers: item.cashPriceInNumbers,
         allocatedOtherExpense: perItemOtherExpense * item.quantityInNumbers,
+        hsnCode: item.hsnCode,
         totalPriceInNumbers:
           item.billPriceInNumbers + item.cashPriceInNumbers + perItemOtherExpense,
         gstPercent: item.gstPercent, // NEW: sending item-level GST to backend
@@ -1415,12 +1421,12 @@ export default function PurchasePage() {
                     <div className="flex-1">
                       {/* Item Details */}
                       <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
                           <div className="flex flex-col">
                             <label className="mb-1 flex items-center text-xs text-gray-700">
                               <span>Item ID</span>
                               <span className="italic ml-auto text-gray-300">
-                                Last Item: {lastItemId || "Not found"}
+                              {lastItemId || "Not found"}
                               </span>
                             </label>
                             <input
@@ -1448,6 +1454,22 @@ export default function PurchasePage() {
                               ref={itemNameRef}
                               value={itemName}
                               onChange={(e) => setItemName(e.target.value)}
+                              onKeyDown={(e) => changeRef(e, hsnCodeRef)}
+                              className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
+                              required
+                            />
+                          </div>
+
+                          <div className="flex flex-col">
+                            <label className="text-xs text-gray-700 mb-1">
+                             HsnCode
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="Enter Item Hsn"
+                              ref={hsnCodeRef}
+                              value={hsnCode}
+                              onChange={(e) => setHsnCode(e.target.value)}
                               onKeyDown={(e) => changeRef(e, itemBrandRef)}
                               className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
                               required
