@@ -252,7 +252,8 @@ export default function PurchasePage() {
       psRatio === "" ||
       length === "" ||
       breadth === "" ||
-      itemGst === ""
+      itemGst === "" ||
+      hsnCode === "" 
     ) {
       setError("Please fill in all required fields before adding an item.");
       setShowErrorModal(true);
@@ -454,9 +455,10 @@ export default function PurchasePage() {
     try {
       const { data } = await api.get(`/api/transportpayments/name/${e.target.value}`);
       if (type === "local") {
-        setLocalCompanyGst(data.transportGst);
+        setLocalCompanyGst(data.companyGst);
       } else if (type === "logistic") {
-        setLogisticCompanyGst(data.transportGst);
+        console.log(data);
+        setLogisticCompanyGst(data.companyGst);
       }
     } catch (err) {
       setError("Error fetching transporter details.");

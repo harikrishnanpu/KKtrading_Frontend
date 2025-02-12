@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../api";
+import { useGetMenuMaster } from "api/menu";
 
 export default function EditPurchaseScreen() {
   const { id } = useParams(); // Purchase ID from URL
@@ -20,6 +21,8 @@ export default function EditPurchaseScreen() {
   const [sellerSuggestions, setSellerSuggestions] = useState([]);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
     const [hsnCode, setHsnCode] = useState("");
+        const {menuMaster} = useGetMenuMaster();
+    
   
 
   // Purchase Information
@@ -366,7 +369,8 @@ export default function EditPurchaseScreen() {
       actLength === "" ||
       actBreadth === "" ||
       size === "" ||
-      itemGst === ""
+      itemGst === "" ||
+      hsnCode === ""
     ) {
       setError("Please fill in all required fields before adding an item.");
       setShowErrorModal(true);
@@ -824,9 +828,9 @@ export default function EditPurchaseScreen() {
     try {
       const { data } = await api.get(`/api/transportpayments/name/${e.target.value}`);
       if (type === "local") {
-        setLocalCompanyGst(data.transportGst);
+        setLocalCompanyGst(data.companyGst);
       } else if (type === "logistic") {
-        setLogisticCompanyGst(data.transportGst);
+        setLogisticCompanyGst(data.companyGst);
       }
     } catch (err) {
       setError("Error fetching transporter details.");
@@ -1414,8 +1418,20 @@ export default function EditPurchaseScreen() {
                 )}
 
                 {/* Input Section */}
-                <div className="p-4 md:fixed bottom-0 left-0 right-0 bg-white shadow-inner">
-                  <div className="md:flex justify-between space-x-2">
+                <div   style={{
+    zIndex: 100,
+    left: menuMaster.isDashboardDrawerOpened
+      ? '280px' : 'auto' ||
+       menuMaster.isComponentDrawerOpened
+      ? '80px'
+      : 'auto',
+    width: menuMaster.isDashboardDrawerOpened
+      ? 'calc(100% - 280px)' : '100%' ||
+     menuMaster.isComponentDrawerOpened
+      ? 'calc(100% - 80px)'
+      : '100%',
+  }} className="p-4 md:fixed bottom-0 left-0 right-0 bg-white shadow-inner">
+                      <div className="md:flex justify-between space-x-2">
                     {/* Left Section: Input Fields */}
                     <div className="flex-1">
                       <div className="space-y-4">

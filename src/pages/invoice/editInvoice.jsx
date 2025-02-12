@@ -1,5 +1,5 @@
 // src/screens/EditBillScreen.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import SummaryModal from 'components/invoice/SummaryModal';
 import OutOfStockModal from 'components/invoice/itemAddingModal';
@@ -7,6 +7,24 @@ import api from '../api';
 import useAuth from 'hooks/useAuth';
 import { useGetMenuMaster } from 'api/menu';
 import { openSnackbar } from 'api/snackbar';
+import { 
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  useMediaQuery,
+  useTheme,
+  Slide,
+  FormControlLabel,
+  Checkbox,
+  Button
+} from '@mui/material';
+
+
+const Transition = forwardRef(function Transition(props, ref) {
+  return <Slide direction="up" ref={ref} {...props} />;
+});
+
 
 export default function EditBillScreen() {
   const navigate = useNavigate();
@@ -80,6 +98,27 @@ export default function EditBillScreen() {
   // Loading States
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+
+  // Add these at the top with your other useState hooks:
+const [showPrintModal, setShowPrintModal] = useState(false);
+
+// We store which columns to show. By default, all columns are `true`:
+const [printOptions, setPrintOptions] = useState({
+  showItemId: true,
+  showItemName: true,
+  showItemRemark: true,
+  showQuantity: true,
+  showUnit: true,
+  showPrice: true,
+  showRate: true,
+  showGst: true,
+  showCgst: true,
+  showSgst: true,
+  showDiscount: true,
+  showNetAmount: true,
+});
+
 
   // Refs for Input Navigation
   const invoiceNoRef = useRef();
@@ -709,7 +748,7 @@ const itemDiscount = itemBase * discountRatio;
       unloading,
       showroom,
       transportation,
-      handlingcharge: handlingCharge,
+      handlingCharge: handlingCharge,
       remark,
       discount,
       products: products.map((p) => ({
@@ -831,7 +870,7 @@ const itemDiscount = itemBase * discountRatio;
   };
 
   // Print Invoice
-  const printInvoice = () => {
+  function printInvoice(options) {
     const formData = {
       invoiceNo,
       invoiceDate,
@@ -858,36 +897,38 @@ const itemDiscount = itemBase * discountRatio;
       cgst,
       sgst,
       discount,
-      products: products.map((p) => ({
-        item_id: p.item_id,
-        name: p.name,
-        category: p.category,
-        brand: p.brand,
-        quantity: p.quantity,
-        sellingPrice: p.sellingPrice,
-        enteredQty: p.enteredQty,
-        sellingPriceinQty: p.sellingPriceinQty,
-        unit: p.unit,
-        size: p.size,
-        gstRate: p.gstRate,
-        itemRemark: p.itemRemark
+      // Existing product mapping
+      products: products.map((product) => ({
+        item_id: product.item_id,
+        name: product.name,
+        category: product.category,
+        brand: product.brand,
+        quantity: product.quantity,
+        sellingPrice: product.sellingPrice,
+        enteredQty: product.enteredQty,
+        sellingPriceinQty: product.sellingPriceinQty,
+        unit: product.unit,
+        size: product.size,
+        gstRate: product.gstRate,
+        itemRemark: product.itemRemark
       })),
+      // NEW: pass the user-selected print options
+      printOptions: options
     };
-
+  
     api
-      .post('api/print/generate-invoice-html', formData)
+      .post('/api/print/generate-invoice-html', formData)
       .then((response) => {
-        const htmlContent = response.data;
+        const htmlContent = response.data; 
         const printWindow = window.open('', '', 'height=800,width=600');
         printWindow.document.write(htmlContent);
         printWindow.document.close();
-        printWindow.print();
       })
       .catch((error) => {
         console.error('Error:', error);
-        setError('Failed to print invoice.');
       });
-  };
+  }
+  
 
   // Handle Step Navigation
   const nextStep = () => {
@@ -1048,14 +1089,15 @@ const itemDiscount = itemBase * discountRatio;
             </button>
 
             <button
-              onClick={printInvoice}
-              className={`mb-2 bg-red-500 text-xs text-white font-bold py-2 px-4 rounded-lg mr-2 ${
-                products.length === 0 ? 'opacity-70 cursor-not-allowed' : 'hover:bg-red-600'
-              }`}
-              disabled={products.length === 0 || !userInfo.isAdmin}
-            >
-              <i className="fa fa-print" />
-            </button>
+  onClick={() => setShowPrintModal(true)}
+  className={`mb-2 bg-red-500 text-xs text-white font-bold py-2 px-4 rounded-lg mr-2 ${
+    products.length === 0 ? 'opacity-70 cursor-not-allowed' : 'hover:bg-red-600'
+  }`}
+  disabled={products.length === 0 || !userInfo.isAdmin}
+>
+  <i className="fa fa-print" aria-hidden="true" />
+</button>
+
 
             <button
               onClick={() => setShowSummaryModal(true)}
@@ -2442,6 +2484,222 @@ const netTotal = rateWithoutGST + gstAmount;
           stockRef={outOfStockRef}
         />
       )}
+
+
+
+<Dialog
+  open={showPrintModal}
+  onClose={() => setShowPrintModal(false)}
+  TransitionComponent={Transition}
+  // For full screen on small devices, partial width on larger:
+  fullScreen={useMediaQuery(useTheme().breakpoints.down('sm'))}
+  maxWidth="sm"
+  fullWidth
+>
+  <DialogTitle>Select Print Options</DialogTitle>
+
+  <DialogContent dividers>
+    <div className="grid grid-cols-2 gap-2 text-sm text-gray-700 mb-4">
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={printOptions.showItemId}
+            onChange={() =>
+              setPrintOptions((prev) => ({
+                ...prev,
+                showItemId: !prev.showItemId
+              }))
+            }
+          />
+        }
+        label="Item ID"
+      />
+
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={printOptions.showItemName}
+            onChange={() =>
+              setPrintOptions((prev) => ({
+                ...prev,
+                showItemName: !prev.showItemName
+              }))
+            }
+          />
+        }
+        label="Item Name"
+      />
+
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={printOptions.showItemRemark}
+            onChange={() =>
+              setPrintOptions((prev) => ({
+                ...prev,
+                showItemRemark: !prev.showItemRemark
+              }))
+            }
+          />
+        }
+        label="Item Remark"
+      />
+
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={printOptions.showQuantity}
+            onChange={() =>
+              setPrintOptions((prev) => ({
+                ...prev,
+                showQuantity: !prev.showQuantity
+              }))
+            }
+          />
+        }
+        label="Quantity"
+      />
+
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={printOptions.showUnit}
+            onChange={() =>
+              setPrintOptions((prev) => ({
+                ...prev,
+                showUnit: !prev.showUnit
+              }))
+            }
+          />
+        }
+        label="Unit"
+      />
+
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={printOptions.showPrice}
+            onChange={() =>
+              setPrintOptions((prev) => ({
+                ...prev,
+                showPrice: !prev.showPrice
+              }))
+            }
+          />
+        }
+        label="Price"
+      />
+
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={printOptions.showRate}
+            onChange={() =>
+              setPrintOptions((prev) => ({
+                ...prev,
+                showRate: !prev.showRate
+              }))
+            }
+          />
+        }
+        label="Rate"
+      />
+
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={printOptions.showGst}
+            onChange={() =>
+              setPrintOptions((prev) => ({
+                ...prev,
+                showGst: !prev.showGst
+              }))
+            }
+          />
+        }
+        label="GST %"
+      />
+
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={printOptions.showCgst}
+            onChange={() =>
+              setPrintOptions((prev) => ({
+                ...prev,
+                showCgst: !prev.showCgst
+              }))
+            }
+          />
+        }
+        label="CGST"
+      />
+
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={printOptions.showSgst}
+            onChange={() =>
+              setPrintOptions((prev) => ({
+                ...prev,
+                showSgst: !prev.showSgst
+              }))
+            }
+          />
+        }
+        label="SGST"
+      />
+
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={printOptions.showDiscount}
+            onChange={() =>
+              setPrintOptions((prev) => ({
+                ...prev,
+                showDiscount: !prev.showDiscount
+              }))
+            }
+          />
+        }
+        label="Discount"
+      />
+
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={printOptions.showNetAmount}
+            onChange={() =>
+              setPrintOptions((prev) => ({
+                ...prev,
+                showNetAmount: !prev.showNetAmount
+              }))
+            }
+          />
+        }
+        label="Net Amount"
+      />
+    </div>
+  </DialogContent>
+
+  <DialogActions>
+    <Button onClick={() => setShowPrintModal(false)} color="error">
+      Close
+    </Button>
+    <Button
+      variant="outlined"
+      color="primary"
+      onClick={() => {
+        setShowPrintModal(false);
+        printInvoice(printOptions);
+      }}
+    >
+      Print Invoice
+    </Button>
+  </DialogActions>
+</Dialog>
+
+
 
       {/* Error Message */}
       {error && (
