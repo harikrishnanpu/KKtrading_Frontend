@@ -5,10 +5,10 @@ export const facebookColor = '#3b5998';
 export const linkedInColor = '#0e76a8';
 
 export const APP_DEFAULT_PATH = '/dashboard/default/';
-export const HORIZONTAL_MAX_ITEM = 6;
+export const HORIZONTAL_MAX_ITEM = 10;
 export const DRAWER_WIDTH = 280;
 export const MINI_DRAWER_WIDTH = 90;
-export const HEADER_HEIGHT = 74;
+export const HEADER_HEIGHT = 60;
 
 export let SimpleLayoutType;
 
@@ -65,7 +65,7 @@ export let DropzopType;
 const config = {
   fontFamily: `Inter var`,
   i18n: 'en',
-  menuOrientation: MenuOrientation.VERTICAL,
+  menuOrientation: MenuOrientation.HORIZONTAL,
   menuCaption: true,
   miniDrawer: false,
   container: false,

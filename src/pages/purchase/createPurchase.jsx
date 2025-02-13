@@ -669,12 +669,12 @@ export default function PurchasePage() {
         size: item.size,
         billPartPrice: item.billPrice,
         cashPartPrice: item.cashPrice,
-        billPartPriceInNumbers: item.billPriceInNumbers,
+        billPartPriceInNumbers: item.billPriceInNumbers * (1 + item.gstPercent / 100),
         cashPartPriceInNumbers: item.cashPriceInNumbers,
         allocatedOtherExpense: perItemOtherExpense * item.quantityInNumbers,
         hsnCode: item.hsnCode,
         totalPriceInNumbers:
-          item.billPriceInNumbers + item.cashPriceInNumbers + perItemOtherExpense,
+          item.billPriceInNumbers * (1 + item.gstPercent / 100) + item.cashPriceInNumbers + perItemOtherExpense,
         gstPercent: item.gstPercent, // NEW: sending item-level GST to backend
       })),
       totals: {
@@ -1406,19 +1406,7 @@ export default function PurchasePage() {
                 </div>
 
                 {/* Input Section */}
-                <div   style={{
-    zIndex: 100,
-    left: menuMaster.isDashboardDrawerOpened
-      ? '280px' : 'auto' ||
-       menuMaster.isComponentDrawerOpened
-      ? '80px'
-      : 'auto',
-    width: menuMaster.isDashboardDrawerOpened
-      ? 'calc(100% - 280px)' : '100%' ||
-     menuMaster.isComponentDrawerOpened
-      ? 'calc(100% - 80px)'
-      : '100%',
-  }} className="p-4 md:fixed bottom-0 left-0 right-0 bg-white shadow-inner">
+                <div  className="p-4 md:fixed bottom-0 left-0 right-0 bg-white shadow-inner">
                   <div className="md:flex justify-between space-x-2">
                     <div className="flex-1">
                       {/* Item Details */}

@@ -737,13 +737,13 @@ export default function EditPurchaseScreen() {
         actBreadth: item.actBreadth,
         billPartPrice: item.billPrice,
         cashPartPrice: item.cashPrice,
-        billPartPriceInNumbers: item.billPriceInNumbers,
+        billPartPriceInNumbers: item.billPriceInNumbers * (1 + item.gstPercent / 100),
         cashPartPriceInNumbers: item.cashPriceInNumbers,
         hsnCode: item.hsnCode,
         gstPercent: item.gstPercent, // NEW: sending item-level GST
         allocatedOtherExpense: perItemOtherExpense * item.quantityInNumbers,
         totalPriceInNumbers:
-          item.billPriceInNumbers + item.cashPriceInNumbers + perItemOtherExpense,
+        item.billPriceInNumbers * (1 + item.gstPercent / 100) + item.cashPriceInNumbers + perItemOtherExpense,
       })),
       totals: {
         billPartTotal,
@@ -792,7 +792,7 @@ export default function EditPurchaseScreen() {
       const response = await api.put(`/api/products/purchase/${purchaseId}`, purchaseData);
       if (response.status === 200) {
         alert("Purchase updated successfully!");
-        navigate("/allpurchases");
+        navigate("/purchase/list");
       } else {
         setError("Error updating purchase. Please try again.");
         setShowErrorModal(true);
@@ -1418,19 +1418,7 @@ export default function EditPurchaseScreen() {
                 )}
 
                 {/* Input Section */}
-                <div   style={{
-    zIndex: 100,
-    left: menuMaster.isDashboardDrawerOpened
-      ? '280px' : 'auto' ||
-       menuMaster.isComponentDrawerOpened
-      ? '80px'
-      : 'auto',
-    width: menuMaster.isDashboardDrawerOpened
-      ? 'calc(100% - 280px)' : '100%' ||
-     menuMaster.isComponentDrawerOpened
-      ? 'calc(100% - 80px)'
-      : '100%',
-  }} className="p-4 md:fixed bottom-0 left-0 right-0 bg-white shadow-inner">
+                <div  className="p-4 md:fixed bottom-0 left-0 right-0 bg-white shadow-inner">
                       <div className="md:flex justify-between space-x-2">
                     {/* Left Section: Input Fields */}
                     <div className="flex-1">

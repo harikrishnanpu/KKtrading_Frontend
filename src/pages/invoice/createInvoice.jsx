@@ -1733,19 +1733,6 @@ const netTotal = rateWithoutGST + gstAmount;
 
                 {/* Bottom Fixed Section: Item Inputs */}
                 <div
-  style={{
-    zIndex: 100,
-    left: menuMaster.isDashboardDrawerOpened
-      ? '280px' : 'auto' ||
-       menuMaster.isComponentDrawerOpened
-      ? '80px'
-      : 'auto',
-    width: menuMaster.isDashboardDrawerOpened
-      ? 'calc(100% - 280px)' : '100%' ||
-     menuMaster.isComponentDrawerOpened
-      ? 'calc(100% - 80px)'
-      : '100%',
-  }}
   className="fixed bottom-0 right-0 bg-white px-4 pt-4 pb-4 border-t shadow-inner"
 >              <div className="flex justify-between">
                     <div className="w-4/5">
