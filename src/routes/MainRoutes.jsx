@@ -108,12 +108,20 @@ const Notifications = Loadable(lazy(() => import('pages/notifications/notificati
 const AllUsers  = Loadable(lazy(() => import('pages/admin/allUers')));
 const EditUser = Loadable(lazy(() => import('pages/admin/editUser')));
 
+
+const EmployeeApprovalScreen = Loadable(lazy(() => import('pages/auth/auth1/employee-approval')));
+
+
 // ==============================|| MAIN ROUTES ||============================== //
 
 const MainRoutes = {
   path: '/',
   element: <TabsLayout />,
   children: [
+      {
+        path: '/employee',
+        element: <EmployeeApprovalScreen />
+      },
     {
       path: '/',
       element: 

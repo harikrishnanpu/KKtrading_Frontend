@@ -70,7 +70,7 @@ export default function MainLayout() {
 
   return (
     <AuthGuard>
-      <Box sx={{ display: 'flex', width: '100%' }}>
+      <Box sx={{ display: 'flex', width: '93%' }}>
         <Header />
         {!isHorizontal ? <Drawer /> : <HorizontalBar />}
 

@@ -1733,7 +1733,10 @@ const netTotal = rateWithoutGST + gstAmount;
 
                 {/* Bottom Fixed Section: Item Inputs */}
                 <div
-  className="fixed bottom-0 right-0 bg-white px-4 pt-4 pb-4 border-t shadow-inner"
+                style={{
+                  width: '96%'
+                }}
+  className="fixed bottom-0 left-0 bg-white px-4 pt-4 pb-4 border-t shadow-inner"
 >              <div className="flex justify-between">
                     <div className="w-4/5">
                       <div className="grid grid-cols-4 gap-2">
@@ -2290,11 +2293,31 @@ const netTotal = rateWithoutGST + gstAmount;
                       )
                       .map((product, index) => {
                         // Compute base total / GST for mobile
-                        const baseTotal =
-                          product.quantity * product.sellingPriceinQty -
-                          product.quantity * perItemDiscount;
-                        const productGstAmount = baseTotal * (product.gstRate / 100);
-                        const netTotal = baseTotal + productGstAmount;
+                        const qty = parseFloat(product.quantity) || 0;
+                        const priceInQty = parseFloat(product.sellingPriceinQty) || 0;
+                        const gstRate = parseFloat(product.gstRate) || 0;
+                        
+                        // Base
+                        const itemBase = qty * priceInQty;
+                        
+                        // This row's discount portion: "itemBase / sumOfBase * discount"
+                        let sumOfBase = 0;
+                        products.forEach((p) => {
+                          sumOfBase += (parseFloat(p.quantity) || 0) * (parseFloat(p.sellingPriceinQty) || 0);
+                        });
+                        const discountRatio = sumOfBase > 0 ? (parseFloat(discount) || 0) / sumOfBase : 0;
+                        const itemDiscount = itemBase * discountRatio;
+                        
+                        const rateWithoutGST = itemBase / (1 + gstRate / 100) - itemDiscount;
+                        
+                        // After discount
+                        const baseTotal = rateWithoutGST;
+                        
+                        // GST on discounted base
+                        const gstAmount = rateWithoutGST * (1 + gstRate / 100) - rateWithoutGST;
+                        
+                        // Final net per item
+                        const netTotal = rateWithoutGST + gstAmount;
 
                         return (
                           <div
@@ -2381,7 +2404,7 @@ const netTotal = rateWithoutGST + gstAmount;
                                   <input
                                     type="text"
                                     readOnly
-                                    value={productGstAmount.toFixed(2)}
+                                    value={gstAmount.toFixed(2)}
                                     className="w-full border border-gray-300 px-2 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs bg-gray-50"
                                   />
                                 </div>

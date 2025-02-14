@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const axiosServices = axios.create({ baseURL: import.meta.env.VITE_APP_API_URL || 'http://localhost:3010/' });
+const axiosServices = axios.create({ baseURL: import.meta.env.VITE_APP_API_URL || 'https://kk-back-end-kappa.vercel.app/' });
 
 // ==============================|| AXIOS - FOR MOCK SERVICES ||============================== //
 

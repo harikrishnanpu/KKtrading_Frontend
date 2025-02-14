@@ -1608,7 +1608,10 @@ const netTotal = rateWithoutGST + gstAmount;
 
                 {/* Bottom fixed row for adding items */}
                 <div
-  className="fixed bottom-0 right-0 bg-white px-4 pt-4 pb-4 border-t shadow-inner"
+                                style={{
+                                  width: '96%'
+                                }}
+  className="fixed bottom-0 left-0 bg-white px-4 pt-4 pb-4 border-t shadow-inner"
 >                    <div className="flex justify-between">
                       <div className="w-4/5">
                         <div className="grid grid-cols-4 gap-2">

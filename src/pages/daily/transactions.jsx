@@ -979,22 +979,11 @@ const DailyTransactions = () => {
 
           {/* Bottom Fixed Actions Bar (unified for all screens) */}
           <div
-            style={{
-              zIndex: 100,
-              // If one drawer is open, shift accordingly; else full width
-              left: menuMaster.isDashboardDrawerOpened
-                ? '280px'
-                : menuMaster.isComponentDrawerOpened
-                ? '80px'
-                : '0px',
-              width: menuMaster.isDashboardDrawerOpened
-                ? 'calc(100% - 280px)'
-                : menuMaster.isComponentDrawerOpened
-                ? 'calc(100% - 80px)'
-                : '100%',
-            }}
-            className="fixed bottom-0 shadow-inner bg-white p-2 flex justify-around border-t"
-          >
+          style={{
+            zIndex: 1000
+          }}
+  className="fixed bottom-0 left-0 right-0 w-full bg-white px-4 pt-4 pb-4 border-t shadow-inner flex justify-around"
+  >
             <button
               onClick={() => openModal('in')}
               className="flex font-bold items-center justify-center bg-green-500 text-white w-12 h-12 rounded-full shadow-lg hover:bg-green-600 transition"

@@ -116,7 +116,7 @@ export default function UserListScreen() {
         <GridActionsCellItem
           icon={<Edit />}
           label="Edit"
-          onClick={() => navigate(`/admin/edituser/${params._id}`)}
+          onClick={() => navigate(`/admin/edituser/${params.id}`)}
         />,
         <GridActionsCellItem
           icon={<Delete />}
@@ -134,8 +134,10 @@ export default function UserListScreen() {
   const fetchUsers = async () => {
     try {
       const { data } = await api.get('/api/users');
+      // Map the returned user so that each has an "id" property for DataGrid
       setUsers(data.map(user => ({
         ...user,
+        id: user._id,
         status: user.isActive ? 'Active' : 'Inactive',
         role: user.isAdmin ? 'Admin' : 'User'
       })));
@@ -149,7 +151,7 @@ export default function UserListScreen() {
   const handleDeleteUsers = async (ids) => {
     try {
       await Promise.all(ids.map(id => api.delete(`/api/users/${id}`)));
-      setUsers(users.filter(user => !ids.includes(user._id)));
+      setUsers(users.filter(user => !ids.includes(user.id)));
       setSelectedUsers([]);
     } catch (err) {
       setError(err.response?.data?.message || err.message);
@@ -286,7 +288,7 @@ export default function UserListScreen() {
       ) : (
         <Grid container spacing={3}>
           {filteredUsers.map((user) => (
-            <Grid item xs={12} sm={6} md={4} key={user._id}>
+            <Grid item xs={12} sm={6} md={4} key={user.id}>
               <Card sx={{ p: 2 }}>
                 <CardContent>
                   <Stack direction="row" alignItems="center" spacing={2}>
@@ -305,10 +307,10 @@ export default function UserListScreen() {
                   </Stack>
 
                   <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-                    <IconButton onClick={() => navigate(`/admin/edituser/${user._id}`)}>
+                    <IconButton onClick={() => navigate(`/admin/edituser/${user.id}`)}>
                       <Edit />
                     </IconButton>
-                    <IconButton onClick={() => handleOpenDeleteDialog([user._id])}>
+                    <IconButton onClick={() => handleOpenDeleteDialog([user.id])}>
                       <Delete />
                     </IconButton>
                   </Stack>

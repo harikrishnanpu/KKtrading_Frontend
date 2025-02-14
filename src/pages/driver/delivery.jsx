@@ -5,6 +5,16 @@ import api from "../api";
 import DeliverySuccess from "components/driver/deliverysuccess";
 import DeliveredProducts from "components/driver/deliveredProducts";
 import useAuth from "hooks/useAuth";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Button,
+} from "@mui/material";
+import LoadingModal from "components/LoadingModal";
+
 
 const DriverBillingPage = () => {
   const [invoiceNo, setInvoiceNo] = useState("");
@@ -551,7 +561,7 @@ const DriverBillingPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 pb-10">
+    <div className="min-h-screen pb-10">
 
       {!deliveryStarted && (
         <div className="flex justify-center gap-8 mb-4">
@@ -878,258 +888,252 @@ const DriverBillingPage = () => {
                             </button>
                           </div>
 
-                          {bill.showModal && (
-                            <div className="fixed inset-0 z-50 flex justify-center items-center bg-black bg-opacity-50 overflow-auto">
-                              <div className="bg-white animate-slide-up top-1/4 rounded-lg w-full max-w-xl shadow-lg p-6 relative">
-                                <button
-                                  className="absolute font-bold top-4 right-4 text-gray-600 hover:text-gray-600"
-                                  onClick={() =>
-                                    setAssignedBills((prevBills) => {
-                                      const updatedBills = [...prevBills];
-                                      updatedBills[billIndex].showModal = false;
-                                      return updatedBills;
-                                    })
-                                  }
-                                >
-                                  &times;
-                                </button>
+                          <Dialog
+  open={bill.showModal}
+  onClose={() =>
+    setAssignedBills((prevBills) => {
+      const updatedBills = [...prevBills];
+      updatedBills[billIndex].showModal = false;
+      return updatedBills;
+    })
+  }
+  fullWidth
+  maxWidth="sm"
+>
+  {bill.modalStep === 1 && (
+    <>
+      <DialogTitle className="text-sm font-bold text-gray-600">Delivery Summary</DialogTitle>
+      <DialogContent>
+        {/* --- STEP 1 CONTENT --- */}
+        <div className="text-xs text-gray-600 space-y-2">
+          <p>
+            <span className="font-bold">Invoice Number:</span> {bill.invoiceNo}
+          </p>
+          <p>
+            <span className="font-bold">Customer:</span> {bill.customerName}
+          </p>
+          <p>
+            <span className="font-bold">Address:</span> {bill.customerAddress}
+          </p>
+          <p>
+            <span className="font-bold">Expected Delivery Date:</span>{" "}
+            {new Date(bill.expectedDeliveryDate).toLocaleDateString()}
+          </p>
+          <p>
+            <span className="font-bold">Bill Amount:</span> ₹ {bill.grandTotal}
+          </p>
+          <p>
+            <span className="font-bold">Received Amount:</span> ₹ {bill.receivedAmount}
+          </p>
+          <p>
+            <span className="font-bold">Remaining Balance:</span> ₹ {bill.remainingAmount}
+          </p>
+        </div>
 
-                                {bill.modalStep === 1 && (
-                                  <>
-                                    <h5 className="mb-4 text-sm font-bold text-gray-600">
-                                      Delivery Summary
-                                    </h5>
-                                    <div className="text-xs text-gray-600 space-y-2">
-                                      <p>
-                                        <span className="font-bold">Invoice Number:</span>{" "}
-                                        {bill.invoiceNo}
-                                      </p>
-                                      <p>
-                                        <span className="font-bold">Customer:</span> {bill.customerName}
-                                      </p>
-                                      <p>
-                                        <span className="font-bold">Address:</span> {bill.customerAddress}
-                                      </p>
-                                      <p>
-                                        <span className="font-bold">Expected Delivery Date:</span>{" "}
-                                        {new Date(bill.expectedDeliveryDate).toLocaleDateString()}
-                                      </p>
-                                      <p>
-                                        <span className="font-bold">Bill Amount:</span> ₹ {bill.grandTotal}
-                                      </p>
-                                      <p>
-                                        <span className="font-bold">Received Amount:</span> ₹{" "}
-                                        {bill.receivedAmount}
-                                      </p>
-                                      <p>
-                                        <span className="font-bold">Remaining Balance:</span> ₹{" "}
-                                        {bill.remainingAmount}
-                                      </p>
-                                    </div>
+        <div className="mt-4">
+          <h6 className="text-xs font-bold text-gray-700 mb-2">
+            Delivered Products: {bill.deliveredProducts?.length}
+          </h6>
+          <ul className="list-disc list-inside text-xs text-gray-700 space-y-1">
+            {bill.deliveredProducts.map((dp) => {
+              const productName =
+                dp.name.length > 30 ? dp.name.slice(0, 30) + ".." : dp.name;
+              if (dp.deliveredQuantity > 0) {
+                return (
+                  <li
+                    key={dp.item_id}
+                    className="bg-gray-100 p-2 rounded-lg mb-1"
+                  >
+                    <div className="flex justify-between">
+                      <p className="font-bold">{dp.item_id}</p>
+                      <p className="font-bold">{productName}</p>
+                    </div>
+                    <p className="font-bold">
+                      Delivered Quantity: {dp.deliveredQuantity}
+                    </p>
+                  </li>
+                );
+              }
+              return null;
+            })}
+          </ul>
+        </div>
+      </DialogContent>
+      <DialogActions>
+        <Button
+          variant="outlined"
+          color="primary"
+          size="small"
+          onClick={() => handleNext(billIndex)}
+        >
+          Next
+        </Button>
+      </DialogActions>
+    </>
+  )}
 
-                                    <div className="mt-4">
-                                      <h6 className="font-bold text-sm text-gray-700">
-                                        Delivered Products: {bill.deliveredProducts?.length}
-                                      </h6>
-                                      <ul className="list-disc list-inside text-xs text-gray-700 mt-2 space-y-1">
-                                        {bill.deliveredProducts.map((dp) => {
-                                          const productName =
-                                            dp.name.length > 30
-                                              ? dp.name.slice(0, 30) + ".."
-                                              : dp.name;
-                                          if (dp.deliveredQuantity > 0) {
-                                            return (
-                                              <li
-                                                className="bg-gray-100 p-2 rounded-lg"
-                                                key={dp.item_id}
-                                              >
-                                                <div className="flex justify-between">
-                                                  <p className="font-bold">{dp.item_id}</p>
-                                                  <p className="font-bold">{productName}</p>
-                                                </div>
-                                                <p className="font-bold">
-                                                  Delivered Quantity: {dp.deliveredQuantity}
-                                                </p>
-                                              </li>
-                                            );
-                                          }
-                                          return null;
-                                        })}
-                                      </ul>
-                                    </div>
+  {bill.modalStep === 2 && (
+    <>
+      <DialogTitle className="text-sm font-bold text-red-500">
+        Additional Details
+      </DialogTitle>
+      <DialogContent>
+        {/* --- STEP 2 CONTENT --- */}
+        <div className="flex flex-col gap-4 mt-2 text-xs">
+          <div>
+            <label className="block text-gray-500 mb-1">Starting KM</label>
+            <input
+              type="number"
+              value={bill.startingKm}
+              onChange={(e) =>
+                setAssignedBills((prevBills) => {
+                  const updatedBills = [...prevBills];
+                  const val = parseFloat(e.target.value) || 0;
+                  updatedBills[billIndex].startingKm = val;
+                  updatedBills[billIndex].kmTravelled =
+                    (parseFloat(updatedBills[billIndex].endKm) || 0) - val;
+                  return updatedBills;
+                })
+              }
+              className="w-full border border-gray-300 px-3 py-2 rounded-md"
+            />
+          </div>
 
-                                    <div className="flex justify-center mt-6">
-                                      <button
-                                        className="bg-red-500 hover:bg-red-600 text-white font-bold text-xs px-6 py-2 rounded-lg"
-                                        onClick={() => handleNext(billIndex)}
-                                      >
-                                        Next
-                                      </button>
-                                    </div>
-                                  </>
-                                )}
+          <div>
+            <label className="block text-gray-500 mb-1">Ending KM</label>
+            <input
+              type="number"
+              value={bill.endKm}
+              onChange={(e) =>
+                setAssignedBills((prevBills) => {
+                  const updatedBills = [...prevBills];
+                  const newEndKm = parseFloat(e.target.value) || 0;
+                  updatedBills[billIndex].endKm = newEndKm;
+                  updatedBills[billIndex].kmTravelled =
+                    newEndKm - (parseFloat(updatedBills[billIndex].startingKm) || 0);
+                  updatedBills[billIndex].fuelCharge = (
+                    ((parseFloat(updatedBills[billIndex].kmTravelled) || 0) / 10) *
+                    96
+                  ).toFixed(2);
+                  return updatedBills;
+                })
+              }
+              className="w-full border border-gray-300 px-3 py-2 rounded-md"
+            />
+          </div>
 
-                                {bill.modalStep === 2 && (
-                                  <>
-                                    <h5 className="mb-4 text-sm font-bold text-red-500">
-                                      Additional Details
-                                    </h5>
-                                    <div className="flex flex-col gap-4">
-                                      <div>
-                                        <label className="block text-xs text-gray-400">Starting KM</label>
-                                        <input
-                                          type="number"
-                                          value={bill.startingKm}
-                                          onChange={(e) =>
-                                            setAssignedBills((prevBills) => {
-                                              const updatedBills = [...prevBills];
-                                              const val = parseFloat(e.target.value) || 0;
-                                              updatedBills[billIndex].startingKm = val;
-                                              updatedBills[billIndex].kmTravelled =
-                                                (parseFloat(updatedBills[billIndex].endKm) || 0) - val;
-                                              return updatedBills;
-                                            })
-                                          }
-                                          className="w-full border border-gray-300 px-3 py-2 rounded-md text-xs"
-                                        />
-                                      </div>
+          <div>
+            <label className="block font-bold text-gray-500 mb-1">
+              Distance Travelled (km)
+            </label>
+            <input
+              type="number"
+              value={bill.kmTravelled}
+              readOnly
+              className="w-full border bg-gray-100 border-gray-300 px-3 py-2 rounded-md"
+            />
+          </div>
 
-                                      <div>
-                                        <label className="block text-xs text-gray-400">Ending KM</label>
-                                        <input
-                                          type="number"
-                                          value={bill.endKm}
-                                          onChange={(e) =>
-                                            setAssignedBills((prevBills) => {
-                                              const updatedBills = [...prevBills];
-                                              const newEndKm = parseFloat(e.target.value) || 0;
-                                              updatedBills[billIndex].endKm = newEndKm;
-                                              updatedBills[billIndex].kmTravelled =
-                                                newEndKm - (parseFloat(updatedBills[billIndex].startingKm) || 0);
-                                              updatedBills[billIndex].fuelCharge = (
-                                                ((parseFloat(updatedBills[billIndex].kmTravelled) || 0) /
-                                                  10) *
-                                                96
-                                              ).toFixed(2);
-                                              return updatedBills;
-                                            })
-                                          }
-                                          className="w-full border border-gray-300 px-3 py-2 rounded-md text-xs"
-                                        />
-                                      </div>
+          <div>
+            <label className="block font-bold text-gray-500 mb-1">Fuel Charge</label>
+            <input
+              type="number"
+              value={bill.fuelCharge}
+              onChange={(e) =>
+                setAssignedBills((prevBills) => {
+                  const updatedBills = [...prevBills];
+                  updatedBills[billIndex].fuelCharge = parseFloat(e.target.value) || 0;
+                  return updatedBills;
+                })
+              }
+              className="w-full border border-gray-300 px-3 py-2 rounded-md"
+            />
+          </div>
 
-                                      <div>
-                                        <label className="block text-xs font-bold text-gray-400">
-                                          Distance Travelled (km)
-                                        </label>
-                                        <input
-                                          type="number"
-                                          value={bill.kmTravelled}
-                                          readOnly
-                                          className="w-full border bg-gray-100 border-gray-300 px-3 py-2 rounded-md text-xs"
-                                        />
-                                      </div>
+          <div>
+            <h6 className="text-xs font-bold text-gray-500 mb-1">Other Expenses</h6>
+            {bill.otherExpenses.map((expense, idx) => (
+              <div key={idx} className="flex gap-2 mb-2">
+                <input
+                  type="number"
+                  value={expense.amount}
+                  onChange={(e) =>
+                    handleOtherExpensesChange(billIndex, idx, "amount", e.target.value)
+                  }
+                  placeholder="Amount"
+                  className="w-full border border-gray-300 px-3 py-2 rounded-md"
+                />
+                <input
+                  type="text"
+                  value={expense.remark}
+                  onChange={(e) =>
+                    handleOtherExpensesChange(billIndex, idx, "remark", e.target.value)
+                  }
+                  placeholder="Remark"
+                  className="w-full border border-gray-300 px-3 py-2 rounded-md"
+                />
+              </div>
+            ))}
+            <Button
+              onClick={() => handleAddExpense(billIndex)}
+              sx={{ textTransform: "none" }}
+            >
+              + Add Expense
+            </Button>
+          </div>
 
-                                      <div>
-                                        <label className="block text-xs font-bold text-gray-400">Fuel Charge</label>
-                                        <input
-                                          type="number"
-                                          value={bill.fuelCharge}
-                                          onChange={(e) =>
-                                            setAssignedBills((prevBills) => {
-                                              const updatedBills = [...prevBills];
-                                              updatedBills[billIndex].fuelCharge = parseFloat(e.target.value) || 0;
-                                              return updatedBills;
-                                            })
-                                          }
-                                          className="w-full border border-gray-300 px-3 py-2 rounded-md text-xs"
-                                        />
-                                      </div>
-
-                                      <div className="mt-4">
-                                        <h6 className="text-xs font-bold text-gray-500 mb-1">
-                                          Add Other Expenses
-                                        </h6>
-                                        {bill.otherExpenses.map((expense, idx) => (
-                                          <div key={idx} className="flex gap-2 mb-2">
-                                            <input
-                                              type="number"
-                                              value={expense.amount}
-                                              onChange={(e) =>
-                                                handleOtherExpensesChange(billIndex, idx, "amount", e.target.value)
-                                              }
-                                              placeholder="Amount"
-                                              className="w-full border border-gray-300 px-3 py-2 rounded-md text-xs"
-                                            />
-                                            <input
-                                              type="text"
-                                              value={expense.remark}
-                                              onChange={(e) =>
-                                                handleOtherExpensesChange(billIndex, idx, "remark", e.target.value)
-                                              }
-                                              placeholder="Remark"
-                                              className="w-full border border-gray-300 px-3 py-2 rounded-md text-xs"
-                                            />
-                                          </div>
-                                        ))}
-                                        <button
-                                          onClick={() => handleAddExpense(billIndex)}
-                                          className="text-xs font-bold text-blue-500 hover:text-blue-700 mt-2"
-                                        >
-                                          + Add Expense
-                                        </button>
-                                      </div>
-
-                                      <div>
-                                        <label className="block text-xs font-bold text-gray-400">
-                                          Expense Payment Method
-                                        </label>
-                                        <select
-                                          value={bill.method || ""}
-                                          onChange={(e) =>
-                                            setAssignedBills((prevBills) => {
-                                              const updatedBills = [...prevBills];
-                                              updatedBills[billIndex].method = e.target.value;
-                                              return updatedBills;
-                                            })
-                                          }
-                                          className="w-full border border-gray-300 px-3 py-2 rounded-md text-xs"
-                                        >
-                                          <option value="">Select method</option>
-                                          {accounts.map((acc) => (
-                                            <option key={acc.accountId} value={acc.accountId}>
-                                              {acc.accountName}
-                                            </option>
-                                          ))}
-                                        </select>
-                                      </div>
-                                    </div>
-
-                                    <div className="flex justify-right mt-6 gap-4">
-                                      <button
-                                        className="bg-gray-400 hover:bg-gray-500 text-white font-bold text-xs px-4 py-2 rounded-lg w-1/2"
-                                        onClick={() =>
-                                          setAssignedBills((prevBills) => {
-                                            const updatedBills = [...prevBills];
-                                            updatedBills[billIndex].modalStep = 1;
-                                            return updatedBills;
-                                          })
-                                        }
-                                      >
-                                        Back
-                                      </button>
-                                      <button
-                                        className="bg-red-500 hover:bg-red-600 text-white font-bold text-xs px-4 py-2 rounded-lg w-full"
-                                        onClick={() => handleSubmit(billIndex)}
-                                      >
-                                        Submit
-                                      </button>
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          )}
+          <div>
+            <label className="block font-bold text-gray-500 mb-1">
+              Expense Payment Method
+            </label>
+            <select
+              value={bill.method || ""}
+              onChange={(e) =>
+                setAssignedBills((prevBills) => {
+                  const updatedBills = [...prevBills];
+                  updatedBills[billIndex].method = e.target.value;
+                  return updatedBills;
+                })
+              }
+              className="w-full border border-gray-300 px-3 py-2 rounded-md"
+            >
+              <option value="">Select method</option>
+              {accounts.map((acc) => (
+                <option key={acc.accountId} value={acc.accountId}>
+                  {acc.accountName}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </DialogContent>
+      <DialogActions>
+        <Button
+          variant="outlined"
+          color="inherit"
+          size="small"
+          onClick={() =>
+            setAssignedBills((prevBills) => {
+              const updatedBills = [...prevBills];
+              updatedBills[billIndex].modalStep = 1;
+              return updatedBills;
+            })
+          }
+        >
+          Back
+        </Button>
+        <Button
+          variant="outlined"
+          color="primary"
+          size="small"
+          onClick={() => handleSubmit(billIndex)}
+        >
+          Submit
+        </Button>
+      </DialogActions>
+    </>
+  )}
+</Dialog>
                         </div>
                       )}
 
@@ -1230,22 +1234,26 @@ const DriverBillingPage = () => {
             </div>
           )}
 
-          {showSuccessModal && (
-            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-              <div className="bg-white text-center p-6 rounded-lg shadow-lg">
-                <h3 className="text-md font-bold text-gray-500">Operation Successful</h3>
-                <p className="text-xs italic text-gray-400 mt-1 mb-5">
-                  Successfully updated the billing information.
-                </p>
-                <button
-                  className="bg-red-500 hover:bg-red-600 text-white font-bold text-xs px-4 py-2 rounded-lg"
-                  onClick={() => setShowSuccessModal(false)}
-                >
-                  <i className="fa fa-check" />
-                </button>
-              </div>
-            </div>
-          )}
+<Dialog open={showSuccessModal} onClose={() => setShowSuccessModal(false)}>
+  <DialogTitle className="text-md font-bold text-gray-500">
+    Operation Successful
+  </DialogTitle>
+  <DialogContent>
+    <DialogContentText className="text-xs italic text-gray-400 mt-1 mb-5">
+      Successfully updated the billing information.
+    </DialogContentText>
+  </DialogContent>
+  <DialogActions>
+    <Button
+      variant="contained"
+      color="primary"
+      size="small"
+      onClick={() => setShowSuccessModal(false)}
+    >
+      <i className="fa fa-check" />
+    </Button>
+  </DialogActions>
+</Dialog>
 
           {deliveredModal && (
             <DeliverySuccess
@@ -1300,231 +1308,250 @@ const DriverBillingPage = () => {
             </div>
           )}
 
-          {showDeliveryModal && selectedDelivery && (
-            <div className="fixed animate-slide-up overflow-auto inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-              <div className="bg-white top-1/4 rounded-lg w-full max-w-lg shadow-lg p-6 relative">
-                <button
-                  className="absolute top-4 right-4 text-gray-600 hover:text-gray-600"
-                  onClick={() => {
-                    setShowDeliveryModal(false);
-                    setSelectedDelivery(null);
-                  }}
-                >
-                  &times;
-                </button>
+<Dialog
+  open={showDeliveryModal && !!selectedDelivery}
+  onClose={() => {
+    setShowDeliveryModal(false);
+    setSelectedDelivery(null);
+  }}
+  fullWidth
+  maxWidth="sm"
+>
+  <DialogTitle className="text-sm font-bold text-gray-600">
+    Edit Delivery Details - Invoice No: {selectedDelivery?.invoiceNo}
+  </DialogTitle>
+  <DialogContent dividers>
+    <div className="text-xs text-gray-600 space-y-2 mb-4">
+      <p>
+        <span className="font-bold">Customer:</span>{" "}
+        {selectedDelivery?.customerName}
+      </p>
+      <p>
+        <span className="font-bold">Address:</span>{" "}
+        {selectedDelivery?.customerAddress}
+      </p>
+      <p>
+        <span className="font-bold">Billing Amount:</span> ₹{" "}
+        {selectedDelivery?.grandTotal}
+      </p>
+      <p>
+        <span className="font-bold">Payment Status:</span>{" "}
+        {selectedDelivery?.paymentStatus}
+      </p>
+      <p>
+        <span className="font-bold">Delivery Status:</span>{" "}
+        {selectedDelivery?.deliveryStatus}
+      </p>
+    </div>
 
-                <h5 className="mb-4 text-sm font-bold text-gray-600">
-                  Edit Delivery Details - Invoice No: {selectedDelivery.invoiceNo}
-                </h5>
-                <div className="text-xs text-gray-600 space-y-2">
-                  <p>
-                    <span className="font-bold">Customer:</span> {selectedDelivery.customerName}
-                  </p>
-                  <p>
-                    <span className="font-bold">Address:</span> {selectedDelivery.customerAddress}
-                  </p>
-                  <p>
-                    <span className="font-bold">Billing Amount:</span> ₹ {selectedDelivery.grandTotal}
-                  </p>
-                  <p>
-                    <span className="font-bold">Payment Status:</span> {selectedDelivery.paymentStatus}
-                  </p>
-                  <p>
-                    <span className="font-bold">Delivery Status:</span> {selectedDelivery.deliveryStatus}
-                  </p>
-                </div>
+    <div className="flex flex-col gap-4 text-xs">
+      <div>
+        <label className="block text-gray-500">Starting KM</label>
+        <input
+          type="number"
+          value={selectedDelivery?.startingKm || 0}
+          onChange={(e) =>
+            setSelectedDelivery((prev) => ({
+              ...prev,
+              startingKm: parseFloat(e.target.value) || 0,
+              kmTravelled:
+                (parseFloat(prev.endKm) || 0) -
+                (parseFloat(e.target.value) || 0),
+            }))
+          }
+          className="w-full border border-gray-300 px-3 py-2 rounded-md"
+        />
+      </div>
 
-                <div className="flex flex-col gap-4 mt-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-400">Starting KM</label>
-                    <input
-                      type="number"
-                      value={selectedDelivery.startingKm || 0}
-                      onChange={(e) =>
-                        setSelectedDelivery((prev) => ({
-                          ...prev,
-                          startingKm: parseFloat(e.target.value) || 0,
-                          kmTravelled:
-                            (parseFloat(prev.endKm) || 0) - (parseFloat(e.target.value) || 0),
-                        }))
-                      }
-                      className="w-full border border-gray-300 px-3 py-2 rounded-md text-xs"
-                    />
-                  </div>
+      <div>
+        <label className="block text-gray-500">Ending KM</label>
+        <input
+          type="number"
+          value={selectedDelivery?.endKm || 0}
+          onChange={(e) =>
+            setSelectedDelivery((prev) => {
+              const newEndKm = parseFloat(e.target.value) || 0;
+              const distance =
+                newEndKm - (parseFloat(prev.startingKm) || 0);
+              return {
+                ...prev,
+                endKm: newEndKm,
+                kmTravelled: distance,
+                fuelCharge: ((distance / 10) * 96).toFixed(2),
+              };
+            })
+          }
+          className="w-full border border-gray-300 px-3 py-2 rounded-md"
+        />
+      </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-gray-400">Ending KM</label>
-                    <input
-                      type="number"
-                      value={selectedDelivery.endKm || 0}
-                      onChange={(e) =>
-                        setSelectedDelivery((prev) => {
-                          const newEndKm = parseFloat(e.target.value) || 0;
-                          const distance = newEndKm - (parseFloat(prev.startingKm) || 0);
-                          return {
-                            ...prev,
-                            endKm: newEndKm,
-                            kmTravelled: distance,
-                            fuelCharge: ((distance / 10) * 96).toFixed(2),
-                          };
-                        })
-                      }
-                      className="w-full border border-gray-300 px-3 py-2 rounded-md text-xs"
-                    />
-                  </div>
+      <div>
+        <label className="block font-bold text-gray-500">
+          Distance Travelled (km)
+        </label>
+        <input
+          type="number"
+          value={selectedDelivery?.kmTravelled || 0}
+          readOnly
+          className="w-full border bg-gray-100 border-gray-300 px-3 py-2 rounded-md"
+        />
+      </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-gray-400">
-                      Distance Travelled (km)
-                    </label>
-                    <input
-                      type="number"
-                      value={selectedDelivery.kmTravelled || 0}
-                      readOnly
-                      className="w-full border-gray-300 px-3 py-2 mt-1 rounded-md bg-gray-100 text-xs"
-                    />
-                  </div>
+      <div>
+        <label className="block font-bold text-gray-500">Fuel Charge</label>
+        <input
+          type="number"
+          value={selectedDelivery?.fuelCharge || 0}
+          onChange={(e) =>
+            setSelectedDelivery((prev) => ({
+              ...prev,
+              fuelCharge: parseFloat(e.target.value) || 0,
+            }))
+          }
+          className="w-full border border-gray-300 px-3 py-2 rounded-md"
+        />
+      </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-gray-400">Fuel Charge</label>
-                    <input
-                      type="number"
-                      value={selectedDelivery.fuelCharge || 0}
-                      onChange={(e) =>
-                        setSelectedDelivery((prev) => ({
-                          ...prev,
-                          fuelCharge: parseFloat(e.target.value) || 0,
-                        }))
-                      }
-                      className="w-full border border-gray-300 px-3 py-2 rounded-md text-xs"
-                    />
-                  </div>
+      <div>
+        <h6 className="text-xs font-bold text-gray-500 mb-1">
+          Other Expenses
+        </h6>
+        {selectedDelivery?.otherExpenses?.map((expense, index) => (
+          <div key={index} className="flex gap-2 mb-2">
+            <input
+              type="number"
+              value={expense.amount || 0}
+              onChange={(e) => {
+                const updatedExpenses = [...selectedDelivery.otherExpenses];
+                updatedExpenses[index] = {
+                  ...updatedExpenses[index],
+                  amount: parseFloat(e.target.value) || 0,
+                  isEdited: true,
+                };
+                setSelectedDelivery((prev) => ({
+                  ...prev,
+                  otherExpenses: updatedExpenses,
+                }));
+              }}
+              placeholder="Amount"
+              className="w-1/2 p-2 border border-gray-300 rounded-md"
+            />
+            <input
+              type="text"
+              value={expense.remark || ""}
+              onChange={(e) => {
+                const updatedExpenses = [...selectedDelivery.otherExpenses];
+                updatedExpenses[index] = {
+                  ...updatedExpenses[index],
+                  remark: e.target.value,
+                  isEdited: true,
+                };
+                setSelectedDelivery((prev) => ({
+                  ...prev,
+                  otherExpenses: updatedExpenses,
+                }));
+              }}
+              placeholder="Remark"
+              className="w-1/2 p-2 border border-gray-300 rounded-md"
+            />
+          </div>
+        ))}
+        <Button
+          onClick={() => {
+            setSelectedDelivery((prev) => ({
+              ...prev,
+              otherExpenses: [
+                ...prev.otherExpenses,
+                { amount: 0, remark: "", isNew: true },
+              ],
+            }));
+          }}
+          sx={{ textTransform: "none" }}
+        >
+          + Add Expense
+        </Button>
+      </div>
 
-                  <div className="mt-4">
-                    <h6 className="text-xs font-bold text-gray-500 mb-1">Other Expenses</h6>
-                    {selectedDelivery.otherExpenses.map((expense, index) => (
-                      <div key={index} className="flex gap-2 mb-2">
-                        <input
-                          type="number"
-                          value={expense.amount || 0}
-                          onChange={(e) => {
-                            const updatedExpenses = [...selectedDelivery.otherExpenses];
-                            updatedExpenses[index] = {
-                              ...updatedExpenses[index],
-                              amount: parseFloat(e.target.value) || 0,
-                              isEdited: true,
-                            };
-                            setSelectedDelivery((prev) => ({
-                              ...prev,
-                              otherExpenses: updatedExpenses,
-                            }));
-                          }}
-                          placeholder="Amount"
-                          className="w-1/2 p-2 border border-gray-300 rounded-md text-xs"
-                        />
-                        <input
-                          type="text"
-                          value={expense.remark || ""}
-                          onChange={(e) => {
-                            const updatedExpenses = [...selectedDelivery.otherExpenses];
-                            updatedExpenses[index] = {
-                              ...updatedExpenses[index],
-                              remark: e.target.value,
-                              isEdited: true,
-                            };
-                            setSelectedDelivery((prev) => ({
-                              ...prev,
-                              otherExpenses: updatedExpenses,
-                            }));
-                          }}
-                          placeholder="Remark"
-                          className="w-1/2 p-2 border border-gray-300 rounded-md text-xs"
-                        />
-                      </div>
-                    ))}
-                    <button
-                      onClick={() => {
-                        setSelectedDelivery((prev) => ({
-                          ...prev,
-                          otherExpenses: [...prev.otherExpenses, { amount: 0, remark: "", isNew: true }],
-                        }));
-                      }}
-                      className="text-xs font-bold text-blue-500 hover:text-blue-700 mt-2"
-                    >
-                      + Add Expense
-                    </button>
-                  </div>
+      <div>
+        <label className="block font-bold text-gray-500 mb-1">
+          Expense Payment Method
+        </label>
+        <select
+          value={selectedDelivery?.method || ""}
+          onChange={(e) =>
+            setSelectedDelivery((prev) => ({
+              ...prev,
+              method: e.target.value,
+            }))
+          }
+          className="w-full border border-gray-300 px-3 py-2 rounded-md"
+        >
+          <option value="">Select Method</option>
+          {accounts.map((acc) => (
+            <option key={acc.accountId} value={acc.accountId}>
+              {acc.accountName}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1">
-                      Expense Payment Method
-                    </label>
-                    <select
-                      value={selectedDelivery.method || ""}
-                      onChange={(e) =>
-                        setSelectedDelivery((prev) => ({
-                          ...prev,
-                          method: e.target.value,
-                        }))
-                      }
-                      className="w-full border border-gray-300 px-3 py-2 rounded-md text-xs"
-                    >
-                      <option value="">Select Method</option>
-                      {accounts.map((acc) => (
-                        <option key={acc.accountId} value={acc.accountId}>
-                          {acc.accountName}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+    {/* Delivered Products Editing */}
+    <div className="mt-6">
+      <h6 className="font-bold text-gray-700">Delivered Products:</h6>
+      <div className="space-y-4 mt-2">
+        {selectedDelivery?.productsDelivered?.map((dp, index) => (
+          <div key={dp.item_id} className="border-b pb-2 text-xs">
+            <p className="font-bold">Item ID: {dp.item_id}</p>
+            <label className="block text-gray-500 mt-2">
+              Delivered Quantity
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={dp.deliveredQuantity || 0}
+              onChange={(e) => {
+                const updated = [...selectedDelivery.productsDelivered];
+                updated[index].deliveredQuantity =
+                  parseFloat(e.target.value) || 0;
+                updated[index].isEdited = true;
+                setSelectedDelivery((prev) => ({
+                  ...prev,
+                  productsDelivered: updated,
+                }));
+              }}
+              className="w-full border border-gray-300 px-3 py-1 rounded-md"
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  </DialogContent>
+  <DialogActions>
+    <Button
+      variant="outlined"
+      color="inherit"
+      size="small"
+      onClick={() => {
+        setShowDeliveryModal(false);
+        setSelectedDelivery(null);
+      }}
+    >
+      Close
+    </Button>
+    <Button
+      variant="contained"
+      color="primary"
+      size="small"
+      onClick={handleUpdateDelivery}
+    >
+      Save
+    </Button>
+  </DialogActions>
+</Dialog>
 
-                <div className="mt-6">
-                  <h6 className="font-bold text-gray-700">Delivered Products:</h6>
-                  <div className="space-y-4 mt-2">
-                    {selectedDelivery.productsDelivered.map((dp, index) => (
-                      <div key={dp.item_id} className="border-b pb-2">
-                        <p className="text-xs font-bold">Item ID: {dp.item_id}</p>
-                        <label className="block text-xs font-bold text-gray-400 mt-2">
-                          Delivered Quantity
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={dp.deliveredQuantity || 0}
-                          onChange={(e) => {
-                            const updated = [...selectedDelivery.productsDelivered];
-                            updated[index].deliveredQuantity = parseFloat(e.target.value) || 0;
-                            updated[index].isEdited = true;
-                            setSelectedDelivery((prev) => ({ ...prev, productsDelivered: updated }));
-                          }}
-                          className="w-full border border-gray-300 px-3 py-1 rounded-md text-xs"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
+{isLoading && <LoadingModal open={isLoading} />}
 
-                <div className="flex justify-end mt-6 gap-4">
-                  <button
-                    className="bg-gray-400 hover:bg-gray-500 text-white font-bold text-xs px-4 py-2 rounded-lg"
-                    onClick={() => {
-                      setShowDeliveryModal(false);
-                      setSelectedDelivery(null);
-                    }}
-                  >
-                    Close
-                  </button>
-                  <button
-                    className="bg-red-500 hover:bg-red-600 text-white font-bold text-xs px-4 py-2 rounded-lg"
-                    onClick={handleUpdateDelivery}
-                  >
-                    Save
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

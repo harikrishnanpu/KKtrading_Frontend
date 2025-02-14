@@ -9,18 +9,24 @@ import useAuth from 'hooks/useAuth';
 // ==============================|| GUEST GUARD ||============================== //
 
 export default function GuestGuard({ children }) {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
     if (isLoggedIn) {
-      navigate(location?.state?.from ? location?.state?.from : APP_DEFAULT_PATH, {
-        state: { from: '' },
-        replace: true
-      });
+      // If the user is an employee, redirect to the default path.
+      // Otherwise (e.g. if not an employee), redirect to /employee.
+      if (user && user.isEmployee) {
+        navigate(
+          location?.state?.from ? location.state.from : APP_DEFAULT_PATH,
+          { state: { from: '' }, replace: true }
+        );
+      } else {
+        navigate('/employee', { state: { from: '' }, replace: true });
+      }
     }
-  }, [isLoggedIn, navigate, location]);
+  }, [isLoggedIn, user, navigate, location]);
 
   return children;
 }

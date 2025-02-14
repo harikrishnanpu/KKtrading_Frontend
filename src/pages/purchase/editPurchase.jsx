@@ -1418,7 +1418,10 @@ export default function EditPurchaseScreen() {
                 )}
 
                 {/* Input Section */}
-                <div  className="p-4 md:fixed bottom-0 left-0 right-0 bg-white shadow-inner">
+                <div                 style={{
+                  width: '96%'
+                }}
+                  className="p-4 md:fixed bottom-0 left-0 right-0 bg-white shadow-inner">
                       <div className="md:flex justify-between space-x-2">
                     {/* Left Section: Input Fields */}
                     <div className="flex-1">
