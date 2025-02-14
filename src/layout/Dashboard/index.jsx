@@ -20,7 +20,7 @@ import AuthGuard from 'utils/route-guard/AuthGuard';
 import { DRAWER_WIDTH, MenuOrientation } from 'config';
 import useConfig from 'hooks/useConfig';
 import { handlerDrawerOpen, useGetMenuMaster } from 'api/menu';
-import { useTabs } from 'contexts/tabsContext';
+import { useTabs } from 'contexts/TabsContext';
 import TabBar from './tabBar';
 import KeepAlive from 'react-activation';
 
