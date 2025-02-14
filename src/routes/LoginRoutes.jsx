@@ -3,6 +3,7 @@ import { lazy } from 'react';
 // project-imports
 import AuthLayout from 'layout/Auth';
 import Loadable from 'components/Loadable';
+import TabsLayout from 'layout/TabsLayout';
 
 // render - login
 const AuthLogin = Loadable(lazy(() => import('pages/auth/auth1/login')));
@@ -16,10 +17,12 @@ const AuthCodeVerification = Loadable(lazy(() => import('pages/auth/auth1/code-v
 
 const LoginRoutes = {
   path: '/',
+  element: <TabsLayout />,
   children: [
     {
       path: '/',
-      element: <AuthLayout />,
+      element: 
+      <AuthLayout />,
       children: [
         {
           path: '/',

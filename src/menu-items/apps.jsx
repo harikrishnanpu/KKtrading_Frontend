@@ -22,57 +22,7 @@ const apps = {
   id: 'App',
   title: <FormattedMessage id="Apps" />,
   type: 'group',
-  children: [
-    {
-      id: 'invoice',
-      title: <FormattedMessage id="Estimate" />,
-      type: 'collapse',
-      url: '/invoice/create',
-      icon: icons.invoice,
-      children: [
-        {
-          id: 'Create',
-          title: <FormattedMessage id="Create Estimate" />,
-          type: 'item',
-          url: '/invoice/create/',
-          target: false,
-          breadcrumbs: false
-        },
-        {
-          id: 'List',
-          title: <FormattedMessage id="All Estimates" />,
-          type: 'item',
-          url: '/invoice/list/',
-          target: false,
-          breadcrumbs: true
-        }
-      ]
-    },
-    {
-      id: 'purchase',
-      title: <FormattedMessage id="Purchases" />,
-      type: 'collapse',
-      url: '/purchase/create',
-      icon: icons.purchase,
-      children: [
-        {
-          id: 'Create',
-          title: <FormattedMessage id="Create Purchase" />,
-          type: 'item',
-          url: '/purchase/create/',
-          target: false,
-          breadcrumbs: false
-        },
-        {
-          id: 'List',
-          title: <FormattedMessage id="All Purchases" />,
-          type: 'item',
-          url: '/purchase/list/',
-          target: false,
-          breadcrumbs: true
-        }
-      ]
-    },
+  children: [,
     {
       id: 'return',
       title: <FormattedMessage id="Return" />,

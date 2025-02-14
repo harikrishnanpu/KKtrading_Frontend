@@ -11,6 +11,7 @@ import Snackbar from 'components/@extended/Snackbar';
 
 // auth-provider
 import { JWTProvider as AuthProvider } from 'contexts/JWTContext';
+import { AliveScope } from 'react-activation';
 
 // ==============================|| APP - THEME, ROUTER, LOCAL  ||============================== //
 
@@ -21,10 +22,12 @@ export default function App() {
       <Locales>
         <ScrollTop>
           <AuthProvider>
+            <AliveScope>
             <>
               <RouterProvider router={router} />
               <Snackbar />
             </>
+            </AliveScope>
           </AuthProvider>
         </ScrollTop>
       </Locales>

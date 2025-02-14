@@ -4,6 +4,7 @@ import { lazy } from 'react';
 import Loadable from '../components/Loadable';
 import DashboardLayout from 'layout/Dashboard';
 import PagesLayout from 'layout/Pages';
+import TabsLayout from 'layout/TabsLayout';
 
 const MaintenanceError = Loadable(lazy(() => import('pages/maintenance/error/404')));
 const MaintenanceError500 = Loadable(lazy(() => import('pages/maintenance/error/500')));
@@ -111,10 +112,12 @@ const EditUser = Loadable(lazy(() => import('pages/admin/editUser')));
 
 const MainRoutes = {
   path: '/',
+  element: <TabsLayout />,
   children: [
     {
       path: '/',
-      element: <DashboardLayout />,
+      element: 
+      <DashboardLayout />,
       children: [
         {
           path: '/search/category/:category/brand/:brand/size/:size/name/:name/min/:min/max/:max/rating/:rating/order/:order/inStock/:inStock/countInStockMin/:countInStockMin/pageNumber/:pageNumber',

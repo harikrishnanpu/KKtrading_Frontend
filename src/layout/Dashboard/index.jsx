@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
@@ -20,6 +20,9 @@ import AuthGuard from 'utils/route-guard/AuthGuard';
 import { DRAWER_WIDTH, MenuOrientation } from 'config';
 import useConfig from 'hooks/useConfig';
 import { handlerDrawerOpen, useGetMenuMaster } from 'api/menu';
+import { useTabs } from 'contexts/tabsContext';
+import TabBar from './tabBar';
+import KeepAlive from 'react-activation';
 
 // ==============================|| MAIN LAYOUT ||============================== //
 
@@ -33,6 +36,27 @@ export default function MainLayout() {
   const { container, miniDrawer, menuOrientation } = useConfig();
 
   const isHorizontal = menuOrientation === MenuOrientation.HORIZONTAL && !downLG;
+
+  const location = useLocation();
+  const { openTab } = useTabs();
+
+ 
+  function deriveLabelFromPath(path) {
+    if (!path || path === '/') return 'Home';
+    const segments = path.split('/').filter(Boolean);
+    const firstSegment = segments[0].charAt(0).toUpperCase() + segments[0].slice(1).toLowerCase();
+    const rest = segments.slice(1).join(' ').toLowerCase();
+    return rest ? `${firstSegment} ${rest}` : firstSegment;
+  }
+  
+  
+
+
+  useEffect(() => {
+    // Suppose you derive a label from location, or use a config
+    const label = deriveLabelFromPath(location.pathname)
+    openTab(location.pathname, label)
+  }, [location.pathname])
 
   // set media wise responsive drawer
   useEffect(() => {
@@ -52,6 +76,7 @@ export default function MainLayout() {
 
         <Box component="main" sx={{ width: `calc(100% - ${DRAWER_WIDTH}px)`, flexGrow: 1, p: { xs: 2, md: 3 } }}>
           <Toolbar sx={{ mt: isHorizontal ? 8 : 'inherit', mb: isHorizontal ? 2 : 'inherit' }} />
+          <TabBar/>
           <Container
             maxWidth={container ? 'xl' : false}
             sx={{
@@ -60,11 +85,13 @@ export default function MainLayout() {
               position: 'relative',
               minHeight: 'calc(100vh - 110px)',
               display: 'flex',
-              flexDirection: 'column'
+              flexDirection: 'column',
             }}
           >
             <Breadcrumbs />
+            <KeepAlive id={location.pathname}>
             <Outlet />
+            </KeepAlive>
             <Footer />
           </Container>
         </Box>

@@ -9,11 +9,13 @@ import reports from './reports';
 import driver from './driver';
 import stocks from './stocks';
 import admin from './admin';
+import estimate from './estimate';
+import purchase from './purchase';
 
 // ==============================|| MENU ITEMS ||============================== //
 
 const menuItems = {
-  items: [dashboard, apps, driver, payments, stocks, reports, accounts]
+  items: [dashboard,estimate,purchase, apps, driver, payments, stocks, reports, accounts]
 };
 
 export default menuItems;
