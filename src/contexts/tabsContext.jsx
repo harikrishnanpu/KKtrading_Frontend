@@ -11,88 +11,100 @@ export const useTabs = () => {
   return context;
 };
 
-// A simple helper to derive a label if not explicitly provided.
 function deriveLabelFromPath(path) {
   if (!path || path === '/') return 'Home';
   const segments = path.split('/').filter(Boolean);
-  const firstSegment = segments[0].charAt(0).toUpperCase() + segments[0].slice(1).toLowerCase();
+  const first = segments[0].charAt(0).toUpperCase() + segments[0].slice(1).toLowerCase();
   const rest = segments.slice(1).join(' ').toLowerCase();
-  return rest ? `${firstSegment} ${rest}` : firstSegment;
+  return rest ? `${first} ${rest}` : first;
 }
-
-
 
 export const TabsProvider = ({ children }) => {
   const navigate = useNavigate();
-
-  // Each tab has { path, label }.
+  
+  // Each tab = { path, label }
   const [tabs, setTabs] = useState([]);
   const [activeTab, setActiveTab] = useState(null);
 
-  // Add or "activate" a tab
+  // 1) OPEN or ACTIVATE a tab
   const openTab = (path, label) => {
+    // If no "?" in path, append ?_ts=...
+    let newPath = path;
+    if (!path.includes('?')) {
+      newPath = `${path}?_ts=${Date.now()}`;
+    }
+
     setTabs((prev) => {
-      // If tab exists, just set it active
-      const existing = prev.find((t) => t.path === path);
-      if (existing) {
-        setActiveTab(path);
-        return prev;
+      // If not already in tabs, add it
+      const exists = prev.find((t) => t.path === newPath);
+      if (!exists) {
+        return [...prev, { path: newPath, label: label || deriveLabelFromPath(path) }];
       }
-      // Create a new tab
-      const newTab = {
-        path,
-        label: label || deriveLabelFromPath(path),
-      };
-      return [...prev, newTab];
+      return prev;
     });
-    setActiveTab(path);
-    navigate(path);
+    setActiveTab(newPath);
+    navigate(newPath);
   };
 
-  // Switch/activate an existing tab
+  // 2) SWITCH to an existing tab
+  //    Must use the EXACT stored path string (including ?_ts= or ?instance=).
   const switchTab = (path) => {
+    console.log("switchTab called with:", path);
     setActiveTab(path);
     navigate(path);
   };
+  
 
-  // Close a tab
+  // 3) CLOSE a tab
+  //    If the closed tab was active, switch to another (or home if none remain).
   const closeTab = (path) => {
     setTabs((prev) => prev.filter((t) => t.path !== path));
     setTimeout(() => {
-      setTabs((currentTabs) => {
-        // If no tabs remain, go home (or anywhere you want)
-        if (currentTabs.length === 0) {
+      setTabs((current) => {
+        if (current.length === 0) {
           navigate('/');
           setActiveTab(null);
-          return currentTabs;
+          return current;
         }
-        // If closing the active tab, switch to the first open tab
         if (path === activeTab) {
-          navigate(currentTabs[0].path);
-          setActiveTab(currentTabs[0].path);
+          navigate(current[0].path);
+          setActiveTab(current[0].path);
         }
-        return currentTabs;
+        return current;
       });
     }, 0);
   };
 
-
+  // 4) RENAME a tab (updates label only)
   const renameTab = (path, newLabel) => {
     setTabs((prevTabs) =>
-      prevTabs.map((tab) =>
-        tab.path === path ? { ...tab, label: newLabel } : tab
-      )
+      prevTabs.map((tab) => (tab.path === path ? { ...tab, label: newLabel } : tab))
     );
   };
 
-  // "Refresh" a tab by re-navigating, forcing remount
+  // 5) REFRESH a tab
+  //    - Overwrite the tab's path in the array so the next click uses the new ?_ts
+  //    - Navigate to that new ?_ts path
   const refreshTab = (path) => {
-    // If you navigate to the exact same path,
-    // React Router might not remount. So we
-    // add a query param or random key to force remount:
-    const refreshUrl = `${path}?_ts=${Date.now()}`;
-    navigate(refreshUrl, { replace: true });
-    setActiveTab(path);
+    const basePath = path.split('?')[0];
+    const newPath = `${basePath}?_ts=${Date.now()}`;
+
+    // Update stored path
+    setTabs((prev) =>
+      prev.map((tab) => (tab.path === path ? { ...tab, path: newPath } : tab))
+    );
+
+    setActiveTab(newPath);
+    navigate(newPath, { replace: true });
+  };
+
+  // 6) DUPLICATE a tab
+  //    Creates a distinct URL with ?instance=...
+  const duplicateTab = (path) => {
+    const basePath = path.split('?')[0];
+    const newPath = `${basePath}?_ts=${Date.now()}`;
+    // Also optional: add " (copy)" to label
+    openTab(newPath, deriveLabelFromPath(basePath) + ' (copy)');
   };
 
   const value = {
@@ -101,8 +113,9 @@ export const TabsProvider = ({ children }) => {
     openTab,
     switchTab,
     closeTab,
+    renameTab,
     refreshTab,
-    renameTab
+    duplicateTab
   };
 
   return <TabsContext.Provider value={value}>{children}</TabsContext.Provider>;

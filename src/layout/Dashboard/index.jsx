@@ -53,10 +53,12 @@ export default function MainLayout() {
 
 
   useEffect(() => {
-    // Suppose you derive a label from location, or use a config
-    const label = deriveLabelFromPath(location.pathname)
-    openTab(location.pathname, label)
-  }, [location.pathname])
+    // Derive label from the BASE path if you like:
+    const label = deriveLabelFromPath(location.pathname);
+
+    // Always include location.search so we don't drop the query string:
+    openTab(location.pathname + location.search, label);
+  }, [location.pathname, location.search]);
 
   // set media wise responsive drawer
   useEffect(() => {
@@ -89,8 +91,8 @@ export default function MainLayout() {
             }}
           >
             <Breadcrumbs />
-            <KeepAlive id={location.pathname}>
-            <Outlet />
+            <KeepAlive id={location.pathname + location.search}>
+            <Outlet key={location.pathname + location.search} />
             </KeepAlive>
             <Footer />
           </Container>
