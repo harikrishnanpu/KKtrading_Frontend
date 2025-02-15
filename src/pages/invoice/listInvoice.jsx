@@ -79,6 +79,8 @@ const BillingList = () => {
   const { user: userInfo } = useAuth();
   const { menuMaster } = useGetMenuMaster();
 
+  console.log(userInfo);
+
   // ---------------------------------------------------------------------------
   // State Variables
   // ---------------------------------------------------------------------------

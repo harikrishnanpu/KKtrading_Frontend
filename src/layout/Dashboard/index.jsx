@@ -23,6 +23,7 @@ import { handlerDrawerOpen, useGetMenuMaster } from 'api/menu';
 import { useTabs } from 'contexts/TabsContext';
 import TabBar from './tabBar';
 import KeepAlive from 'react-activation';
+import { isMobile } from 'react-device-detect';
 
 // ==============================|| MAIN LAYOUT ||============================== //
 
@@ -72,7 +73,7 @@ export default function MainLayout() {
 
   return (
     <AuthGuard>
-      <Box sx={{ display: 'flex', width: '93%' }}>
+      <Box sx={{ display: 'flex', width: isMobile ? '93%' : '98%' }}>
         <Header />
         {!isHorizontal ? <Drawer /> : <HorizontalBar />}
 

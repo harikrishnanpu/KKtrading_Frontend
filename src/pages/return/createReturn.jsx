@@ -1,18 +1,38 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
-import BillingSuccess from '../../components/invoice/billingsuccess';
+import BillingSuccess from 'components/invoice/billingsuccess';
 import useAuth from 'hooks/useAuth';
-import { Button, Dialog, DialogContent, DialogTitle, Box , Typography} from '@mui/material';
+import { Button, Dialog, DialogContent, DialogTitle, Box, Typography, Slide } from '@mui/material';
 
+
+const Transition = React.forwardRef(function Transition(props, ref) {
+  return <Slide direction="up" ref={ref} {...props} />;
+});
 
 // A simple modal for choosing the return type
 function ChooseReturnTypeModal({ isOpen, onClose, onSelectReturnType }) {
   if (!isOpen) return null;
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
-    <DialogTitle>
+<Dialog
+      open={isOpen}
+      onClose={onClose}
+      fullWidth
+      maxWidth="xs"
+      TransitionComponent={Transition}
+      hideBackdrop
+      disableEnforceFocus
+      PaperProps={{
+        style: {
+          position: 'fixed',
+          bottom: 0,
+          margin: 0,
+          width: '100%',
+          borderRadius: '8px 8px 0 0',
+        },
+      }}
+    >    <DialogTitle>
       <Typography variant="h6" align="center" gutterBottom>
         Select Return Type
       </Typography>

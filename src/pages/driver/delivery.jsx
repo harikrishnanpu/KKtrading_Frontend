@@ -1540,7 +1540,7 @@ const DriverBillingPage = () => {
       Close
     </Button>
     <Button
-      variant="contained"
+      variant="outlined"
       color="primary"
       size="small"
       onClick={handleUpdateDelivery}

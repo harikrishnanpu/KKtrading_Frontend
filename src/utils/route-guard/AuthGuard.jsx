@@ -21,13 +21,17 @@ export default function AuthGuard({ children }) {
         replace: true
       });
     }else if(isLoggedIn && user && !user.isEmployee){
-      navigate('/employee', {
-        state: {
-          from: ' '
-        },
-        replace: true
-      });
-    }
+  navigate('/employee', {
+    state: {
+      from: ' '
+    },
+    replace: true
+  });
+}
+        // If the user tries to access "/users/all" but isn't an Admin & Super
+  else if (location.pathname === '/admin/allusers/' && (!user?.isAdmin || !user?.isSuper)) {
+          navigate('/', { replace: true }); // Redirect to home or another safe route
+      }
   }, [isLoggedIn, navigate, location]);
 
   return children;

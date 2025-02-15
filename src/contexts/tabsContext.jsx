@@ -28,12 +28,13 @@ export const TabsProvider = ({ children }) => {
 
   // 1) OPEN or ACTIVATE a tab
   const openTab = (path, label) => {
-    // If no "?" in path, append ?_ts=...
     let newPath = path;
-    if (!path.includes('?')) {
-      newPath = `${path}?_ts=${Date.now()}`;
+    // If the URL does not contain a _ts parameter, add one with the value 'ddd'
+    if (!path.includes('_ts=')) {
+      // If there’s already a query string, append using &, otherwise start with ?
+      newPath = path.includes('?') ? `${path}&_ts=new` : `${path}?_ts=new`;
     }
-
+  
     setTabs((prev) => {
       // If not already in tabs, add it
       const exists = prev.find((t) => t.path === newPath);
@@ -45,6 +46,7 @@ export const TabsProvider = ({ children }) => {
     setActiveTab(newPath);
     navigate(newPath);
   };
+  
 
   // 2) SWITCH to an existing tab
   //    Must use the EXACT stored path string (including ?_ts= or ?instance=).

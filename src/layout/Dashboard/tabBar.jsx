@@ -83,7 +83,11 @@ export default function TabBar() {
         display: 'flex',
         flexDirection: 'column',
         zIndex: 1100,
-        overflow: 'hidden'
+        overflow: 'hidden',
+        transition: theme.transitions.create('width', {
+          easing: theme.transitions.easing.sharp,
+          duration: theme.transitions.duration.standard,
+        }),
       }}
     >
       {/* Toggle Sidebar */}
@@ -95,7 +99,14 @@ export default function TabBar() {
 
       {/* Sidebar Title */}
       {openSidebar && (
-        <Box sx={{ px: 2, py: 1, borderBottom: `1px solid ${theme.palette.divider}` }}>
+        <Box
+          sx={{
+            px: 2,
+            py: 1,
+            borderBottom: `1px solid ${theme.palette.divider}`,
+            transition: 'opacity 0.3s',
+          }}
+        >
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
             My Tabs
           </Typography>
@@ -120,15 +131,16 @@ export default function TabBar() {
                   p: 0.8,
                   color: isActive ? iconSelectedColor : textColor,
                   '&:hover': {
-                    bgcolor: mode === ThemeMode.DARK ? 'divider' : 'secondary.200'
+                    bgcolor: mode === ThemeMode.DARK ? 'divider' : 'secondary.200',
                   },
                   '&.Mui-selected': {
                     bgcolor: 'transparent',
                     color: iconSelectedColor,
                     '&:hover': {
-                      bgcolor: 'transparent'
-                    }
-                  }
+                      bgcolor: 'transparent',
+                    },
+                  },
+                  transition: 'background-color 0.3s, color 0.3s',
                 }}
               >
                 {openSidebar ? (
@@ -148,8 +160,8 @@ export default function TabBar() {
                         sx={{
                           '& .MuiInputBase-input': {
                             fontSize: '0.8rem',
-                            fontWeight: isActive ? 500 : 400
-                          }
+                            fontWeight: isActive ? 500 : 400,
+                          },
                         }}
                       />
                     ) : (
@@ -157,8 +169,12 @@ export default function TabBar() {
                         primary={
                           <Typography
                             variant="h6"
-                            sx={{ fontWeight: isActive ? 500 : 400, fontSize: '0.8rem' }}
-                            onDoubleClick={() => handleDoubleClick(tab)}
+                            sx={{
+                              fontWeight: isActive ? 500 : 400,
+                              fontSize: '0.8rem',
+                              transition: 'none', // Disabling animation on label
+                            }}
+                          onDoubleClick={() => handleDoubleClick(tab)}
                           >
                             {tab.label}
                           </Typography>
@@ -180,7 +196,7 @@ export default function TabBar() {
                           mr: 0.5,
                           p: 0.3,
                           border: '1px solid transparent',
-                          '&:hover': { borderColor: theme.palette.divider }
+                          '&:hover': { borderColor: theme.palette.divider },
                         }}
                       >
                         <RefreshIcon sx={{ fontSize: '1rem' }} />
@@ -198,7 +214,7 @@ export default function TabBar() {
                           mr: 0.5,
                           p: 0.3,
                           border: '1px solid transparent',
-                          '&:hover': { borderColor: theme.palette.divider }
+                          '&:hover': { borderColor: theme.palette.divider },
                         }}
                       >
                         <AddIcon sx={{ fontSize: '1rem' }} />
@@ -215,7 +231,7 @@ export default function TabBar() {
                           color: 'inherit',
                           p: 0.5,
                           border: '1px solid transparent',
-                          '&:hover': { borderColor: theme.palette.divider }
+                          '&:hover': { borderColor: theme.palette.divider },
                         }}
                       >
                         <CloseIcon sx={{ fontSize: '1rem' }} />
@@ -229,7 +245,7 @@ export default function TabBar() {
                     sx={{
                       fontWeight: isActive ? 600 : 700,
                       fontSize: '0.8rem',
-                      textAlign: 'center'
+                      textAlign: 'center',
                     }}
                   >
                     {tab.label.charAt(0)}
@@ -251,5 +267,5 @@ TabBar.propTypes = {
   closeTab: PropTypes.func,
   refreshTab: PropTypes.func,
   renameTab: PropTypes.func,
-  duplicateTab: PropTypes.func
+  duplicateTab: PropTypes.func,
 };

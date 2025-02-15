@@ -7,6 +7,16 @@ import 'react-loading-skeleton/dist/skeleton.css';
 import { FaRecycle, FaTimes, FaEye } from 'react-icons/fa';
 import useAuth from 'hooks/useAuth';
 
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import Slide from '@mui/material/Slide';
+import IconButton from '@mui/material/IconButton';
+
+const Transition = React.forwardRef(function Transition(props, ref) {
+  return <Slide direction="up" ref={ref} {...props} />;
+});
+
 export default function ReturnListingScreen() {
   const navigate = useNavigate();
   const [returnsData, setReturnsData] = useState([]);
@@ -720,232 +730,247 @@ export default function ReturnListingScreen() {
         </>
       )}
 
-      {/* Full-screen Modal for Viewing Return Details */}
-      {selectedReturn && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          {/* The container is full-screen scrollable, with relative to place the close button */}
-          <div className="bg-white w-full h-full md:w-4/5 md:h-4/5 md:rounded-lg overflow-auto relative p-4 sm:p-8">
-            <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-3xl"
-              onClick={closeModal}
-            >
+      {/* MUI Dialog for Viewing Return Details */}
+      <Dialog
+        fullScreen
+        open={Boolean(selectedReturn)}
+        onClose={closeModal}
+        TransitionComponent={Transition}
+      >
+        <DialogTitle>
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-2">
+              <FaRecycle className="text-red-600" />
+              <span className="text-lg font-bold text-red-600">
+                Return Details - {selectedReturn?.returnNo}
+              </span>
+            </div>
+            <IconButton onClick={closeModal}>
               <FaTimes />
-            </button>
-            <div className="p-2">
-              <h2 className="text-lg font-bold text-red-600 mb-4 flex items-center space-x-2">
-                <FaRecycle className="text-red-600" />
-                <span>Return Details - {selectedReturn.returnNo}</span>
-              </h2>
-
-              {/* Example Layout */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                {/* Left side info */}
-                <div>
-                  {selectedReturn.returnType?.toLowerCase() === 'bill' ? (
-                    <>
-                      <p className="mb-1">
-                        Billing No:{' '}
-                        <span className="text-gray-700">
-                          {selectedReturn.billingNo}
-                        </span>
-                      </p>
-                      <p className="mb-1">
-                        Customer Name:{' '}
-                        <span className="text-gray-700">
-                          {selectedReturn.customerName}
-                        </span>
-                      </p>
-                      <p className="mb-1">
-                        Customer Address:{' '}
-                        <span className="text-gray-700">
-                          {selectedReturn.customerAddress}
-                        </span>
-                      </p>
-                    </>
-                  ) : selectedReturn.returnType?.toLowerCase() === 'purchase' ? (
-                    <>
-                      <p className="mb-1">
-                        Purchase No:{' '}
-                        <span className="text-gray-700">
-                          {selectedReturn.purchaseNo}
-                        </span>
-                      </p>
-                      <p className="mb-1">
-                        Seller Name:{' '}
-                        <span className="text-gray-700">
-                          {selectedReturn.sellerName}
-                        </span>
-                      </p>
-                      <p className="mb-1">
-                        Seller Address:{' '}
-                        <span className="text-gray-700">
-                          {selectedReturn.sellerAddress}
-                        </span>
-                      </p>
-                    </>
-                  ) : null}
-                </div>
-                {/* Right side info */}
-                <div>
-                  <p className="mb-1">
-                    Return Date:{' '}
-                    <span className="text-gray-700">
-                      {new Date(selectedReturn.returnDate).toLocaleDateString()}
-                    </span>
-                  </p>
-                  <p className="mb-1">
-                    Discount:{' '}
-                    <span className="text-gray-700">
-                      ₹{parseFloat(selectedReturn.discount || 0).toFixed(2)}
-                    </span>
-                  </p>
-                  {selectedReturn.otherExpenses && selectedReturn.otherExpenses.length > 0 && (
-                    <p className="mb-1">
-                      Other Expenses:{' '}
-                      <span className="text-gray-700">
-                        ₹
-                        {selectedReturn.otherExpenses
-                          .reduce((acc, oe) => acc + (parseFloat(oe.amount) || 0), 0)
-                          .toFixed(2)}
-                      </span>
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <hr className="my-4" />
-
-              {/* Products Table */}
-              <h3 className="text-md font-bold text-red-600 mb-2">
-                Products ({selectedReturn.products?.length || 0})
-              </h3>
-              <div className="overflow-x-auto mb-4">
-                <table className="w-full text-sm text-gray-500">
-                  <thead className="bg-gray-100 text-xs uppercase text-gray-700">
-                    <tr>
-                      <th className="px-4 py-3">#</th>
-                      <th className="px-4 py-3">Item ID</th>
-                      <th className="px-4 py-3">Name</th>
-                      <th className="px-4 py-3">Qty</th>
-                      <th className="px-4 py-3">Unit</th>
-                      <th className="px-4 py-3">Return Price</th>
-                      <th className="px-4 py-3">Discount</th>
-                      <th className="px-4 py-3">Total Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedReturn?.products.map((prod, idx) => (
-                      <tr
-                        key={idx}
-                        className="border-b hover:bg-gray-50"
-                      >
-                        <td className="px-4 py-3 text-xs font-medium text-gray-900 whitespace-nowrap">
-                          {idx + 1}
-                        </td>
-                        <td className="px-4 py-3 text-xs text-gray-600">{prod.item_id || 'N/A'}</td>
-                        <td className="px-4 py-3 text-xs text-gray-600">{prod.name || 'N/A'}</td>
-                        <td className="px-4 py-3 text-xs text-gray-600">{prod.quantity || '0'}</td>
-                        <td className="px-4 py-3 text-xs text-gray-600">{prod.unit || 'N/A'}</td>
-                        <td className="px-4 py-3 text-xs text-gray-600">₹{parseFloat(prod.returnPrice || 0).toFixed(2)}</td>
-                        <td className="px-4 py-3 text-xs text-gray-600">
-                          ₹{(
-                            (parseFloat(selectedReturn.discount || 0) / selectedReturn.products.length) *
-                            parseFloat(prod.quantity || 0)
-                          ).toFixed(2)}
-                        </td>
-                        <td className="px-4 py-3 text-xs text-gray-600">
-                          ₹{(
-                            parseFloat(prod.quantity || 0) * parseFloat(prod.returnPrice || 0) -
-                            (parseFloat(selectedReturn.discount || 0) / selectedReturn.products.length) *
-                              parseFloat(prod.quantity || 0)
-                          ).toFixed(2)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Summary */}
-              <div className="text-right">
-                <p className="text-sm mb-1">
-                  Subtotal:{' '}
-                  <span className="text-gray-600">
-                    ₹{parseFloat(selectedReturn.returnAmount || 0).toFixed(2)}
-                  </span>
-                </p>
-                {selectedReturn.cgst > 0 && (
-                  <p className="text-sm mb-1">
-                    CGST:{' '}
-                    <span className="text-gray-600">
-                      ₹{parseFloat(selectedReturn.cgst || 0).toFixed(2)}
-                    </span>
-                  </p>
-                )}
-                {selectedReturn.sgst > 0 && (
-                  <p className="text-sm mb-1">
-                    SGST:{' '}
-                    <span className="text-gray-600">
-                      ₹{parseFloat(selectedReturn.sgst || 0).toFixed(2)}
-                    </span>
-                  </p>
-                )}
-                <p className="text-sm mb-1">
-                  Total Tax:{' '}
-                  <span className="text-gray-600">
-                    ₹{parseFloat(selectedReturn.totalTax || 0).toFixed(2)}
-                  </span>
-                </p>
-                <p className="text-md font-bold mb-1">
-                  Grand Total:{' '}
-                  <span className="text-gray-800">
-                    ₹{parseFloat(selectedReturn.netReturnAmount || 0).toFixed(2)}
-                  </span>
-                </p>
-              </div>
-
-              {/* Other Expenses Table */}
-              {selectedReturn.otherExpenses && selectedReturn.otherExpenses.length > 0 && (
+            </IconButton>
+          </div>
+        </DialogTitle>
+        <DialogContent dividers className="p-4 sm:p-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            {/* Left side info */}
+            <div>
+              {selectedReturn?.returnType?.toLowerCase() === 'bill' ? (
                 <>
-                  <hr className="my-4" />
-                  <h3 className="text-md font-bold text-red-600 mb-2">
-                    Other Expenses ({selectedReturn.otherExpenses.length})
-                  </h3>
-                  <div className="overflow-x-auto mb-4">
-                    <table className="w-full text-sm text-gray-500">
-                      <thead className="bg-gray-100 text-xs uppercase text-gray-700">
-                        <tr>
-                          <th className="px-4 py-3">#</th>
-                          <th className="px-4 py-3">Amount</th>
-                          <th className="px-4 py-3">Remark</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedReturn.otherExpenses.map((oe, idx) => (
-                          <tr
-                            key={idx}
-                            className="border-b hover:bg-gray-50"
-                          >
-                            <td className="px-4 py-3 text-xs font-medium text-gray-900 whitespace-nowrap">
-                              {idx + 1}
-                            </td>
-                            <td className="px-4 py-3 text-xs text-gray-600">
-                              ₹{parseFloat(oe.amount || 0).toFixed(2)}
-                            </td>
-                            <td className="px-4 py-3 text-xs text-gray-600">
-                              {oe.remark || 'N/A'}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <p className="mb-1">
+                    Billing No:{' '}
+                    <span className="text-gray-700">
+                      {selectedReturn.billingNo}
+                    </span>
+                  </p>
+                  <p className="mb-1">
+                    Customer Name:{' '}
+                    <span className="text-gray-700">
+                      {selectedReturn.customerName}
+                    </span>
+                  </p>
+                  <p className="mb-1">
+                    Customer Address:{' '}
+                    <span className="text-gray-700">
+                      {selectedReturn.customerAddress}
+                    </span>
+                  </p>
                 </>
-              )}
+              ) : selectedReturn?.returnType?.toLowerCase() === 'purchase' ? (
+                <>
+                  <p className="mb-1">
+                    Purchase No:{' '}
+                    <span className="text-gray-700">
+                      {selectedReturn.purchaseNo}
+                    </span>
+                  </p>
+                  <p className="mb-1">
+                    Seller Name:{' '}
+                    <span className="text-gray-700">
+                      {selectedReturn.sellerName}
+                    </span>
+                  </p>
+                  <p className="mb-1">
+                    Seller Address:{' '}
+                    <span className="text-gray-700">
+                      {selectedReturn.sellerAddress}
+                    </span>
+                  </p>
+                </>
+              ) : null}
+            </div>
+            {/* Right side info */}
+            <div>
+              <p className="mb-1">
+                Return Date:{' '}
+                <span className="text-gray-700">
+                  {new Date(selectedReturn?.returnDate).toLocaleDateString()}
+                </span>
+              </p>
+              <p className="mb-1">
+                Discount:{' '}
+                <span className="text-gray-700">
+                  ₹{parseFloat(selectedReturn?.discount || 0).toFixed(2)}
+                </span>
+              </p>
+              {selectedReturn?.otherExpenses &&
+                selectedReturn?.otherExpenses.length > 0 && (
+                  <p className="mb-1">
+                    Other Expenses:{' '}
+                    <span className="text-gray-700">
+                      ₹
+                      {selectedReturn.otherExpenses
+                        .reduce(
+                          (acc, oe) => acc + (parseFloat(oe.amount) || 0),
+                          0
+                        )
+                        .toFixed(2)}
+                    </span>
+                  </p>
+                )}
             </div>
           </div>
-        </div>
-      )}
+
+          <hr className="my-4" />
+
+          {/* Products Table */}
+          <h3 className="text-md font-bold text-red-600 mb-2">
+            Products ({selectedReturn?.products?.length || 0})
+          </h3>
+          <div className="overflow-x-auto mb-4">
+            <table className="w-full text-sm text-gray-500">
+              <thead className="bg-gray-100 text-xs uppercase text-gray-700">
+                <tr>
+                  <th className="px-4 py-3">#</th>
+                  <th className="px-4 py-3">Item ID</th>
+                  <th className="px-4 py-3">Name</th>
+                  <th className="px-4 py-3">Qty</th>
+                  <th className="px-4 py-3">Unit</th>
+                  <th className="px-4 py-3">Return Price</th>
+                  <th className="px-4 py-3">Discount</th>
+                  <th className="px-4 py-3">Total Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selectedReturn?.products?.map((prod, idx) => (
+                  <tr key={idx} className="border-b hover:bg-gray-50">
+                    <td className="px-4 py-3 text-xs font-medium text-gray-900 whitespace-nowrap">
+                      {idx + 1}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-600">
+                      {prod.item_id || 'N/A'}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-600">
+                      {prod.name || 'N/A'}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-600">
+                      {prod.quantity || '0'}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-600">
+                      {prod.unit || 'N/A'}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-600">
+                      ₹{parseFloat(prod.returnPrice || 0).toFixed(2)}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-600">
+                      ₹
+                      {(
+                        (parseFloat(selectedReturn.discount || 0) /
+                          selectedReturn.products.length) *
+                        parseFloat(prod.quantity || 0)
+                      ).toFixed(2)}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-600">
+                      ₹
+                      {(
+                        parseFloat(prod.quantity || 0) *
+                          parseFloat(prod.returnPrice || 0) -
+                        (parseFloat(selectedReturn.discount || 0) /
+                          selectedReturn.products.length) *
+                          parseFloat(prod.quantity || 0)
+                      ).toFixed(2)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Summary */}
+          <div className="text-right">
+            <p className="text-sm mb-1">
+              Subtotal:{' '}
+              <span className="text-gray-600">
+                ₹{parseFloat(selectedReturn?.returnAmount || 0).toFixed(2)}
+              </span>
+            </p>
+            {selectedReturn?.cgst > 0 && (
+              <p className="text-sm mb-1">
+                CGST:{' '}
+                <span className="text-gray-600">
+                  ₹{parseFloat(selectedReturn?.cgst || 0).toFixed(2)}
+                </span>
+              </p>
+            )}
+            {selectedReturn?.sgst > 0 && (
+              <p className="text-sm mb-1">
+                SGST:{' '}
+                <span className="text-gray-600">
+                  ₹{parseFloat(selectedReturn?.sgst || 0).toFixed(2)}
+                </span>
+              </p>
+            )}
+            <p className="text-sm mb-1">
+              Total Tax:{' '}
+              <span className="text-gray-600">
+                ₹{parseFloat(selectedReturn?.totalTax || 0).toFixed(2)}
+              </span>
+            </p>
+            <p className="text-md font-bold mb-1">
+              Grand Total:{' '}
+              <span className="text-gray-800">
+                ₹{parseFloat(selectedReturn?.netReturnAmount || 0).toFixed(2)}
+              </span>
+            </p>
+          </div>
+
+          {/* Other Expenses Table */}
+          {selectedReturn?.otherExpenses &&
+            selectedReturn?.otherExpenses.length > 0 && (
+              <>
+                <hr className="my-4" />
+                <h3 className="text-md font-bold text-red-600 mb-2">
+                  Other Expenses ({selectedReturn?.otherExpenses.length})
+                </h3>
+                <div className="overflow-x-auto mb-4">
+                  <table className="w-full text-sm text-gray-500">
+                    <thead className="bg-gray-100 text-xs uppercase text-gray-700">
+                      <tr>
+                        <th className="px-4 py-3">#</th>
+                        <th className="px-4 py-3">Amount</th>
+                        <th className="px-4 py-3">Remark</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedReturn?.otherExpenses.map((oe, idx) => (
+                        <tr key={idx} className="border-b hover:bg-gray-50">
+                          <td className="px-4 py-3 text-xs font-medium text-gray-900 whitespace-nowrap">
+                            {idx + 1}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-gray-600">
+                            ₹{parseFloat(oe.amount || 0).toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-gray-600">
+                            {oe.remark || 'N/A'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
