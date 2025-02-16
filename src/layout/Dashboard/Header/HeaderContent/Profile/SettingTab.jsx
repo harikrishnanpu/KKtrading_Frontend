@@ -25,7 +25,7 @@ export default function SettingTab() {
 
   return (
     <List component="nav" sx={{ p: 0, '& .MuiListItemIcon-root': { minWidth: 32 } }}>
-      <Link style={{ textDecoration: 'none' }} target="_blank" href="https://phoenixcoded.authordesk.app/">
+      <Link style={{ textDecoration: 'none' }} target="_blank" href="#">
         <ListItemButton selected={selectedIndex === 0} onClick={(event) => handleListItemClick(event, 0)}>
           <ListItemIcon>
             <I24Support variant="Bulk" size={18} />
@@ -45,7 +45,7 @@ export default function SettingTab() {
         </ListItemIcon>
         <ListItemText primary="Privacy Center" />
       </ListItemButton>
-      <Link style={{ textDecoration: 'none' }} target="_blank" href="https://phoenixcoded.authordesk.app/">
+      <Link style={{ textDecoration: 'none' }} target="_blank" href="#">
         <ListItemButton selected={selectedIndex === 3} onClick={(event) => handleListItemClick(event, 3)}>
           <ListItemIcon>
             <Messages1 variant="Bulk" size={18} />

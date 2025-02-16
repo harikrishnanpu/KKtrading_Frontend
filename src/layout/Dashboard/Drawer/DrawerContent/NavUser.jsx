@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Link } from 'react-router-dom';
 
@@ -22,6 +22,7 @@ import { useGetMenuMaster } from 'api/menu';
 import { ArrowRight2 } from 'iconsax-react';
 
 import avatar1 from 'assets/images/users/avatar-1.png';
+import api from 'pages/api';
 
 const ExpandMore = styled(IconButton, { shouldForwardProp: (prop) => prop !== 'theme' && prop !== 'expand' && prop !== 'drawerOpen' })(
   ({ theme, expand, drawerOpen }) => ({
@@ -44,11 +45,24 @@ const ExpandMore = styled(IconButton, { shouldForwardProp: (prop) => prop !== 't
 export default function UserList() {
   const theme = useTheme();
   const navigate = useNavigate();
-
+  const [avatar, setAvatar] = useState(avatar1);
+  
   const { menuMaster } = useGetMenuMaster();
   const drawerOpen = menuMaster.isDashboardDrawerOpened;
-
+  
   const { logout, user } = useAuth();
+
+  useEffect(async()=>{
+    if(user){
+      const { data } = await api.get(`/api/users/${user._id}`);
+      if(data.error){
+        console.error(data.error);
+      }else{
+        setAvatar(data.avatar);
+      }
+    }
+  },[user]);
+  
   const handleLogout = async () => {
     try {
       await logout();
@@ -98,7 +112,7 @@ export default function UserList() {
           }}
         >
           <ListItemAvatar>
-            <Avatar alt="Avatar" src={avatar1} sx={{ ...(drawerOpen && { width: 46, height: 46 }) }} />
+            <Avatar alt="Avatar" src={avatar} sx={{ ...(drawerOpen && { width: 46, height: 46 }) }} />
           </ListItemAvatar>
           <ListItemText primary={user?.name} sx={{ ...(!drawerOpen && { display: 'none' }) }} secondary={user.role} />
         </ListItem>
@@ -113,10 +127,10 @@ export default function UserList() {
         transformOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
         <MenuItem onClick={handleLogout}>Logout</MenuItem>
-        <MenuItem component={Link} to="#" onClick={handleClose}>
+        <MenuItem component={Link} to="/apps/profiles/account/basic" onClick={handleClose}>
           Profile
         </MenuItem>
-        <MenuItem component={Link} to="#" onClick={handleClose}>
+        <MenuItem component={Link} to="/apps/profiles/account/basic" onClick={handleClose}>
           My account
         </MenuItem>
       </Menu>

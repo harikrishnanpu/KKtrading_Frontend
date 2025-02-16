@@ -76,13 +76,13 @@ export default function MainLayout() {
 
   return (
     <AuthGuard>
-      <Box sx={{ display: 'flex', width: isMobile ? '90%' : '98%' }}>
+      <Box sx={{ display: 'flex', width: isMobile ? '100%' : '97%' }}>
         <Header />
         {!isHorizontal ? <Drawer /> : <HorizontalBar />}
 
-        <Box component="main" sx={{ width: `calc(100% - ${DRAWER_WIDTH}px)`, flexGrow: 1, p: { xs: 2, md: 3 } }}>
+        <Box component="main" sx={{ width: `calc(100% - ${DRAWER_WIDTH}px)`, flexGrow: 1 }}>
           <Toolbar sx={{ mt: isHorizontal ? 8 : 'inherit', mb: isHorizontal ? 2 : 'inherit' }} />
-          <TabBar/>
+          {!isMobile && <TabBar/> }
           <Container
             maxWidth={container ? 'xl' : false}
             sx={{
