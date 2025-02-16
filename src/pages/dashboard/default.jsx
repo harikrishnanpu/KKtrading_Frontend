@@ -4,6 +4,9 @@ import { useTheme } from '@mui/material/styles';
 import { useEffect, useState } from 'react';
 import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
+import Skeleton from '@mui/material/Skeleton';
+import { keyframes } from '@mui/system';
 
 // project-imports
 import WelcomeBanner from 'sections/dashboard/default/WelcomeBanner';
@@ -29,6 +32,18 @@ import {
 
 // API instance
 import api from 'pages/api'; // Adjust to your actual API import if needed
+
+// Define a simple fade-in animation for the skeleton cards
+const fadeIn = keyframes`
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+`;
 
 export default function DashboardDefault() {
   const theme = useTheme();
@@ -57,11 +72,76 @@ export default function DashboardDefault() {
     fetchDashboardData();
   }, []);
 
-  // Loading state
+  // Skeletal Loading State
   if (loading) {
     return (
-      <Grid container justifyContent="center" sx={{ p: 3 }}>
-        <Typography variant="subtitle1">Loading Dashboard Data...</Typography>
+      <Grid container rowSpacing={4.5} columnSpacing={2.75} sx={{ p: 3 }}>
+        {/* Skeleton for Welcome Banner */}
+        <Grid item xs={12}>
+          <Skeleton 
+            variant="rectangular" 
+            animation="wave" 
+            height={200} 
+            sx={{ borderRadius: '12px' }} 
+          />
+        </Grid>
+
+        {/* Skeleton for Low Stock Preview
+        <Grid item xs={12}>
+          <Skeleton 
+            variant="rectangular" 
+            animation="wave" 
+            height={150} 
+            sx={{ borderRadius: '12px' }} 
+          />
+        </Grid> */}
+
+        {/* Skeletons for the Dashboard Cards */}
+        {Array.from(new Array(6)).map((_, index) => (
+          <Grid item xs={12} sm={6} lg={3} key={index}>
+            <Box 
+              sx={{ 
+                p: 2, 
+                borderRadius: '12px', 
+                backgroundColor: theme.palette.background.paper, 
+                boxShadow: 2,
+                animation: `${fadeIn} 0.5s ease-in-out`
+              }}
+            >
+              {/* Title Skeleton */}
+              <Skeleton 
+                variant="text" 
+                animation="wave" 
+                width="70%" 
+                height={30} 
+                sx={{ borderRadius: '8px', mb: 1 }} 
+              />
+              {/* Count Skeleton */}
+              {/* <Skeleton 
+                variant="text" 
+                animation="wave" 
+                width="50%" 
+                height={25} 
+                sx={{ borderRadius: '8px', mb: 1 }} 
+              /> */}
+              {/* Sparkline/Chart Skeleton */}
+              <Skeleton 
+                variant="rectangular" 
+                animation="wave" 
+                height={50} 
+                sx={{ borderRadius: '8px', mb: 1 }} 
+              />
+              {/* Percentage/Detail Skeleton */}
+              <Skeleton 
+                variant="text" 
+                animation="wave" 
+                width="30%" 
+                height={20} 
+                sx={{ borderRadius: '8px' }} 
+              />
+            </Box>
+          </Grid>
+        ))}
       </Grid>
     );
   }
@@ -95,9 +175,7 @@ export default function DashboardDefault() {
     {
       key: 'bills',
       title: 'Total Bills',
-      // Default to 0 if not provided
       count: dashboardData.totalBills ?? 0,
-      // Default to an array of 12 zeros if missing
       monthly: dashboardData.monthlyBills ?? Array(12).fill(0),
       iconPrimary: <ShoppingCart size={24} color={theme.palette.success.main} />,
       color: theme.palette.success.main,
@@ -180,10 +258,7 @@ export default function DashboardDefault() {
       count: dashboardData.totalDeliveries ?? 0,
       monthly: dashboardData.monthlyDeliveries ?? Array(12).fill(0),
       iconPrimary: (
-        <ArrowSwapHorizontal
-          size={24}
-          color={theme.palette.secondary.main}
-        />
+        <ArrowSwapHorizontal size={24} color={theme.palette.secondary.main} />
       ),
       color: theme.palette.secondary.main,
       percentage: (
@@ -229,7 +304,6 @@ export default function DashboardDefault() {
       ))}
 
       {/* Additional Rows */}
-
       {/* <Grid item xs={12} md={6}>
         <TotalIncome />
       </Grid> */}

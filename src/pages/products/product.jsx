@@ -1,17 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
+
+// Router & Hooks
+import { useNavigate, useParams } from 'react-router-dom';
 import useAuth from 'hooks/useAuth';
 import api from '../api';
 
-// --- MUI Imports ---
+// MUI Imports
+import useMediaQuery from '@mui/material/useMediaQuery';
 import {
   Alert,
   Box,
   Button,
   CardMedia,
   Chip,
-  CircularProgress,
-  Container,
   Divider,
   FormControl,
   Grid,
@@ -20,62 +21,81 @@ import {
   MenuItem,
   Paper,
   Select,
+  Skeleton,
   Stack,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableRow,
-  Typography,
+  Typography
 } from '@mui/material';
-import { styled } from '@mui/system';
 
-// --- MUI Icons ---
+// MUI Icons (or iconsax-react if you prefer)
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 
-// ================ Styled Components ================
-/** 
- * A simple, classic background using light grey. 
- * Feel free to customize the color to suit your design taste.
- */
-const MinimalBackground = styled('div')(({ theme }) => ({
-  paddingTop: theme.spacing(4),
-  paddingBottom: theme.spacing(6),
-  [theme.breakpoints.down('sm')]: {
-    paddingTop: theme.spacing(2),
-  },
-}));
+// Extended Components (as per your structure)
+import MainCard from 'components/MainCard';
+import Avatar from 'components/@extended/Avatar';
 
-/**
- * A basic Paper container with mild rounding and shadow.
- * This is our main content wrapper for the product details.
- */
-const StyledPaper = styled(Paper)(({ theme }) => ({
-  borderRadius: theme.spacing(2),
-  boxShadow: theme.shadows[2],
-  padding: theme.spacing(3),
-}));
+// Assets (if you need a default product image)
+import defaultImages from 'assets/images/users/default.png';
 
-/**
- * A "classic highlight" box for "Usually sells at" price info.
- * Light grey background, subtle border, centered text.
- */
-const ClassicHighlightBox = styled(Box)(({ theme }) => ({
-  border: `1px solid ${theme.palette.grey[300]}`,
-  borderRadius: theme.shape.borderRadius,
-  padding: theme.spacing(2),
-  textAlign: 'center',
-}));
+function ProductScreenSkeleton() {
+  // A simple skeleton layout to mimic the final structure.
+  return (
+    <Grid container spacing={3}>
+      {/* Left column skeleton */}
+      <Grid item xs={12} sm={5} md={4} xl={3}>
+        <MainCard>
+          <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 1 }} />
+          <Divider sx={{ my: 2 }} />
+          <Skeleton variant="text" height={35} />
+          <Skeleton variant="text" width="60%" />
+          <Skeleton variant="text" width="40%" />
+        </MainCard>
+      </Grid>
 
-// ============== Product Screen Component ==============
+      {/* Right column skeleton */}
+      <Grid item xs={12} sm={7} md={8} xl={9}>
+        <Grid container spacing={3}>
+          {/* Skeleton card #1 */}
+          <Grid item xs={12}>
+            <MainCard>
+              <Skeleton variant="text" height={35} width="30%" />
+              <Skeleton variant="text" height={25} />
+              <Skeleton variant="rectangular" height={60} sx={{ borderRadius: 1 }} />
+            </MainCard>
+          </Grid>
+          {/* Skeleton card #2 */}
+          <Grid item xs={12}>
+            <MainCard>
+              <Skeleton variant="text" height={35} width="40%" />
+              <Skeleton variant="rectangular" height={80} sx={{ borderRadius: 1 }} />
+            </MainCard>
+          </Grid>
+          {/* Skeleton card #3 */}
+          <Grid item xs={12}>
+            <MainCard>
+              <Skeleton variant="text" height={35} width="30%" />
+              <Skeleton variant="rectangular" height={60} sx={{ borderRadius: 1 }} />
+            </MainCard>
+          </Grid>
+        </Grid>
+      </Grid>
+    </Grid>
+  );
+}
+
 export default function ProductScreen() {
   const { id: productId } = useParams();
   const navigate = useNavigate();
   const { user: userInfo } = useAuth();
+  const matchDownMD = useMediaQuery((theme) => theme.breakpoints.down('md'));
 
-  // ------------- States -------------
+  // ----------------- State -----------------
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [product, setProduct] = useState(null);
@@ -86,12 +106,11 @@ export default function ProductScreen() {
   const [isImageError, setIsImageError] = useState(false);
 
   // Unit & Calculations
-  const [selectedUnit, setSelectedUnit] = useState('NOS'); // default
+  const [selectedUnit, setSelectedUnit] = useState('NOS');
   const [inStockForUnit, setInStockForUnit] = useState(0);
   const [displaySellingPrice, setDisplaySellingPrice] = useState('0.00');
 
-  // ============== Effects ==============
-  // Fetch product data on mount
+  // ----------------- Fetch Data -----------------
   useEffect(() => {
     async function fetchProduct() {
       setLoading(true);
@@ -115,7 +134,7 @@ export default function ProductScreen() {
     fetchProduct();
   }, [productId]);
 
-  // Recalculate “in stock” and “Usually sells at” whenever unit or product changes
+  // ----------------- Recalculate stock & price on changes -----------------
   useEffect(() => {
     if (!product) return;
 
@@ -132,6 +151,7 @@ export default function ProductScreen() {
       const psRatio = parseFloat(product.psRatio) || 1;
       computedStock = parseFloat(product.countInStock / psRatio).toFixed(2);
     } else if (selectedUnit === 'TNOS') {
+      // TILES NOS ?
       computedStock = parseFloat(product.countInStock).toFixed(2);
     } else {
       computedStock = parseFloat(product.countInStock).toFixed(2);
@@ -147,7 +167,8 @@ export default function ProductScreen() {
     const psRatio = parseFloat(product.psRatio) || 1;
 
     if (product.category === 'TILES') {
-      const tileBase = basePrice / 0.8;
+      // Example calculation
+      const tileBase = basePrice / 0.8; // Sample multiplier
       if (selectedUnit === 'SQFT' && area > 0) {
         newPrice = (tileBase / area).toFixed(2);
       } else if (selectedUnit === 'BOX') {
@@ -163,7 +184,7 @@ export default function ProductScreen() {
     setDisplaySellingPrice(newPrice.toString());
   }, [selectedUnit, product]);
 
-  // ============== Handlers ==============
+  // ----------------- Delete Handler -----------------
   const deleteHandler = async () => {
     if (!product) return;
     if (window.confirm('Are you sure you want to delete this product?')) {
@@ -177,36 +198,25 @@ export default function ProductScreen() {
     }
   };
 
-  // ============== Loading / Error States ==============
+  // ----------------- Loading & Error States -----------------
   if (loading) {
-    return (
-      <MinimalBackground>
-        <Container
-          maxWidth="lg"
-          sx={{
-            width: "100%"
-          }}
-        >
-          <CircularProgress />
-        </Container>
-      </MinimalBackground>
-    );
+    return <ProductScreenSkeleton />;
   }
 
   if (error || !product) {
     return (
-      <MinimalBackground>
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error || 'Product not found'}
-          </Alert>
-          <Button variant="outlined" color="error" onClick={() => navigate('/products/all')}>
-            See All Products
-          </Button>
-      </MinimalBackground>
+      <MainCard>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error || 'Product not found'}
+        </Alert>
+        <Button variant="outlined" color="error" onClick={() => navigate('/products/all')}>
+          See All Products
+        </Button>
+      </MainCard>
     );
   }
 
-  // ============== Determine Stock Chip State ==============
+  // ----------------- Determine Stock Chip -----------------
   let stockChipColor = 'warning';
   let stockChipLabel = 'Low Stock';
   if (product.countInStock > 10) {
@@ -217,82 +227,86 @@ export default function ProductScreen() {
     stockChipLabel = 'Out Of Stock';
   }
 
-  // ============== Main Render ==============
+  // ----------------- Main Render -----------------
   return (
-    <MinimalBackground>
-        <StyledPaper>
-          <Grid container spacing={4}>
-            {/* ================= Image Section ================= */}
-            <Grid item xs={12} md={6}>
-              <Box sx={{ position: 'relative' }}>
-                <Chip
-                  label={stockChipLabel}
-                  color={stockChipColor}
-                  sx={{ position: 'absolute', top: 16, right: 16, zIndex: 2 }}
-                />
-                <CardMedia
-                  component="img"
-                  image={product.image}
-                  alt={product.name}
-                  onLoad={() => setIsImageLoaded(true)}
-                  onError={() => {
-                    setIsImageError(true);
-                    setIsImageLoaded(false);
-                  }}
-                  sx={{
-                    height: { xs: 300, md: 400 },
-                    borderRadius: 2,
-                    objectFit: 'cover',
-                    width: '100%',
-                    boxShadow: 2,
-                    filter: isImageLoaded ? 'none' : 'blur(8px)',
-                    transition: 'filter 0.3s ease-in-out',
-                  }}
-                />
-                {isImageError && (
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      bgcolor: '#ffffffcc',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: 2,
-                    }}
-                  >
-                    <Typography variant="body1" color="text.secondary">
-                      No image available
-                    </Typography>
-                  </Box>
-                )}
+    <Grid container spacing={3}>
+      {/* ================= Left Column ================= */}
+      <Grid item xs={12} sm={5} md={4} xl={3}>
+        <MainCard>
+          {/* Product Image / Avatar area */}
+          <Box sx={{ position: 'relative' }}>
+            <Chip
+              label={stockChipLabel}
+              color={stockChipColor}
+              sx={{
+                position: 'absolute',
+                top: 16,
+                right: 16,
+                zIndex: 2
+              }}
+            />
+            <CardMedia
+              component="img"
+              image={product.image || defaultImages}
+              alt={product.name}
+              onLoad={() => setIsImageLoaded(true)}
+              onError={() => {
+                setIsImageError(true);
+                setIsImageLoaded(false);
+              }}
+              sx={{
+                borderRadius: 1,
+                objectFit: 'cover',
+                width: '100%',
+                height: 250,
+                boxShadow: 1,
+                filter: isImageLoaded ? 'none' : 'blur(4px)',
+                transition: 'filter 0.3s ease-in-out'
+              }}
+            />
+            {/* If image fails */}
+            {isImageError && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: 250,
+                  bgcolor: '#ffffffcc',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 1
+                }}
+              >
+                <Typography variant="body1" color="text.secondary">
+                  No image available
+                </Typography>
               </Box>
-            </Grid>
+            )}
+          </Box>
 
-            {/* ================= Details Section ================= */}
-            <Grid item xs={12} md={6}>
-              {/* Title / ID */}
-              <Typography variant="subtitle2" color="text.secondary">
-                Product ID: {product.item_id}
-              </Typography>
-              <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
-                {product.name}
-              </Typography>
-              <Stack direction="row" spacing={3} sx={{ mb: 2, flexWrap: 'wrap' }}>
-                <Typography variant="body1">
-                  <strong>Brand:</strong> {product.brand}
-                </Typography>
-                <Typography variant="body1">
-                  <strong>Category:</strong> {product.category}
-                </Typography>
-              </Stack>
-              <Divider sx={{ mb: 2 }} />
+          {/* Basic Info (Name, ID, Brand, Category) */}
+          <Divider sx={{ my: 2 }} />
+          <Stack spacing={1} sx={{ textAlign: 'center' }}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Product ID: {product.item_id}
+            </Typography>
+            <Typography variant="h5">{product.name}</Typography>
+            <Typography color="secondary">{product.brand}</Typography>
+            <Typography color="secondary">{product.category}</Typography>
+          </Stack>
+        </MainCard>
+      </Grid>
 
-              {/* ========= Table of Attributes (Classic style) ========= */}
-              <TableContainer component={Box} sx={{ mb: 2 }}>
+      {/* ================= Right Column ================= */}
+      <Grid item xs={12} sm={7} md={8} xl={9}>
+        <Grid container spacing={3}>
+          {/* ----------- Basic Attributes Card ----------- */}
+          <Grid item xs={12}>
+            <MainCard title="Product Details">
+              <TableContainer component={Paper}>
                 <Table size="small">
                   <TableBody>
                     <TableRow>
@@ -348,20 +362,23 @@ export default function ProductScreen() {
                   </TableBody>
                 </Table>
               </TableContainer>
+            </MainCard>
+          </Grid>
 
-              {/* Description (if present) */}
-              {product.description && (
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                    Description
-                  </Typography>
-                  <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
-                    {product.description}
-                  </Typography>
-                </Box>
-              )}
+          {/* ----------- Description Card ----------- */}
+          {product.description && (
+            <Grid item xs={12}>
+              <MainCard title="Description">
+                <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
+                  {product.description}
+                </Typography>
+              </MainCard>
+            </Grid>
+          )}
 
-              {/* Unit Selector & Price */}
+          {/* ----------- Stock & Price Card ----------- */}
+          <Grid item xs={12}>
+            <MainCard title="Stock & Price">
               <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: 'wrap' }}>
                 <FormControl size="small" sx={{ minWidth: 120 }}>
                   <InputLabel id="unit-select-label">Unit</InputLabel>
@@ -379,48 +396,55 @@ export default function ProductScreen() {
                 </FormControl>
               </Stack>
 
-              {/* Classic-Style Highlight for "Usually sells at" */}
-              <ClassicHighlightBox sx={{ mb: 3 }}>
+              {/* "Usually sells at" Highlight */}
+              <Paper
+                variant="outlined"
+                sx={{
+                  mb: 2,
+                  p: 2,
+                  textAlign: 'center',
+                  borderColor: 'grey.300',
+                  borderRadius: 1
+                }}
+              >
                 <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                   Usually sells at ({selectedUnit}):
                 </Typography>
                 <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 1 }}>
                   ₹{displaySellingPrice}
                 </Typography>
-              </ClassicHighlightBox>
+              </Paper>
 
               {/* Stock Info */}
-              <Box sx={{ mb: 2 }}>
-                <Grid container justifyContent="space-between" alignItems="center">
-                  <Grid item>
-                    <Typography
-                      variant="h6"
-                      sx={{
-                        color:
-                          product.countInStock > 10
-                            ? 'green'
-                            : product.countInStock === 0
-                            ? 'red'
-                            : 'orange',
-                      }}
-                    >
-                      In Stock (pieces): {product.countInStock}
-                    </Typography>
-                  </Grid>
-                  <Grid item>
-                    <Typography variant="body2" color="text.secondary">
-                      Stock Cleared: {soldOut ? soldOut.totalQuantity : 0}
-                    </Typography>
-                  </Grid>
-                </Grid>
-                <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
+              <Stack spacing={1}>
+                <Stack direction="row" justifyContent="space-between">
+                  <Typography
+                    variant="subtitle1"
+                    sx={{
+                      color:
+                        product.countInStock > 10
+                          ? 'green'
+                          : product.countInStock === 0
+                          ? 'red'
+                          : 'orange'
+                    }}
+                  >
+                    In Stock (pieces): {product.countInStock}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Stock Cleared: {soldOut ? soldOut.totalQuantity : 0}
+                  </Typography>
+                </Stack>
+                <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
                   In Stock ({selectedUnit}): {inStockForUnit}
                 </Typography>
-              </Box>
+              </Stack>
+            </MainCard>
+          </Grid>
 
-              <Divider sx={{ mb: 3 }} />
-
-              {/* ============== Action Buttons ============== */}
+          {/* ----------- Actions Card ----------- */}
+          <Grid item xs={12}>
+            <MainCard title="Actions">
               <Stack direction="row" spacing={2} flexWrap="wrap">
                 <Button
                   variant="outlined"
@@ -453,16 +477,27 @@ export default function ProductScreen() {
                   Delete
                 </Button>
               </Stack>
-            </Grid>
+            </MainCard>
           </Grid>
-        </StyledPaper>
 
-        {/* ============== Link to All Products ============== */}
-        <Box sx={{ mt: 4, textAlign: 'center' }}>
-          <Link component={RouterLink} to="/products/all" underline="hover" color="error">
-            Search Another Product? Click here
-          </Link>
-        </Box>
-    </MinimalBackground>
+          {/* ----------- Link to All Products ----------- */}
+          <Grid item xs={12}>
+            <MainCard>
+              <Typography variant="body2" align="center">
+                <Link
+                  component="button"
+                  onClick={() => navigate('/products/all')}
+                  underline="hover"
+                  color="error"
+                  sx={{ cursor: 'pointer' }}
+                >
+                  Search Another Product? Click here
+                </Link>
+              </Typography>
+            </MainCard>
+          </Grid>
+        </Grid>
+      </Grid>
+    </Grid>
   );
 }

@@ -7,6 +7,7 @@ import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import LinearProgress from '@mui/material/LinearProgress';
+import Skeleton from '@mui/material/Skeleton';
 import { keyframes } from '@mui/system';
 
 // Project imports
@@ -27,8 +28,6 @@ const glitterEffect = keyframes`
   100% { background-color: rgba(255, 0, 0, 0.8); box-shadow: 0 0 5px rgba(255, 0, 0, 0.6), inset 0 0 2px rgba(255, 255, 255, 0.3); }
 `;
 
-
-
 // Styled component for the "New" badge
 const NewBadge = styled(Box)(({ theme }) => ({
   position: 'absolute',
@@ -42,10 +41,8 @@ const NewBadge = styled(Box)(({ theme }) => ({
   fontSize: '12px',
   letterSpacing: '1px',
   backgroundColor: 'rgba(255, 0, 0, 0.8)',
-  animation: `${glitterEffect} 1.2s infinite alternate ease-in-out`, // Faster, more lively effect
+  animation: `${glitterEffect} 1.2s infinite alternate ease-in-out`,
 }));
-
-
 
 export default function WelcomeBanner() {
   const theme = useTheme();
@@ -56,24 +53,22 @@ export default function WelcomeBanner() {
   const [progress, setProgress] = useState(0);
   const progressInterval = useRef(null);
 
-
   const timeAgo = (timestamp) => {
     const now = new Date();
     const past = new Date(timestamp);
     const diffInSeconds = Math.floor((now - past) / 1000);
-  
-    if (diffInSeconds < 60) return "Just now"; // Less than a minute
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`; // Less than an hour
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`; // Less than a day
-    if (diffInSeconds < 172800) return "Yesterday"; // Less than 2 days
-    return `${Math.floor(diffInSeconds / 86400)} days ago`; // More than 2 days
+
+    if (diffInSeconds < 60) return "Just now";
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+    if (diffInSeconds < 172800) return "Yesterday";
+    return `${Math.floor(diffInSeconds / 86400)} days ago`;
   };
-  
 
   // Fetch announcements from API
   useEffect(() => {
     api
-      .get('/api/announcements') // Update to your API
+      .get('/api/announcements')
       .then((response) => {
         // Sort announcements by time descending to have the latest first
         const sortedAnnouncements = response.data.sort(
@@ -92,7 +87,7 @@ export default function WelcomeBanner() {
 
     const interval = setInterval(() => {
       setCurrentIndex((prevIndex) => (prevIndex + 1) % announcements.length);
-    }, 6000); // 3 seconds interval
+    }, 6000); // 6 seconds interval
 
     return () => clearInterval(interval);
   }, [announcements, isManual]);
@@ -138,6 +133,59 @@ export default function WelcomeBanner() {
   const latestAnnouncementId =
     announcements.length > 0 ? announcements[0]._id : null;
 
+  // Render animated Skeleton Card while loading announcements
+  if (announcements.length === 0) {
+    return (
+      <MainCard
+        border={false}
+        sx={{
+          color: 'common.white',
+          bgcolor:
+            theme.palette.mode === ThemeMode.DARK
+              ? 'primary.400'
+              : 'primary.darker',
+          position: 'relative',
+          overflow: 'hidden',
+          '&:after': {
+            content: '""',
+            background: `url("${cardBack}") 100% 100% / cover no-repeat`,
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 1,
+            opacity: 0.5,
+          },
+        }}
+      >
+        <Grid container>
+          {/* Left Section Skeleton */}
+          <Grid item md={6} sm={6} xs={12}>
+            <Stack spacing={2} sx={{ padding: 3 }}>
+              <Skeleton variant="text" animation="wave" width="80%" height={40} />
+              <Skeleton variant="text" animation="wave" width="90%" height={20} />
+              {/* <Skeleton variant="text" animation="wave" width="40%" height={20} /> */}
+              {/* <Skeleton variant="rectangular" animation="wave" width="100%" height={100} sx={{ borderRadius: 2 }} /> */}
+              <Skeleton variant="text" animation="wave" width="30%" height={20} />
+            </Stack>
+          </Grid>
+          {/* Right Section Skeleton */}
+          <Grid item md={6} sm={6} xs={12} sx={{ display: { xs: 'none', sm: 'block' } }}>
+            <Stack
+              sx={{ position: 'relative', pr: { sm: 3, md: 8 } }}
+              justifyContent="center"
+              alignItems="flex-end"
+            >
+              <Skeleton variant="rectangular" animation="wave" width="200px" height="200px" sx={{ borderRadius: 2 }} />
+            </Stack>
+          </Grid>
+        </Grid>
+      </MainCard>
+    );
+  }
+
+  // Render the full Welcome Banner when announcements are loaded
   return (
     <MainCard
       border={false}
@@ -225,9 +273,8 @@ export default function WelcomeBanner() {
 
                     {/* Time & Submitted By */}
                     <Typography variant="caption" color={theme.palette.background.paper}>
-  {timeAgo(announcement.time)} - {announcement.submitted}
-</Typography>
-
+                      {timeAgo(announcement.time)} - {announcement.submitted}
+                    </Typography>
 
                     {/* Attachments (Buttons) */}
                     {announcement.attachments?.length > 0 && (
@@ -294,9 +341,9 @@ export default function WelcomeBanner() {
                 sx={{
                   height: 4,
                   borderRadius: 2,
-                  bgcolor: 'white.500', // Background color
+                  bgcolor: 'white.500',
                   '& .MuiLinearProgress-bar': {
-                    bgcolor: 'rgba(255, 235, 59, 0.7)', // Light yellow with transparency
+                    bgcolor: 'rgba(255, 235, 59, 0.7)',
                   },
                 }}
               />
@@ -313,7 +360,7 @@ export default function WelcomeBanner() {
                       width: 12,
                       height: 12,
                       borderRadius: '50%',
-                      bgcolor: idx === currentIndex ? 'rgba(239, 78, 78, 0.85)' : 'rgba(252, 252, 252, 0.85)', // Red for active, semi-transparent for inactive
+                      bgcolor: idx === currentIndex ? 'rgba(239, 78, 78, 0.85)' : 'rgba(252, 252, 252, 0.85)',
                       transition: 'background-color 0.3s',
                       cursor: 'pointer',
                     }}

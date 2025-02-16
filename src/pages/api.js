@@ -25,18 +25,19 @@ export const setAuthHeaders = (userData) => {
 // Request interceptor (for other URL checks)
 api.interceptors.request.use(
   (config) => {
-    // Exclude specific URLs from modifying headers
+    // Check if the URL is Cloudinary or Google, then remove auth headers.
     if (
       config.url === 'https://api.cloudinary.com/v1_1/dqniuczkg/image/upload' ||
       config.url === 'https://script.google.com/macros/s/AKfycbzroBYkyoKev_IxlEum8cRIt4UTNkE2A9hyLCtzlcRjLNpxI57oHogqa0FB-gcD8ra43A/exec'
     ) {
-      return config;
+      delete config.headers.user;
+      delete config.headers.Authorization;
     }
-    // Return config (headers will be set by setAuthHeaders)
     return config;
   },
   (error) => Promise.reject(error)
 );
+
 
 export const fetcher = (url) => api.get(url).then((res) => res.data);
 
