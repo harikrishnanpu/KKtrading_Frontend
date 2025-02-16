@@ -370,6 +370,7 @@ const DriverBillingPage = () => {
 
     try {
       await getCurrentLocation(async (endLocation) => {
+        setIsLoading(true);
         if (endLocation) {
           const deliveredProducts = bill.deliveredProducts.map((dp) => ({
             item_id: dp.item_id,
