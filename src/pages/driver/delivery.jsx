@@ -105,7 +105,6 @@ const DriverBillingPage = () => {
     const fetchMyDeliveries = async () => {
       if (!driverName || !userInfo?._id) return;
       try {
-        setIsLoading(true);
         const params = new URLSearchParams();
         params.append("driverName", driverName);
         if (searchInvoiceNo) {
@@ -119,8 +118,6 @@ const DriverBillingPage = () => {
       } catch (error) {
         console.error("Error fetching deliveries:", error);
         setError("Failed to fetch deliveries. Please try again later.");
-      } finally {
-        setIsLoading(false);
       }
     };
 
