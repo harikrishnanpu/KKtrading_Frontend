@@ -11,33 +11,33 @@ export default defineConfig(({ mode }) => {
   return {
     base: API_URL,
     build: {
-      outDir: 'dist'
+      outDir: 'dist',
     },
     server: {
       open: true,
       port: PORT,
-      host: true
+      host: true, // Added missing comma here
       // historyApiFallback is handled by Vite automatically in dev mode.
     },
     preview: {
       open: true,
-      host: true
+      host: true,
     },
     define: {
-      global: 'window'
+      global: 'window',
     },
     resolve: {
       alias: [
         {
           find: /^~(.+)/,
-          replacement: path.join(process.cwd(), 'node_modules/$1')
+          replacement: path.join(process.cwd(), 'node_modules/$1'),
         },
         {
           find: /^src(.+)/,
-          replacement: path.join(process.cwd(), 'src/$1')
-        }
-      ]
+          replacement: path.join(process.cwd(), 'src/$1'),
+        },
+      ],
     },
-    plugins: [react(), jsconfigPaths()]
+    plugins: [react(), jsconfigPaths()],
   };
 });

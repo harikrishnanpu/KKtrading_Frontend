@@ -45,10 +45,13 @@ export default function MainLayout() {
   function deriveLabelFromPath(path) {
     if (!path || path === '/') return 'Home';
     const segments = path.split('/').filter(Boolean);
-    const firstSegment = segments[0].charAt(0).toUpperCase() + segments[0].slice(1).toLowerCase();
-    const rest = segments.slice(1).join(' ').toLowerCase();
-    return rest ? `${firstSegment} ${rest}` : firstSegment;
+    // Only take the first two segments
+    const relevant = segments.slice(0, 2);
+    // Capitalize each segment
+    const formatted = relevant.map(seg => seg.charAt(0).toUpperCase() + seg.slice(1).toLowerCase());
+    return formatted.join(' ').slice(0,18);
   }
+  
   
   
 
@@ -73,7 +76,7 @@ export default function MainLayout() {
 
   return (
     <AuthGuard>
-      <Box sx={{ display: 'flex', width: isMobile ? '93%' : '98%' }}>
+      <Box sx={{ display: 'flex', width: isMobile ? '90%' : '98%' }}>
         <Header />
         {!isHorizontal ? <Drawer /> : <HorizontalBar />}
 

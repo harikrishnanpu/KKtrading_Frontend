@@ -448,23 +448,51 @@ const DriverBillingPage = () => {
     });
   };
 
-  const handleCancel = (billIndex) => {
-    try {
-      // Simply remove the bill from assignedBills
+  const handleCancel = async (billIndex) => {
+    const bill = assignedBills[billIndex];
+    
+    // If deliveryId does not exist, then no delivery was started – just remove it
+    if (!bill.deliveryId) {
       setAssignedBills((prevBills) => {
         const updatedBills = [...prevBills];
         updatedBills.splice(billIndex, 1);
         return updatedBills;
       });
-
       if (assignedBills.length === 1) {
         setDeliveryStarted(false);
       }
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      // Call the cancel delivery endpoint
+      await api.post("/api/users/billing/cancel-delivery", {
+        userId: userInfo._id,
+        driverName,
+        invoiceNo: bill.invoiceNo,
+        deliveryId: bill.deliveryId,
+        cancelReason: "Cancelled by driver" // optional reason
+      });
+      
+      // Remove the cancelled bill from the assigned bills list
+      setAssignedBills((prevBills) => {
+        const updatedBills = [...prevBills];
+        updatedBills.splice(billIndex, 1);
+        return updatedBills;
+      });
+      if (assignedBills.length === 1) {
+        setDeliveryStarted(false);
+      }
+      setIsLoading(false);
+      alert("Delivery cancelled successfully.");
     } catch (error) {
-      console.error("Unexpected error:", error);
-      alert("An unexpected error occurred");
+      console.error("Error cancelling delivery:", error);
+      setIsLoading(false);
+      alert("Failed to cancel delivery. Please try again.");
     }
   };
+  
 
   const handleUpdateDelivery = async () => {
     try {

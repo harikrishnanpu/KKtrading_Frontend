@@ -238,7 +238,7 @@ export default function TabPassword() {
                   <Button variant="outlined" color="secondary">
                     Cancel
                   </Button>
-                  <Button disabled={isSubmitting || Object.keys(errors).length !== 0} type="submit" variant="outlined"
+                  <Button disabled={isSubmitting || Object.keys(errors).length !== 0} type="submit" variant="outlined">
                     Save
                   </Button>
                 </Stack>

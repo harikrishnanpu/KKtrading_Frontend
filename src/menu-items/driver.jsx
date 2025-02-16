@@ -26,6 +26,13 @@ const driver = {
       type: 'item',
       url: '/driver/delivery',
       icon: icons.delivery,
+    },
+    {
+      id: 'All Deliveries',
+      title: <FormattedMessage id="All Deliveries" />,
+      type: 'item',
+      url: '/driver/all',
+      icon: icons.delivery,
     }
   ]
 };

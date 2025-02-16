@@ -14,99 +14,129 @@ export const useTabs = () => {
 function deriveLabelFromPath(path) {
   if (!path || path === '/') return 'Home';
   const segments = path.split('/').filter(Boolean);
-  const first = segments[0].charAt(0).toUpperCase() + segments[0].slice(1).toLowerCase();
-  const rest = segments.slice(1).join(' ').toLowerCase();
-  return rest ? `${first} ${rest}` : first;
+  // Only take the first two segments
+  const relevant = segments.slice(0, 2);
+  // Capitalize each segment
+  const formatted = relevant.map(seg => seg.charAt(0).toUpperCase() + seg.slice(1).toLowerCase());
+  return formatted.join(' ').slice(0,18);
+}
+
+
+/**
+ * Removes just the `_ts` parameter from a URL string so we can compare
+ * the "base path" ignoring `_ts`.
+ *
+ * Examples:
+ *   "/users?_ts=12345" => "/users"
+ *   "/users?foo=bar&_ts=555" => "/users?foo=bar"
+ */
+function stripTimestamp(url = '') {
+  const [base, queryString] = url.split('?');
+  if (!queryString) return base;
+
+  const params = new URLSearchParams(queryString);
+  params.delete('_ts'); // remove the _ts param if it exists
+
+  const remaining = params.toString();
+  return remaining ? `${base}?${remaining}` : base;
 }
 
 export const TabsProvider = ({ children }) => {
   const navigate = useNavigate();
-  
+
   // Each tab = { path, label }
   const [tabs, setTabs] = useState([]);
   const [activeTab, setActiveTab] = useState(null);
 
   // 1) OPEN or ACTIVATE a tab
   const openTab = (path, label) => {
-    let newPath = path;
-    // If the URL does not contain a _ts parameter, add one with the value 'ddd'
-    if (!path.includes('_ts=')) {
-      // If there’s already a query string, append using &, otherwise start with ?
-      newPath = path.includes('?') ? `${path}&_ts=new` : `${path}?_ts=new`;
+    const basePath = stripTimestamp(path);
+
+    // Check if a tab with the same base path (ignoring _ts) already exists
+    const existingTab = tabs.find((t) => stripTimestamp(t.path) === basePath);
+    if (existingTab) {
+      // If it exists, just activate & navigate to that tab
+      setActiveTab(existingTab.path);
+      navigate(existingTab.path);
+      return;
     }
-  
-    setTabs((prev) => {
-      // If not already in tabs, add it
-      const exists = prev.find((t) => t.path === newPath);
-      if (!exists) {
-        return [...prev, { path: newPath, label: label || deriveLabelFromPath(path) }];
-      }
-      return prev;
-    });
+
+    // Otherwise, create a new timestamped path
+    const hasQuery = path.includes('?');
+    const newPath = hasQuery
+      ? `${path}&_ts=${Date.now()}`
+      : `${path}?_ts=${Date.now()}`;
+
+    // Add it to the list
+    setTabs((prevTabs) => [
+      ...prevTabs,
+      { path: newPath, label: label || deriveLabelFromPath(path) }
+    ]);
     setActiveTab(newPath);
     navigate(newPath);
   };
-  
 
-  // 2) SWITCH to an existing tab
-  //    Must use the EXACT stored path string (including ?_ts= or ?instance=).
+  // 2) SWITCH to an existing tab by exact path
   const switchTab = (path) => {
-    console.log("switchTab called with:", path);
     setActiveTab(path);
     navigate(path);
   };
-  
 
   // 3) CLOSE a tab
-  //    If the closed tab was active, switch to another (or home if none remain).
   const closeTab = (path) => {
-    setTabs((prev) => prev.filter((t) => t.path !== path));
-    setTimeout(() => {
-      setTabs((current) => {
-        if (current.length === 0) {
-          navigate('/');
-          setActiveTab(null);
-          return current;
-        }
-        if (path === activeTab) {
-          navigate(current[0].path);
-          setActiveTab(current[0].path);
-        }
-        return current;
-      });
-    }, 0);
+    setTabs((prevTabs) => {
+      const newTabs = prevTabs.filter((t) => t.path !== path);
+      // If no tabs remain, navigate home
+      if (newTabs.length === 0) {
+        navigate('/');
+        setActiveTab(null);
+        return [];
+      }
+      // If the closed tab was active, switch to the first in the new list
+      if (path === activeTab) {
+        navigate(newTabs[0].path);
+        setActiveTab(newTabs[0].path);
+      }
+      return newTabs;
+    });
   };
 
-  // 4) RENAME a tab (updates label only)
+  // 4) RENAME a tab (update label only)
   const renameTab = (path, newLabel) => {
     setTabs((prevTabs) =>
-      prevTabs.map((tab) => (tab.path === path ? { ...tab, label: newLabel } : tab))
+      prevTabs.map((tab) =>
+        tab.path === path ? { ...tab, label: newLabel } : tab
+      )
     );
   };
 
   // 5) REFRESH a tab
-  //    - Overwrite the tab's path in the array so the next click uses the new ?_ts
-  //    - Navigate to that new ?_ts path
   const refreshTab = (path) => {
-    const basePath = path.split('?')[0];
+    const [basePath] = path.split('?');
     const newPath = `${basePath}?_ts=${Date.now()}`;
 
-    // Update stored path
-    setTabs((prev) =>
-      prev.map((tab) => (tab.path === path ? { ...tab, path: newPath } : tab))
+    setTabs((prevTabs) =>
+      prevTabs.map((tab) => (tab.path === path ? { ...tab, path: newPath } : tab))
     );
-
     setActiveTab(newPath);
     navigate(newPath, { replace: true });
   };
 
   // 6) DUPLICATE a tab
-  //    Creates a distinct URL with ?instance=...
+  //    To avoid "ignoring _ts" conflict, add an extra "dup=..." param
+  //    so it's truly recognized as a different base path.
   const duplicateTab = (path) => {
-    const basePath = path.split('?')[0];
-    const newPath = `${basePath}?_ts=${Date.now()}`;
-    // Also optional: add " (copy)" to label
-    openTab(newPath, deriveLabelFromPath(basePath) + ' (copy)');
+    // Remove _ts from the original path, keep other params
+    const baseIgnoringTs = stripTimestamp(path);
+
+    // Make sure the new path differs ignoring `_ts`, by adding a `dup` param
+    const dupId = Date.now();
+    const newPath = baseIgnoringTs.includes('?')
+      ? `${baseIgnoringTs}&dup=${dupId}&_ts=${Date.now()}`
+      : `${baseIgnoringTs}?dup=${dupId}&_ts=${Date.now()}`;
+
+    // " (copy)" is optional, but clarifies which tab is duplicated
+    openTab(newPath, deriveLabelFromPath(baseIgnoringTs) + ' (copy)');
   };
 
   const value = {

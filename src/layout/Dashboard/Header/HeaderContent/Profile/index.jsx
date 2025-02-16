@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 
 // material-ui
@@ -31,6 +31,7 @@ import useAuth from 'hooks/useAuth';
 // assets
 import avatar1 from 'assets/images/users/avatar-6.png';
 import { Setting2, Profile, Logout } from 'iconsax-react';
+import api from 'pages/api';
 
 // tab panel wrapper
 function TabPanel({ children, value, index, ...other }) {
@@ -60,6 +61,7 @@ function a11yProps(index) {
 export default function ProfilePage() {
   const theme = useTheme();
   const navigate = useNavigate();
+  const [avatar, setAvatar] = useState(avatar1);
 
   const { logout, user } = useAuth();
   const handleLogout = async () => {
@@ -74,6 +76,17 @@ export default function ProfilePage() {
       console.error(err);
     }
   };
+
+  useEffect(async()=>{
+    if(user){
+      const { data } = await api.get(`/api/users/${user._id}`);
+      if(data.error){
+        console.error(data.error);
+      }else{
+        setAvatar(data.avatar);
+      }
+    }
+  },[user]);
 
   const anchorRef = useRef(null);
   const [open, setOpen] = useState(false);
@@ -112,7 +125,7 @@ export default function ProfilePage() {
         aria-haspopup="true"
         onClick={handleToggle}
       >
-        <Avatar alt="profile user" src={avatar1} />
+        <Avatar alt="profile user" src={avatar} />
       </ButtonBase>
       <Popper
         placement="bottom-end"
@@ -141,11 +154,11 @@ export default function ProfilePage() {
                     <Grid container justifyContent="space-between" alignItems="center">
                       <Grid item>
                         <Stack direction="row" spacing={1.25} alignItems="center">
-                          <Avatar alt="profile user" src={avatar1} />
+                          <Avatar alt="profile user" src={avatar} />
                           <Stack>
                             <Typography variant="subtitle1">{user?.name}</Typography>
                             <Typography variant="body2" color="secondary">
-                            {user?.role}
+                             {user.role}
                             </Typography>
                           </Stack>
                         </Stack>

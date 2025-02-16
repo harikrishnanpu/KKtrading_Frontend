@@ -108,7 +108,7 @@ export default function TabSettings() {
         <Button variant="outlined" color="secondary">
           Cancel
         </Button>
-        <Button variant="outlined"Save</Button>
+        <Button variant="outlined"> Save</Button>
       </Stack>
     </MainCard>
   );

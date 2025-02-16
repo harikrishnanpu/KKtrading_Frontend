@@ -37,6 +37,20 @@ import reportWebVitals from './reportWebVitals';
 const container = document.getElementById('root');
 const root = createRoot(container);
 
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/serviceworker.js')
+      .then((registration) => {
+        console.log('Service Worker registered with scope:', registration.scope);
+      })
+      .catch((error) => {
+        console.error('Service Worker registration failed:', error);
+      });
+  });
+}
+
+
 // ==============================|| MAIN - REACT DOM RENDER  ||============================== //
 
 root.render(
@@ -44,6 +58,9 @@ root.render(
     <App />
   </ConfigProvider>
 );
+
+
+serviceWorker.register();
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))

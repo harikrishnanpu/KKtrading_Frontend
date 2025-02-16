@@ -778,7 +778,7 @@ const itemDiscount = itemBase * discountRatio;
 
       setTimeout(() => {
         setShowSuccessModal(false);
-        navigate('/invoice/dashboard');
+        navigate('/');
       }, 2000);
     } catch (error) {
       console.error('Error submitting billing data:', error?.message);

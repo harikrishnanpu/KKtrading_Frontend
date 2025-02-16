@@ -185,7 +185,7 @@ export default function TabAccount() {
           <Button variant="outlined" color="secondary">
             Cancel
           </Button>
-          <Button variant="outlined"Update Profile</Button>
+          <Button variant="outlined">Update Profile</Button>
         </Stack>
       </Grid>
     </Grid>

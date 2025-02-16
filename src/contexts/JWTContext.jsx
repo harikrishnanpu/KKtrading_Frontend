@@ -1,4 +1,4 @@
-import { createContext, useEffect, useReducer } from 'react';
+import { createContext, useContext, useEffect, useReducer } from 'react';
 
 // third-party
 import { Chance } from 'chance';
@@ -46,6 +46,12 @@ const setSession = (serviceToken) => {
 // ==============================|| JWT CONTEXT & PROVIDER ||============================== //
 
 const JWTContext = createContext(null);
+
+
+const context = useContext(JWTContext);
+if (!context) {
+  throw new Error("useAuth must be used within an AuthProvider");
+}
 
 export const JWTProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);

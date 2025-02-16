@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import { createContext } from 'react';
+import { createContext, useContext } from 'react';
 
 // project-imports
 import config from 'config';
@@ -23,6 +23,11 @@ const initialState = {
 // ==============================|| CONFIG CONTEXT & PROVIDER ||============================== //
 
 const ConfigContext = createContext(initialState);
+
+const context = useContext(ConfigContext);
+if (!context) {
+  throw new Error("useAuth must be used within an AuthProvider");
+}
 
 function ConfigProvider({ children }) {
   const [config, setConfig] = useLocalStorage('kkt-ts-config', initialState);

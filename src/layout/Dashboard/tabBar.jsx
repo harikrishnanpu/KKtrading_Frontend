@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useTabs } from 'contexts/TabsContext';
 
@@ -50,7 +50,7 @@ export default function TabBar() {
     setOpenSidebar((prev) => !prev);
   };
 
-  // Inline editing
+  // Inline editing functions
   const handleDoubleClick = (tab) => {
     setEditingTab(tab.path);
     setEditingText(tab.label);
@@ -69,8 +69,35 @@ export default function TabBar() {
     setEditingText('');
   };
 
+  // New function: Close all tabs
+  const handleCloseAllTabs = () => {
+    tabs.forEach((tab) => {
+      closeTab(tab.path);
+    });
+  };
+
+  const sidebarRef = useRef(null);
+
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (
+        openSidebar &&
+        sidebarRef.current &&
+        !sidebarRef.current.contains(event.target)
+      ) {
+        setOpenSidebar(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openSidebar]);
+
   return (
     <Box
+    ref={sidebarRef}
       sx={{
         position: 'fixed',
         top: { xs: '56px', sm: '64px' },
@@ -91,25 +118,43 @@ export default function TabBar() {
       }}
     >
       {/* Toggle Sidebar */}
-      <Box sx={{ display: 'flex', justifyContent: openSidebar ? 'flex-start' : 'center', p: 1 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: openSidebar ? 'flex-start' : 'center',
+          p: 1,
+        }}
+      >
         <IconButton onClick={handleToggleSidebar} size="small">
-          {openSidebar ? <ChevronRightIcon fontSize="small" /> : <ChevronLeftIcon fontSize="small" />}
+          {openSidebar ? (
+            <ChevronRightIcon fontSize="small" />
+          ) : (
+            <ChevronLeftIcon fontSize="small" />
+          )}
         </IconButton>
       </Box>
 
-      {/* Sidebar Title */}
+      {/* Sidebar Title and Close All Tabs Button */}
       {openSidebar && (
         <Box
           sx={{
             px: 2,
             py: 1,
             borderBottom: `1px solid ${theme.palette.divider}`,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
             transition: 'opacity 0.3s',
           }}
         >
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
             My Tabs
           </Typography>
+          <Tooltip title="Close All Tabs">
+            <IconButton onClick={handleCloseAllTabs} size="small">
+              <RefreshIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
         </Box>
       )}
 
@@ -174,7 +219,7 @@ export default function TabBar() {
                               fontSize: '0.8rem',
                               transition: 'none', // Disabling animation on label
                             }}
-                          onDoubleClick={() => handleDoubleClick(tab)}
+                            onDoubleClick={() => handleDoubleClick(tab)}
                           >
                             {tab.label}
                           </Typography>
@@ -239,7 +284,7 @@ export default function TabBar() {
                     </Box>
                   </>
                 ) : (
-                  // Collapsed: Only the first letter of label
+                  // Collapsed: Only the first letter of the label
                   <Typography
                     variant="h6"
                     sx={{

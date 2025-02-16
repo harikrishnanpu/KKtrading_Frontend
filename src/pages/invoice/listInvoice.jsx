@@ -21,6 +21,8 @@ import Slide from '@mui/material/Slide';
 import DialogContent from '@mui/material/DialogContent';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
+import MainCard from 'components/MainCard';
+import BillingCard from './components/mobileviewCard';
 
 // =============================================================================
 // Transition Component for Dialog (Slide Up Animation)
@@ -497,108 +499,20 @@ const BillingList = () => {
     ));
   };
 
+
+
   // Render Mobile Card for each Billing
   const renderCard = (billing) => {
     const profit = calculateProfit(billing);
     return (
-      <div
-        key={billing.invoiceNo}
-        className="bg-white rounded-lg shadow-md p-6 mb-4 transition-transform transform hover:scale-105 duration-200"
-      >
-        <div className="flex justify-between items-center">
-          <p
-            onClick={() => navigate(`/invoice/details/${billing._id}`)}
-            className={`text-md cursor-pointer font-bold ${
-              billing.isApproved ? 'text-red-600' : 'text-yellow-600'
-            }`}
-          >
-            {billing.invoiceNo}{' '}
-            {billing.isApproved && (
-              <img
-                className="h-4 w-4 ml-1 mt-1"
-                src="/images/tick.svg"
-                alt="Approved"
-              />
-            )}
-          </p>
-          <div className="flex items-center">
-            <StatusIndicator billing={billing} />
-          </div>
-        </div>
-        <p className="text-gray-600 text-xs mt-2">
-          Customer: {billing.customerName}
-        </p>
-        <p className="text-gray-600 text-xs mt-1">
-          Showroom: {billing.showroom}
-        </p>
-        <p className="text-gray-600 text-xs mt-1">
-          Expected Delivery:{' '}
-          {new Date(billing.expectedDeliveryDate).toLocaleString()}
-        </p>
-        <p className="text-gray-600 text-xs mt-1">
-          Payment: {billing.paymentStatus}
-        </p>
-        {userInfo.isSuper && profit && (
-          <p className="text-gray-600 text-xs mt-1">
-            P/L:{' '}
-            <span className={profit.profitPercentage >= 0 ? 'text-green-600' : 'text-red-600'}>
-              {profit.profitPercentage.toFixed(2)}%
-            </span>
-          </p>
-        )}
-        <div className="flex justify-between">
-          <p className="text-gray-600 text-xs font-bold mt-1">
-            Total Products: {billing.products.length}
-          </p>
-          <p className="text-gray-400 italic text-xs mt-1">
-            Last Edited:{' '}
-            {new Date(billing.updatedAt || billing.createdAt).toLocaleDateString()}
-          </p>
-        </div>
-        <div className="flex mt-4 text-xs space-x-2">
-          <button
-            disabled={!userInfo.isAdmin && billing.isApproved}
-            onClick={() => navigate(`/invoice/edit/${billing._id}`)}
-            className={`${
-              billing.isApproved && !userInfo.isAdmin
-                ? 'bg-gray-300 cursor-not-allowed'
-                : 'bg-red-500 hover:bg-red-600'
-            } text-white px-3 font-bold py-1 rounded flex items-center`}
-          >
-            <i className="fa fa-pen mr-2"></i> Edit
-          </button>
-          {userInfo.isAdmin && (
-            <button
-              onClick={() => generatePDF(billing)}
-              className="bg-red-500 hover:bg-red-600 text-white px-3 font-bold py-1 rounded flex items-center"
-            >
-              <i className="fa fa-truck mr-2"></i>
-            </button>
-          )}
-          <button
-            onClick={() => handleView(billing)}
-            className="bg-red-500 hover:bg-red-600 text-white px-3 font-bold py-1 rounded flex items-center"
-          >
-            <i className="fa fa-eye mr-2"></i> View
-          </button>
-          {userInfo.isAdmin && (
-            <button
-              onClick={() => handleRemove(billing._id)}
-              className="bg-red-500 hover:bg-red-600 text-white px-3 font-bold py-1 rounded flex items-center"
-            >
-              <i className="fa fa-trash mr-2"></i>
-            </button>
-          )}
-          {userInfo.isAdmin && !billing.isApproved && (
-            <button
-              onClick={() => handleApprove(billing)}
-              className="bg-green-500 hover:bg-green-600 text-white px-3 font-bold py-1 rounded flex items-center"
-            >
-              Approve
-            </button>
-          )}
-        </div>
-      </div>
+      <BillingCard   billing={billing}
+      userInfo={userInfo}
+      profit={profit}
+      handleView={handleView}
+      handleRemove={handleRemove}
+      handleApprove={handleApprove}
+      generatePDF={generatePDF}
+       />
     );
   };
 

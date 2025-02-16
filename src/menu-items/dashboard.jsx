@@ -130,6 +130,16 @@ const dashboard = {
       target: false,
       breadcrumbs: true
     },
+    {
+      id: 'allLogs',
+      title: <FormattedMessage id="All Logs" />,
+      type: 'item',
+      url: '/admin/alllogs',
+      icon: icons.users,
+      link: '/admin/alllogs',
+      target: false,
+      breadcrumbs: true
+    },
   ]
 };
 

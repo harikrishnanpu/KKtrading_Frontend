@@ -3,81 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import BillingSuccess from 'components/invoice/billingsuccess';
 import useAuth from 'hooks/useAuth';
-import { Button, Dialog, DialogContent, DialogTitle, Box, Typography, Slide } from '@mui/material';
-
-
-const Transition = React.forwardRef(function Transition(props, ref) {
-  return <Slide direction="up" ref={ref} {...props} />;
-});
-
-// A simple modal for choosing the return type
-function ChooseReturnTypeModal({ isOpen, onClose, onSelectReturnType }) {
-  if (!isOpen) return null;
-
-  return (
-<Dialog
-      open={isOpen}
-      onClose={onClose}
-      fullWidth
-      maxWidth="xs"
-      TransitionComponent={Transition}
-      hideBackdrop
-      disableEnforceFocus
-      PaperProps={{
-        style: {
-          position: 'fixed',
-          bottom: 0,
-          margin: 0,
-          width: '100%',
-          borderRadius: '8px 8px 0 0',
-        },
-      }}
-    >    <DialogTitle>
-      <Typography variant="h6" align="center" gutterBottom>
-        Select Return Type
-      </Typography>
-    </DialogTitle>
-    <DialogContent>
-      <Box display="flex" flexDirection="column" gap={2} mt={2}>
-        <Button
-          variant="outlined"
-          color="primary"
-          onClick={() => {
-            onSelectReturnType('bill');
-            onClose();
-          }}
-        >
-          Return Against Bill
-        </Button>
-        <Button
-          variant="outlined"
-          color="primary"
-          onClick={() => {
-            onSelectReturnType('purchase');
-            onClose();
-          }}
-        >
-          Return Against Purchase
-        </Button>
-        <Button
-          variant="outlined"
-          color="secondary"
-          onClick={onClose}
-        >
-          Cancel
-        </Button>
-      </Box>
-    </DialogContent>
-  </Dialog>
-  );
-}
 
 export default function ReturnBillingScreen() {
   const navigate = useNavigate();
+  const { user: userInfo } = useAuth();
 
-  // -- MODAL STATE --
-  const [isModalOpen, setIsModalOpen] = useState(true); // Show modal on load
-  const [returnType, setReturnType] = useState('');      // "bill" or "purchase"
+  // -- RETURN TYPE SELECTION (Removed the modal; now a simple section) --
+  const [returnType, setReturnType] = useState(''); // 'bill' or 'purchase'
 
   // -- COMMON STATE --
   const [returnNo, setReturnNo] = useState('');
@@ -93,8 +25,8 @@ export default function ReturnBillingScreen() {
   const [discount, setDiscount] = useState(0);
   const [perItemDiscount, setPerItemDiscount] = useState(0);
 
-  // Updated totals: We'll calculate them per item
-  const [returnAmount, setReturnAmount] = useState(0);  // Subtotal (sum of base prices)
+  // Updated totals
+  const [returnAmount, setReturnAmount] = useState(0); // Subtotal
   const [cgst, setCgst] = useState(0);
   const [sgst, setSgst] = useState(0);
   const [totalTax, setTotalTax] = useState(0);
@@ -115,10 +47,8 @@ export default function ReturnBillingScreen() {
   const [sellerName, setSellerName] = useState('');
   const [sellerAddress, setSellerAddress] = useState('');
 
-  // -- OTHER EXPENSES (newly added) --
-  const [otherExpenses, setOtherExpenses] = useState([
-    { amount: '', remark: '' },
-  ]);
+  // -- OTHER EXPENSES --
+  const [otherExpenses, setOtherExpenses] = useState([{ amount: '', remark: '' }]);
 
   // Refs for Input Navigation
   const billingNoRef = useRef();
@@ -131,14 +61,12 @@ export default function ReturnBillingScreen() {
   const sellerNameRef = useRef();
   const sellerAddressRef = useRef();
 
-  const { user: userInfo } = useAuth();
-
   // -- Fetch last Return ID on Mount --
   useEffect(() => {
     async function fetchLastReturn() {
       try {
         const { data } = await api.get('/api/returns/lastreturn/id');
-        // e.g. data is 'CN0001', increment the numerical part
+        // e.g. data = 'CN0001', increment the numerical part
         const numericalPart = parseInt(data.slice(2), 10) + 1;
         const nextReturnNo = `CN${numericalPart
           .toString()
@@ -157,13 +85,13 @@ export default function ReturnBillingScreen() {
   useEffect(() => {
     if (returnType === 'bill') {
       if (selectedBillingNo) {
-        fetchSuggestions(selectedBillingNo); // Billing suggestions
+        fetchSuggestions(selectedBillingNo);
       } else {
         setSuggestions([]);
       }
     } else if (returnType === 'purchase') {
       if (selectedPurchaseNo) {
-        fetchSuggestions(selectedPurchaseNo); // Purchase suggestions
+        fetchSuggestions(selectedPurchaseNo);
       } else {
         setSuggestions([]);
       }
@@ -195,7 +123,7 @@ export default function ReturnBillingScreen() {
     }
   }, [step, returnType]);
 
-  // -- Recalculate Return Amount and Taxes whenever products, GST Toggle, or otherExpenses change --
+  // Recalculate Return Amount and Taxes whenever products, GST Toggle, or otherExpenses change
   useEffect(() => {
     let subtotal = 0;
     let totalTaxCalc = 0;
@@ -203,8 +131,8 @@ export default function ReturnBillingScreen() {
     // 1) Sum up products
     products.forEach((prod) => {
       const qty = parseFloat(prod.quantity) || 0;
-      const baseLine = (prod.returnPrice || 0) * qty; 
-      subtotal += baseLine;
+      const lineBase = (prod.returnPrice || 0) * qty;
+      subtotal += lineBase;
 
       let gstRate = 0;
       if (returnType === 'bill' && prod.gstRate !== undefined) {
@@ -218,7 +146,7 @@ export default function ReturnBillingScreen() {
         gstRate = 0;
       }
 
-      const lineTax = baseLine * (gstRate / 100);
+      const lineTax = lineBase * (gstRate / 100);
       totalTaxCalc += lineTax;
     });
 
@@ -231,7 +159,6 @@ export default function ReturnBillingScreen() {
     // For simplicity, split half-and-half into CGST / SGST
     const halfTax = totalTaxCalc / 2;
 
-    // Update state
     setReturnAmount(subtotal);
     setTotalTax(totalTaxCalc);
     setCgst(halfTax);
@@ -282,7 +209,9 @@ export default function ReturnBillingScreen() {
       setSelectedSuggestionIndex((prev) => (prev + 1) % suggestions.length);
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setSelectedSuggestionIndex((prev) => (prev - 1 + suggestions.length) % suggestions.length);
+      setSelectedSuggestionIndex(
+        (prev) => (prev - 1 + suggestions.length) % suggestions.length
+      );
     } else if (e.key === 'Enter' && selectedSuggestionIndex >= 0) {
       e.preventDefault();
       const selected = suggestions[selectedSuggestionIndex];
@@ -306,33 +235,43 @@ export default function ReturnBillingScreen() {
         // For Bill:
         setCustomerName(data.customerName || '');
         setCustomerAddress(data.customerAddress || '');
-        setDiscount(parseFloat(data.discount) || 0);
+        const billDiscount = parseFloat(data.discount) || 0;
+        setDiscount(billDiscount);
 
-        // Distribute discount if needed
-        const totalQtyProducts = data.products.reduce(
+        // Distribute discount across total quantity
+        const totalQty = data.products.reduce(
           (acc, product) => acc + parseFloat(product.quantity || 0),
           0
         );
         const calculatedPerItemDiscount =
-          totalQtyProducts > 0
-            ? (parseFloat(data.discount) || 0) / totalQtyProducts
-            : 0;
+          totalQty > 0 ? billDiscount / totalQty : 0;
         setPerItemDiscount(parseFloat(calculatedPerItemDiscount.toFixed(2)));
 
         // Prepare each product for the return
-        const productsWithReturnPrice = data.products.map((product) => ({
-          ...product,
-          // We'll store 'gstRate' for product-level GST
-          gstRate: product.gstRate,
-          initialQuantity: parseFloat(product.quantity) || 0,
-          // Return price minus per-item discount if needed
-          returnPrice: parseFloat(
-            
-            ( product.sellingPriceinQty / (1 + product.gstRate / 100) ) - parseFloat(product.quantity * calculatedPerItemDiscount)
-     
-          ),
-          quantity: 0, // Initially 0 for return
-        }));
+        const productsWithReturnPrice = data.products.map((product) => {
+          const gstRate = parseFloat(product.gstRate) || 0;
+          const spQty = parseFloat(product.sellingPriceinQty) || 0; // safer fallback
+
+          // Base (excluding GST)
+          const baseExclGst = spQty / (1 + gstRate / 100);
+
+          // Discount for that product
+          const discountForThisProduct =
+            (parseFloat(product.quantity) || 0) * calculatedPerItemDiscount;
+
+          // Final "returnPrice" is baseExclGst minus the share of discount
+          const returnPriceVal = parseFloat(
+            (baseExclGst - discountForThisProduct).toFixed(2)
+          );
+          return {
+            ...product,
+            gstRate,
+            initialQuantity: parseFloat(product.quantity) || 0,
+            returnPrice: returnPriceVal >= 0 ? returnPriceVal : 0,
+            quantity: 0, // user inputs the quantity to return
+          };
+        });
+
         setProducts(productsWithReturnPrice);
         setStep(1); // Move to next step
       } else {
@@ -340,35 +279,39 @@ export default function ReturnBillingScreen() {
         const { data } = await api.get(`/api/purchases/get/${id}`);
         setSellerName(data.sellerName || '');
         setSellerAddress(data.sellerAddress || '');
-        const purchaseDiscount = 0; // Or fetch from data if available
+        const purchaseDiscount = 0; // or data.discount if your API returns it
         setDiscount(parseFloat(purchaseDiscount) || 0);
 
-        // Distribute discount if needed
+        // Distribute discount
         const totalQtyItems = data.items.reduce(
-          (acc, item) => acc + (parseFloat(item.quantity) || 0),
+          (acc, item) => acc + (parseFloat(item.quantityInNumbers) || 0),
           0
         );
         const calculatedPerItemDiscount =
           totalQtyItems > 0 ? purchaseDiscount / totalQtyItems : 0;
         setPerItemDiscount(parseFloat(calculatedPerItemDiscount.toFixed(2)));
 
-        const productsWithReturnPrice = data.items.map((item) => ({
-          item_id: item.itemId,
-          name: item.name,
-          gstPercent: item.gstPercent,
-          initialQuantity: parseFloat(item.quantityInNumbers) || 0,
-          // ReturnPrice as (cashPart + billPart) - discount
-          returnPrice: parseFloat(
-            (
-              (parseFloat(item.cashPartPriceInNumbers) || 0) +
-              (parseFloat(item.billPartPriceInNumbers) || 0) -
-              calculatedPerItemDiscount
-            ).toFixed(2)
-          ),
-          quantity: 0,
-          cashPartPriceInNumbers: parseFloat(item.cashPartPriceInNumbers) || 0,
-          billPartPriceInNumbers: parseFloat(item.billPartPriceInNumbers) || 0,
-        }));
+        const productsWithReturnPrice = data.items.map((item) => {
+          const cashPrice = parseFloat(item.cashPartPriceInNumbers) || 0;
+          const billPrice = parseFloat(item.billPartPriceInNumbers) || 0;
+          const basePrice = cashPrice + billPrice;
+
+          // Subtract item’s share of discount
+          const finalReturnPrice = parseFloat(
+            (basePrice - calculatedPerItemDiscount).toFixed(2)
+          );
+
+          return {
+            item_id: item.itemId,
+            name: item.name,
+            gstPercent: item.gstPercent,
+            initialQuantity: parseFloat(item.quantityInNumbers) || 0,
+            returnPrice: finalReturnPrice >= 0 ? finalReturnPrice : 0,
+            quantity: 0,
+            cashPartPriceInNumbers: cashPrice,
+            billPartPriceInNumbers: billPrice,
+          };
+        });
         setProducts(productsWithReturnPrice);
         setStep(1);
       }
@@ -387,7 +330,7 @@ export default function ReturnBillingScreen() {
       alert('Please fill all required fields and add at least one product.');
       return;
     }
-    // Additional validation for Bill Return
+    // Bill Return validations
     if (
       returnType === 'bill' &&
       (!selectedBillingNo || !customerName || !customerAddress)
@@ -395,7 +338,7 @@ export default function ReturnBillingScreen() {
       alert('Please fill all required fields for a Bill Return.');
       return;
     }
-    // Additional validation for Purchase Return
+    // Purchase Return validations
     if (
       returnType === 'purchase' &&
       (!selectedPurchaseNo || !sellerName || !sellerAddress)
@@ -414,7 +357,7 @@ export default function ReturnBillingScreen() {
       totalTax,
       returnAmount,
       netReturnAmount,
-      otherExpenses, // Newly added: pass entire array of other expenses
+      otherExpenses,
       products: products.map((p) => ({
         item_id: p.item_id || p.itemId || '',
         name: p.name,
@@ -501,7 +444,7 @@ export default function ReturnBillingScreen() {
       totalTax,
       returnAmount,
       netReturnAmount,
-      otherExpenses, // Newly added
+      otherExpenses,
       products: products.map((p) => ({
         item_id: p.item_id || p.itemId || '',
         name: p.name,
@@ -540,76 +483,102 @@ export default function ReturnBillingScreen() {
       window.open(url, '_blank');
       alert('Return data submitted and invoice generated successfully!');
     } catch (error) {
-      console.error('Error submitting return data or generating invoice:', error);
-      alert('There was an error submitting the return data or generating the invoice. Please try again.');
+      console.error('Error generating/printing return invoice:', error);
+      alert(
+        'There was an error submitting the return data or generating the invoice.'
+      );
     }
   };
 
-  // -- Helper: Update otherExpenses fields --
+  // -- Update otherExpenses fields --
   const handleExpenseChange = (index, field, value) => {
     const newExpenses = [...otherExpenses];
     newExpenses[index][field] = value;
     setOtherExpenses(newExpenses);
   };
 
-  // -- Helper: Add new row for other expenses --
+  // -- Add new row for other expenses --
   const addExpenseRow = () => {
     setOtherExpenses([...otherExpenses, { amount: '', remark: '' }]);
   };
 
-  // -- (Optional) remove expense row method --
-  // If you'd like a remove button, you can add it. Otherwise, skip.
-  // const removeExpenseRow = (index) => {
-  //   const newExpenses = [...otherExpenses];
-  //   newExpenses.splice(index, 1);
-  //   setOtherExpenses(newExpenses);
-  // };
-
   // -- Render --
   return (
-    <div>
-      {/* 1) Modal to choose return type */}
-      <ChooseReturnTypeModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSelectReturnType={(type) => setReturnType(type)}
-      />
+    <div className="container mx-auto py-4">
+      <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg p-8">
 
-      <div className="container mx-auto py-4">
-        <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg p-8">
-          {/* Submit / Print Buttons */}
-          <div className="flex justify-end mb-4">
-            <div className="text-right space-x-2">
-              <button
-                onClick={() => handleGenerateAndPrint()}
-                className="bg-red-600 font-bold text-xs text-white py-2 px-3 rounded-md"
-              >
-                <i className="fa fa-print" />
-              </button>
-              <button
-                onClick={handleReturnSubmit}
-                className="bg-red-600 font-bold text-xs text-white py-2 px-3 rounded-md"
-              >
-                Submit Return
-              </button>
-              <p className="italic text-xs text-gray-400 mt-1">
-                Please fill all required fields before submission
-              </p>
-            </div>
+        {/* 1) Top section: Choose Return Type (replaces the old modal) */}
+        <div className="mb-6">
+          <p className="text-sm font-semibold mb-2">Select Return Type:</p>
+          <div className="space-x-2">
+            <button
+              onClick={() => {
+                setReturnType('bill');
+                setStep(0); // reset steps if switching type
+              }}
+              className={`px-4 py-2 rounded-md ${
+                returnType === 'bill'
+                  ? 'bg-red-600 text-white'
+                  : 'border border-red-400 text-red-600'
+              }`}
+            >
+              Return Against Bill
+            </button>
+            <button
+              onClick={() => {
+                setReturnType('purchase');
+                setStep(0); // reset steps if switching type
+              }}
+              className={`px-4 py-2 rounded-md ${
+                returnType === 'purchase'
+                  ? 'bg-red-600 text-white'
+                  : 'border border-red-400 text-red-600'
+              }`}
+            >
+              Return Against Purchase
+            </button>
           </div>
+        </div>
 
-          {/* Error Message */}
-          {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+        {/* If no returnType chosen, show a small message. Otherwise show form steps. */}
+        {returnType === '' ? (
+          <p className="text-sm text-gray-500">
+            Please select a return type above to proceed.
+          </p>
+        ) : (
+          <>
+            {/* Submit / Print Buttons */}
+            <div className="flex justify-end mb-4">
+              <div className="text-right space-x-2">
+                <button
+                  onClick={handleGenerateAndPrint}
+                  className="bg-red-600 font-bold text-xs text-white py-2 px-3 rounded-md"
+                >
+                  <i className="fa fa-print" />
+                </button>
+                <button
+                  onClick={handleReturnSubmit}
+                  className="bg-red-600 font-bold text-xs text-white py-2 px-3 rounded-md"
+                >
+                  Submit Return
+                </button>
+                <p className="italic text-xs text-gray-400 mt-1">
+                  Please fill all required fields before submission
+                </p>
+              </div>
+            </div>
 
-          {success && (
-            <BillingSuccess
-              isAdmin={userInfo.isAdmin}
-              estimationNo={returnInvoice}
-            />
-          )}
+            {/* Error Message */}
+            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
-          {/* 3) Steps */}
-          <div>
+            {success && (
+              <BillingSuccess
+                isAdmin={userInfo?.isAdmin}
+                estimationNo={returnInvoice}
+              />
+            )}
+
+            {/* Steps */}
             {/* Step 0 => Enter Bill No or Purchase No */}
             {step === 0 && (
               <div className="space-y-1 mb-4">
@@ -646,12 +615,11 @@ export default function ReturnBillingScreen() {
                     />
                   </>
                 )}
+
                 {/* Suggestions */}
                 {suggestions.length > 0 && (
                   <div className="mt-2 bg-white divide-y shadow-md rounded-md max-h-60 overflow-y-auto">
                     {suggestions.map((item, index) => {
-                      // For Bill => item.invoiceNo
-                      // For Purchase => item.purchaseId
                       const displayText =
                         returnType === 'bill' ? item.invoiceNo : item.purchaseId;
                       return (
@@ -696,7 +664,9 @@ export default function ReturnBillingScreen() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-gray-700 text-xs">Return No</label>
+                    <label className="block text-gray-700 text-xs">
+                      Return No
+                    </label>
                     <input
                       type="text"
                       ref={returnNoRef}
@@ -709,7 +679,9 @@ export default function ReturnBillingScreen() {
                     />
                   </div>
                   <div>
-                    <label className="block text-gray-700 text-xs">Return Date</label>
+                    <label className="block text-gray-700 text-xs">
+                      Return Date
+                    </label>
                     <input
                       type="date"
                       ref={returnDateRef}
@@ -816,7 +788,9 @@ export default function ReturnBillingScreen() {
             {/* Step 3 => Update Products */}
             {step === 3 && (
               <div className="space-y-4 mb-4">
-                <h3 className="text-sm font-semibold text-gray-800">Update Products</h3>
+                <h3 className="text-sm font-semibold text-gray-800">
+                  Update Products
+                </h3>
 
                 {/* GST Toggle */}
                 <div className="flex items-center mb-4">
@@ -871,10 +845,14 @@ export default function ReturnBillingScreen() {
                             {returnType === 'purchase' && (
                               <>
                                 <td className="py-3 text-xs px-2">
-                                  ₹{product.cashPartPriceInNumbers?.toFixed(2)}
+                                  ₹
+                                  {product.cashPartPriceInNumbers?.toFixed(2) ||
+                                    '0.00'}
                                 </td>
                                 <td className="py-3 text-xs px-2">
-                                  ₹{product.billPartPriceInNumbers?.toFixed(2)}
+                                  ₹
+                                  {product.billPartPriceInNumbers?.toFixed(2) ||
+                                    '0.00'}
                                 </td>
                               </>
                             )}
@@ -887,9 +865,10 @@ export default function ReturnBillingScreen() {
                                 max={product.initialQuantity}
                                 value={product.quantity}
                                 onChange={(e) => {
-                                  const val = e.target.value === ''
-                                    ? ''
-                                    : Number(e.target.value);
+                                  const val =
+                                    e.target.value === ''
+                                      ? ''
+                                      : Number(e.target.value);
                                   const safeQty = Math.min(
                                     val,
                                     product.initialQuantity
@@ -908,10 +887,12 @@ export default function ReturnBillingScreen() {
                                 onClick={() => {
                                   if (
                                     window.confirm(
-                                      `Are you sure you want to delete ${product.name} from the return?`
+                                      `Are you sure you want to remove "${product.name}" from the return?`
                                     )
                                   ) {
-                                    setProducts(products.filter((_, i) => i !== index));
+                                    setProducts(
+                                      products.filter((_, i) => i !== index)
+                                    );
                                   }
                                 }}
                                 className="text-red-500 hover:text-red-700"
@@ -928,7 +909,7 @@ export default function ReturnBillingScreen() {
                   <p className="text-gray-500">No products available for return.</p>
                 )}
 
-                {/* Other Expenses Section (NEW) */}
+                {/* Other Expenses Section */}
                 <div className="mt-8 p-4 bg-gray-50 rounded-md">
                   <h4 className="text-xs font-semibold text-gray-700 mb-2">
                     Other Expenses
@@ -995,10 +976,10 @@ export default function ReturnBillingScreen() {
                           </div>
                         </>
                       )}
-
-                      {/* Sum of otherExpenses is already in netReturnAmount */}
                       <div className="flex text-sm justify-between font-bold sm:col-span-2">
-                        <span>Net Return Amount (incl. tax + other expenses):</span>
+                        <span>
+                          Net Return Amount (incl. tax + other expenses):
+                        </span>
                         <span>₹{netReturnAmount.toFixed(2)}</span>
                       </div>
                     </div>
@@ -1007,66 +988,68 @@ export default function ReturnBillingScreen() {
               </div>
             )}
 
-            {/* Step 4 => (If you have a confirmation step, place it here) */}
-          </div>
-
-          {/* 4) Step Navigation */}
-          <div className="flex justify-between mb-8 mt-10">
-            <button
-              disabled={step === 0}
-              onClick={prevStep}
-              className={`${
-                step === 0
-                  ? 'bg-gray-300 text-gray-500 text-xs font-bold py-2 px-4 rounded-lg cursor-not-allowed'
-                  : 'bg-red-500 text-xs text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600'
-              }`}
-            >
-              Previous
-            </button>
-            <p className="font-bold text-center text-xs mt-2">
-              Step {step + 1} of 4
-            </p>
-            <button
-              disabled={
-                // Step 0 => must have chosen Bill or Purchase No
-                (step === 0 && returnType === 'bill' && !selectedBillingNo) ||
-                (step === 0 && returnType === 'purchase' && !selectedPurchaseNo) ||
-                // Step 1 => must have returnNo, returnDate
-                (step === 1 && (!returnNo || !returnDate)) ||
-                // Step 2 => must have (customerName & address) or (sellerName & address)
-                (step === 2 &&
-                  returnType === 'bill' &&
-                  (!customerName || !customerAddress)) ||
-                (step === 2 &&
-                  returnType === 'purchase' &&
-                  (!sellerName || !sellerAddress)) ||
-                // Step 3 => must have at least one product with quantity > 0
-                (step === 3 && products.every((p) => p.quantity <= 0)) ||
-                // Step 4 => final step; no next
-                step === 4
-              }
-              onClick={nextStep}
-              className={`${
-                (step === 0 &&
-                  ((returnType === 'bill' && !selectedBillingNo) ||
-                    (returnType === 'purchase' && !selectedPurchaseNo))) ||
-                (step === 1 && (!returnNo || !returnDate)) ||
-                (step === 2 &&
-                  returnType === 'bill' &&
-                  (!customerName || !customerAddress)) ||
-                (step === 2 &&
-                  returnType === 'purchase' &&
-                  (!sellerName || !sellerAddress)) ||
-                (step === 3 && products.every((p) => p.quantity <= 0)) ||
-                step === 4
-                  ? 'bg-gray-300 text-xs text-gray-500 font-bold py-2 px-4 rounded-lg cursor-not-allowed'
-                  : 'bg-red-500 text-xs text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600'
-              }`}
-            >
-              Next
-            </button>
-          </div>
-        </div>
+            {/* Step Navigation */}
+            <div className="flex justify-between mb-8 mt-10">
+              <button
+                disabled={step === 0}
+                onClick={prevStep}
+                className={`${
+                  step === 0
+                    ? 'bg-gray-300 text-gray-500 text-xs font-bold py-2 px-4 rounded-lg cursor-not-allowed'
+                    : 'bg-red-500 text-xs text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600'
+                }`}
+              >
+                Previous
+              </button>
+              <p className="font-bold text-center text-xs mt-2">
+                Step {step + 1} of 4
+              </p>
+              <button
+                disabled={
+                  // Step 0 => must have chosen Bill or Purchase No
+                  (step === 0 &&
+                    returnType === 'bill' &&
+                    !selectedBillingNo) ||
+                  (step === 0 &&
+                    returnType === 'purchase' &&
+                    !selectedPurchaseNo) ||
+                  // Step 1 => must have returnNo, returnDate
+                  (step === 1 && (!returnNo || !returnDate)) ||
+                  // Step 2 => must have (customerName & address) or (sellerName & address)
+                  (step === 2 &&
+                    returnType === 'bill' &&
+                    (!customerName || !customerAddress)) ||
+                  (step === 2 &&
+                    returnType === 'purchase' &&
+                    (!sellerName || !sellerAddress)) ||
+                  // Step 3 => must have at least one product with quantity > 0
+                  (step === 3 && products.every((p) => (p.quantity || 0) <= 0)) ||
+                  step === 4
+                }
+                onClick={nextStep}
+                className={`${
+                  (step === 0 &&
+                    ((returnType === 'bill' && !selectedBillingNo) ||
+                      (returnType === 'purchase' && !selectedPurchaseNo))) ||
+                  (step === 1 && (!returnNo || !returnDate)) ||
+                  (step === 2 &&
+                    returnType === 'bill' &&
+                    (!customerName || !customerAddress)) ||
+                  (step === 2 &&
+                    returnType === 'purchase' &&
+                    (!sellerName || !sellerAddress)) ||
+                  (step === 3 &&
+                    products.every((p) => (p.quantity || 0) <= 0)) ||
+                  step === 4
+                    ? 'bg-gray-300 text-xs text-gray-500 font-bold py-2 px-4 rounded-lg cursor-not-allowed'
+                    : 'bg-red-500 text-xs text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600'
+                }`}
+              >
+                Next
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

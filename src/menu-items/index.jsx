@@ -8,7 +8,6 @@ import payments from './payments';
 import reports from './reports';
 import driver from './driver';
 import stocks from './stocks';
-import admin from './admin';
 import estimate from './estimate';
 import purchase from './purchase';
 

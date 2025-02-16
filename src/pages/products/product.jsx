@@ -199,7 +199,7 @@ export default function ProductScreen() {
           <Alert severity="error" sx={{ mb: 2 }}>
             {error || 'Product not found'}
           </Alert>
-          <Button variant="contained" color="error" onClick={() => navigate('/products/all')}>
+          <Button variant="outlined" color="error" onClick={() => navigate('/products/all')}>
             See All Products
           </Button>
       </MinimalBackground>
@@ -423,7 +423,7 @@ export default function ProductScreen() {
               {/* ============== Action Buttons ============== */}
               <Stack direction="row" spacing={2} flexWrap="wrap">
                 <Button
-                  variant="contained"
+                  variant="outlined"
                   color="primary"
                   startIcon={<VisibilityIcon />}
                   onClick={() => navigate(`/products/${product._id}/preview`)}
@@ -431,7 +431,7 @@ export default function ProductScreen() {
                   Preview
                 </Button>
                 <Button
-                  variant="contained"
+                  variant="outlined"
                   color="secondary"
                   startIcon={<EditIcon />}
                   onClick={() => {
@@ -445,7 +445,7 @@ export default function ProductScreen() {
                   Edit Product
                 </Button>
                 <Button
-                  variant="contained"
+                  variant="outlined"
                   color="error"
                   startIcon={<DeleteIcon />}
                   onClick={deleteHandler}
