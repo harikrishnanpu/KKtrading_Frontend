@@ -27,7 +27,7 @@ api.interceptors.request.use(
   (config) => {
     // Check if the URL is Cloudinary or Google, then remove auth headers.
     if (
-      config.url === 'https://api.cloudinary.com/v1_1/dqniuczkg/image/upload' ||
+      config.url === 'https://api.cloudinary.com/v1_1/dnde4xq0y/image/upload' ||
       config.url === 'https://script.google.com/macros/s/AKfycbzroBYkyoKev_IxlEum8cRIt4UTNkE2A9hyLCtzlcRjLNpxI57oHogqa0FB-gcD8ra43A/exec'
     ) {
       delete config.headers.user;

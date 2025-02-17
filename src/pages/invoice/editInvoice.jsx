@@ -50,7 +50,13 @@ export default function EditBillScreen() {
   const [marketedBy, setMarketedBy] = useState('');
   const [discount, setDiscount] = useState(0);
   const [receivedAmount, setReceivedAmount] = useState(0);
-  const [receivedDate, setReceivedDate] = useState('');
+  const [receivedDate, setReceivedDate] = useState(() => {
+    // Default to current local datetime in input's value format (YYYY-MM-DDTHH:MM)
+    const now = new Date();
+    return new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 16);
+  });
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [unloading, setUnloading] = useState(0);
   const [transportation, setTransportation] = useState(0);
@@ -723,6 +729,8 @@ const itemDiscount = itemBase * discountRatio;
     setIsSubmitting(true);
     setError('');
 
+    const parsedDate = new Date(receivedDate);
+
     const billingData = {
       invoiceNo,
       invoiceDate,
@@ -737,7 +745,7 @@ const itemDiscount = itemBase * discountRatio;
       sgst,
       paymentAmount: receivedAmount,
       paymentMethod,
-      paymentReceivedDate: receivedDate,
+      paymentReceivedDate: parsedDate,
       customerName,
       customerAddress,
       customerContactNumber,

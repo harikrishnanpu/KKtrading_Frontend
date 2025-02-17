@@ -75,7 +75,7 @@ const uploadImageToCloudinary = async (file) => {
   formData.append('upload_preset', 'ml_default'); // Replace with your actual preset
 
   const response = await fetch(
-    `https://api.cloudinary.com/v1_1/dqniuczkg/image/upload`,
+    `https://api.cloudinary.com/v1_1/dnde4xq0y/image/upload`,
     {
       method: 'POST',
       body: formData

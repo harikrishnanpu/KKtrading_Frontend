@@ -224,7 +224,7 @@ export default function ProductEditScreen() {
       formData.append('file', file);
       formData.append('upload_preset', 'ml_default');
       const response = await api.post(
-        'https://api.cloudinary.com/v1_1/dqniuczkg/image/upload',
+        'https://api.cloudinary.com/v1_1/dnde4xq0y/image/upload',
         formData
       );
       setImage(response.data.secure_url);

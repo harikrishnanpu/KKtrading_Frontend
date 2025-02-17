@@ -10,7 +10,7 @@ export async function uploadFileToCloudinary(file) {
     data.append('upload_preset', 'ml_default'); // Replace with your Cloudinary unsigned upload preset
   
     const res = await fetch(
-      `https://api.cloudinary.com/v1_1/dqniuczkg/image/upload`, // Replace with your Cloudinary cloud name
+      `https://api.cloudinary.com/v1_1/dnde4xq0y/image/upload`, // Replace with your Cloudinary cloud name
       {
         method: 'POST',
         body: data

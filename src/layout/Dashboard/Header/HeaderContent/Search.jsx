@@ -84,20 +84,24 @@ export default function SearchBox() {
           ].slice(0, 6);
           setRecentSearches(updatedSearches);
           localStorage.setItem('recentSearches', JSON.stringify(updatedSearches));
+  
+          // Navigate using product _id
+          navigate(`/products/product/${selectedProduct._id}`);
+          return; // Stop execution after navigating
         }
       }
     } catch (error) {
       console.error('Error saving to recent searches', error);
     }
-
+  
     setName(searchTerm);
     setSuggestions([]);
     setShowSuggestions(false);
-
-    // Clean parentheses from name
-    const cleanName = searchTerm.replace(/\s*\(.*?\)\s*/g, '').trim();
-    navigate(`/products/product/${cleanName}`);
+  
+    // Fallback navigation if no matching product is found
+    navigate(`/products/${searchTerm.replace(/\s*\(.*?\)\s*/g, '').trim()}`);
   };
+  
 
   // Handle Enter key
   const handleKeyPress = (e) => {

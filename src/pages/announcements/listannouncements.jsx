@@ -31,7 +31,7 @@ async function uploadToCloudinary(file) {
   // Replace with your own upload preset
   formData.append('upload_preset', 'ml_default');
   // Replace with your own Cloud name
-  const url = 'https://api.cloudinary.com/v1_1/dqniuczkg/image/upload';
+  const url = 'https://api.cloudinary.com/v1_1/dnde4xq0y/image/upload';
 
   const res = await fetch(url, { method: 'POST', body: formData });
   if (!res.ok) throw new Error('Failed to upload file to Cloudinary');

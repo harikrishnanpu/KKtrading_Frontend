@@ -61,8 +61,13 @@ export default function BillingScreen() {
   const [roundOff, setRoundOff] = useState(0);
   const [remark, setRemark] = useState('');
   const [receivedDate, setReceivedDate] = useState(
-    new Date().toISOString().substring(0, 10)
-  );
+    () => {
+      // Default to current local datetime in input's value format (YYYY-MM-DDTHH:MM)
+      const now = new Date();
+      return new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 16);
+    });
   const [paymentMethod, setPaymentMethod] = useState('');
   const [lastBillId, setLastBillId] = useState(null);
   const [itemName, setItemName] = useState('');
@@ -628,7 +633,6 @@ const [printOptions, setPrintOptions] = useState({
     setProducts(updatedProducts);
 
     // Save updated products to local storage
-    localStorage.setItem('savedProducts', JSON.stringify(updatedProducts));
 
     // Show success modal and focus on the next item
     setShowSuccessModal(true);
@@ -819,6 +823,8 @@ const itemDiscount = itemBase * discountRatio;
     setIsSubmitting(true);
     setError('');
 
+    const parsedDate = new Date(receivedDate);
+
     const billingData = {
       invoiceNo,
       invoiceDate,
@@ -830,7 +836,7 @@ const itemDiscount = itemBase * discountRatio;
       grandTotal: grandTotal,
       paymentAmount: receivedAmount,
       paymentMethod,
-      paymentReceivedDate: receivedDate,
+      paymentReceivedDate: parsedDate,
       customerName,
       customerAddress,
       customerId,

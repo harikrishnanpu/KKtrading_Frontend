@@ -221,7 +221,7 @@ const EmployeePaymentExpensePage = () => {
   };
 
   return (
-    <div className="p-3 bg-gray-100 min-h-screen">
+    <div className="p-3 min-h-screen">
 
       {/* Integrated Navigation */}
       <div className="flex justify-center gap-8 mb-6">

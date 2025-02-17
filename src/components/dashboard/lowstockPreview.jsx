@@ -125,7 +125,7 @@ const LowStockPreview = ({ driverPage, adminPage }) => {
             ) : (
               filteredProducts.map((product) => (
                 <div
-                  onClick={() => navigate(`/products/product/${product.item_id}`)}
+                  onClick={() => navigate(`/products/${product.item_id}`)}
                   key={product.item_id}
                   className="flex cursor-pointer hover:bg-gray-100 rounded-md justify-between items-center p-3 border-b border-gray-200"
                 >

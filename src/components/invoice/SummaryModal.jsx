@@ -194,13 +194,14 @@ export default function SummaryModal({
 
             <label className="block text-xs">Received Date</label>
             <input
-            ref={receivedDateRef}
-            onKeyDown={(e)=> changeRef(e, unloadingRef)}
-              type="date"
-              value={receivedDate}
-              onChange={(e) => setReceivedDate(e.target.value)}
-              className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
-            />
+  ref={receivedDateRef}
+  onKeyDown={(e) => changeRef(e, unloadingRef)}
+  type="datetime-local"
+  value={receivedDate}
+  onChange={(e) => setReceivedDate(e.target.value)}
+  className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
+/>
+
 
             </div>
 

@@ -50,6 +50,7 @@ export default function SearchScreen() {
 
   const { user: userInfo } = useAuth();
 
+  // Fetch filter data (categories, brands, sizes)
   useEffect(() => {
     const fetchFilters = async () => {
       try {
@@ -83,6 +84,7 @@ export default function SearchScreen() {
     fetchFilters();
   }, []);
 
+  // Fetch products
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -95,7 +97,6 @@ export default function SearchScreen() {
         setPage(data.page);
         setPages(data.pages);
         setTotalProducts(data.totalProducts);
-
         setLoading(false);
       } catch (err) {
         setError(err.message);
@@ -118,6 +119,7 @@ export default function SearchScreen() {
     pageNumber,
   ]);
 
+  // Generate filter URL
   const getFilterUrl = (filter) => {
     const filterPage = filter.page || 1;
     const filterCategory = filter.category || category;
@@ -128,13 +130,15 @@ export default function SearchScreen() {
     const sortOrder = filter.order || order;
     const filterMin = filter.min ?? min;
     const filterMax = filter.max ?? max;
-    const filterInStock = filter.inStock !== undefined ? filter.inStock : inStock;
+    const filterInStock =
+      filter.inStock !== undefined ? filter.inStock : inStock;
     const filterCountInStockMin =
       filter.countInStockMin ?? countInStockMin;
 
     return `/search/category/${filterCategory}/brand/${filterBrand}/size/${filterSize}/name/${filterName}/min/${filterMin}/max/${filterMax}/rating/${filterRating}/order/${sortOrder}/inStock/${filterInStock}/countInStockMin/${filterCountInStockMin}/pageNumber/${filterPage}`;
   };
 
+  // Handlers for filter changes
   const handleCategoryChange = (e) => {
     navigate(getFilterUrl({ category: e.target.value, page: 1 }));
   };
@@ -200,14 +204,50 @@ export default function SearchScreen() {
     navigate(getFilterUrl({ rating: e.target.value, page: 1 }));
   };
 
+  // Add Product handler
+  const handleAddProduct = async () => {
+    try {
+      // Create product
+      const { data } = await api.post('/api/products/');
+      // Navigate to edit product page with the new product _id
+      navigate(`/products/edit/${data._id}`);
+    } catch (err) {
+      console.error('Error creating product', err);
+      alert('Error creating product');
+    }
+  };
+
   return (
-    <div className="container mx-auto p-2 ">
-      <div className="flex">
+    <div className="container mx-auto p-2">
+      {/* Top bar (both desktop & mobile) */}
+      <div className="p-4 flex items-center justify-between">
+        {/* Page Title */}
+        <div className="text-lg font-bold">Products</div>
+        <div className="flex items-center space-x-2">
+          {/* Show filter toggle in mobile only */}
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 lg:hidden"
+          >
+            <Sort />
+          </button>
+          {/* Add Product Button */}
+          <button
+            onClick={handleAddProduct}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          >
+            Add Product
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-col lg:flex-row">
         {/* Sidebar Overlay (on small screens) */}
         <div
-          className={`fixed inset-0 bg-gray-800 z-40 bg-opacity-5  transition-transform transform ${
+          className={`fixed inset-0 z-40 transition-transform transform ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          } lg:translate-x-0 lg:relative lg:bg-transparent`}
+          } lg:relative lg:translate-x-0`}
+          style={{ backgroundColor: sidebarOpen ? 'rgba(0,0,0,0.3)' : 'transparent' }}
           onClick={() => setSidebarOpen(false)}
         >
           {/* Actual Sidebar */}
@@ -224,13 +264,16 @@ export default function SearchScreen() {
                 <i className="fa fa-times text-xl" />
               </button>
             </div>
-            {/* Filters */}
-            <div className="p-4 pt-10">
+
+            {/* Filters Section */}
+            <div className="p-4 pt-6 lg:pt-0 bg-white lg:bg-transparent">
               <h2 className="text-lg font-bold mb-4">Filters</h2>
+
               {/* Search Box */}
               <div className="mb-4">
                 <SearchBox />
               </div>
+
               {/* Category Filter */}
               <div className="mb-4">
                 <h3 className="font-bold mb-2">Category</h3>
@@ -253,6 +296,7 @@ export default function SearchScreen() {
                   </select>
                 )}
               </div>
+
               {/* Brand Filter */}
               <div className="mb-4">
                 <h3 className="font-bold mb-2">Brand</h3>
@@ -275,6 +319,7 @@ export default function SearchScreen() {
                   </select>
                 )}
               </div>
+
               {/* Size Filter */}
               <div className="mb-4">
                 <h3 className="font-bold mb-2">Size</h3>
@@ -297,6 +342,7 @@ export default function SearchScreen() {
                   </select>
                 )}
               </div>
+
               {/* Price Filter */}
               <div className="mb-4">
                 <h3 className="font-bold mb-2">Price</h3>
@@ -325,6 +371,7 @@ export default function SearchScreen() {
                   Apply
                 </button>
               </div>
+
               {/* Count In Stock Filter */}
               <div className="mb-4">
                 <h3 className="font-bold mb-2">Stock Availability</h3>
@@ -343,7 +390,8 @@ export default function SearchScreen() {
                   Apply
                 </button>
               </div>
-              {/* In-Stock Filter */}
+
+              {/* In-Stock Only Filter */}
               <div className="mb-4">
                 <h3 className="font-bold mb-2">Availability</h3>
                 <div className="flex items-center">
@@ -356,6 +404,7 @@ export default function SearchScreen() {
                   <label>In Stock Only</label>
                 </div>
               </div>
+
               {/* Rating Filter */}
               <div className="mb-4">
                 <h3 className="font-bold mb-2">Rating</h3>
@@ -372,6 +421,7 @@ export default function SearchScreen() {
                   <option value="5">5 stars</option>
                 </select>
               </div>
+
               {/* Sort Options */}
               <div className="mb-4">
                 <h3 className="font-bold mb-2">Sort By</h3>
@@ -390,48 +440,42 @@ export default function SearchScreen() {
             </div>
           </div>
         </div>
+
         {/* Main Content */}
-        <div className="flex-1">
-          {/* Top Bar with Toggle Button on Mobile */}
-          <div className="p-4 flex items-center justify-between lg:hidden">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-            >
-              <Sort />
-            </button>
-            <div className="text-lg font-bold">Products</div>
-          </div>
-          {/* Heading */}
-          <div className="mb-6">
+        <div className="flex-1 lg:ml-4 p-4">
+          {/* Products Count or Error */}
+          <div className="mb-4">
             {loading ? (
               <LoadingBox />
             ) : error ? (
               <MessageBox variant="danger">{error}</MessageBox>
             ) : (
-              <div className="font-semibold">
-                <p className="text-gray-400 text-xs text-center">
-                  Showing: {totalProducts} Results
-                </p>
-              </div>
+              <p className="text-gray-400 text-sm">
+                Showing: {totalProducts} results
+              </p>
             )}
           </div>
 
-          {/* Products List with Skeleton */}
-          {loading &&
-            Array.from({ length: 10 }).map((_, index) => (
-              <SkeletonProduct key={index} />
-            ))}
+          {/* Product Grid or Skeleton */}
+          {loading && (
+            <>
+              {Array.from({ length: 10 }).map((_, index) => (
+                <SkeletonProduct key={index} />
+              ))}
+            </>
+          )}
 
           <div className="w-full">
-            <div className="mx-auto p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-              {loading ? (
-                ''
-              ) : error ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+              {!loading && error && (
                 <MessageBox variant="danger">{error}</MessageBox>
-              ) : products.length === 0 ? (
+              )}
+              {!loading && !error && products.length === 0 && (
                 <MessageBox>No Products Found</MessageBox>
-              ) : (
+              )}
+              {!loading &&
+                !error &&
+                products.length > 0 &&
                 products.map((product) => (
                   <div
                     key={product._id}
@@ -439,22 +483,22 @@ export default function SearchScreen() {
                   >
                     <Product product={product} />
                   </div>
-                ))
-              )}
+                ))}
             </div>
 
             {/* Pagination with Go to Page */}
             {pages > 1 && (
-              <div className="flex justify-between items-center mt-4 space-x-4">
-                {page >= 1 && (
-                  <button
-                    onClick={() => navigate(getFilterUrl({ page: page - 1 }))}
-                    disabled={page === 1}
-                    className="px-3 cursor-pointer text-xs font-bold py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-                  >
-                    Previous
-                  </button>
-                )}
+              <div className="flex flex-wrap justify-between items-center mt-4 space-y-2 sm:space-y-0 sm:space-x-4">
+                <div>
+                  {page > 1 && (
+                    <button
+                      onClick={() => navigate(getFilterUrl({ page: page - 1 }))}
+                      className="px-3 text-xs font-bold py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 mr-2"
+                    >
+                      Previous
+                    </button>
+                  )}
+                </div>
                 <div className="flex text-xs items-center space-x-2">
                   <span>
                     Page {page} of {pages}
@@ -465,7 +509,7 @@ export default function SearchScreen() {
                     max={pages}
                     value={jumpPage}
                     onChange={handlePageInputChange}
-                    className="border border-gray-300 rounded-lg p-2 h-8 w-10 focus:outline-none"
+                    className="border border-gray-300 rounded-lg p-2 h-8 w-16 focus:outline-none"
                   />
                   <button
                     onClick={handleJumpToPage}
@@ -474,14 +518,16 @@ export default function SearchScreen() {
                     Go
                   </button>
                 </div>
-                {page < pages && (
-                  <button
-                    onClick={() => navigate(getFilterUrl({ page: page + 1 }))}
-                    className="px-4 text-xs font-bold py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-                  >
-                    Next
-                  </button>
-                )}
+                <div>
+                  {page < pages && (
+                    <button
+                      onClick={() => navigate(getFilterUrl({ page: page + 1 }))}
+                      className="px-4 text-xs font-bold py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                    >
+                      Next
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>

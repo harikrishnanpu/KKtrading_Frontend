@@ -89,7 +89,7 @@ const LowStockPreview = ({ driverPage, adminPage }) => {
             <p className="text-sm text-gray-400 text-center">No Products Found</p>
           ) : (
             filteredProducts.map((product) => (
-              <div onClick={()=> navigate(`/products/product/${product.item_id}`)} key={product.item_id} className="flex cursor-pointer hover:bg-gray-100 rounded-md justify-between items-center p-3 border-b border-gray-200">
+              <div onClick={()=> navigate(`/products/${product.item_id}`)} key={product.item_id} className="flex cursor-pointer hover:bg-gray-100 rounded-md justify-between items-center p-3 border-b border-gray-200">
                 <div className='space-y-1'>
                   <p className="text-xs font-bold text-gray-600">{product.name.slice(0,20)}...</p>
                   <p className="text-xs text-red-500">In Stock: {product.countInStock}</p>

@@ -70,7 +70,7 @@ const uploadImageToCloudinary = async (file) => {
   // You can also add other parameters like tags, folder, etc., if needed
 
   const response = await fetch(
-    `https://api.cloudinary.com/v1_1/dqniuczkg/image/upload`,
+    `https://api.cloudinary.com/v1_1/dnde4xq0y/image/upload`,
     {
       method: 'POST',
       body: formData
