@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 // project-imports
 import { APP_DEFAULT_PATH } from 'config';
 import useAuth from 'hooks/useAuth';
+import { setAuthHeaders } from 'pages/api';
 
 // ==============================|| GUEST GUARD ||============================== //
 
@@ -12,6 +13,11 @@ export default function GuestGuard({ children }) {
   const { isLoggedIn, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  
+  
+    useEffect(() => {
+      setAuthHeaders(user);
+    }, [user]);
 
   useEffect(() => {
     if (isLoggedIn) {

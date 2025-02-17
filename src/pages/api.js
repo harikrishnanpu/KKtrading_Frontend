@@ -10,8 +10,8 @@ export const setAuthHeaders = (userData) => {
   // Eject existing interceptor if needed or reset headers directly
   if (userData) {
     api.defaults.headers.common['user'] = JSON.stringify({
-      userId: userData._id,
-      username: userData.name,
+      _id: userData._id,
+      name: userData.name,
     });
     if (userData.token) {
       api.defaults.headers.common['Authorization'] = `Bearer ${userData.token}`;

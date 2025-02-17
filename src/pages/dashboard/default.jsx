@@ -14,6 +14,12 @@ import PreviewDataCard from 'components/dashboard/previewDataCard';  // Ensure t
 import PreviewDataChart from 'components/dashboard/previewDataChart'; // Ensure this path is correct
 import LowStockPreview from 'components/dashboard/lowstockPreview';   // Ensure this path is correct
 import TotalIncome from 'sections/widget/chart/TotalIncome';          // Ensure this path is correct
+import MainCard from 'components/MainCard';
+import { ThemeMode } from 'config';
+
+// Asset imports
+import WelcomeImage from 'assets/images/analytics/welcome-banner.png';
+import cardBack from 'assets/images/widget/img-dropbox-bg.svg';
 
 // icons
 import {
@@ -32,6 +38,7 @@ import {
 
 // API instance
 import api from 'pages/api'; // Adjust to your actual API import if needed
+import { Stack } from '@mui/material';
 
 // Define a simple fade-in animation for the skeleton cards
 const fadeIn = keyframes`
@@ -78,26 +85,75 @@ export default function DashboardDefault() {
       <Grid container rowSpacing={4.5} columnSpacing={2.75} sx={{ p: 3 }}>
         {/* Skeleton for Welcome Banner */}
         <Grid item xs={12}>
-          <Skeleton 
-            variant="rectangular" 
-            animation="wave" 
-            height={200} 
-            sx={{ borderRadius: '12px' }} 
-          />
+        <MainCard
+        border={false}
+        sx={{
+          color: 'common.white',
+          bgcolor:
+            theme.palette.mode === ThemeMode.DARK
+              ? 'primary.400'
+              : 'primary.darker',
+          position: 'relative',
+          overflow: 'hidden',
+          '&:after': {
+            content: '""',
+            background: `url("${cardBack}") 100% 100% / cover no-repeat`,
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 1,
+            opacity: 0.5,
+          },
+        }}
+      >
+        <Grid container>
+          {/* Left Section Skeleton */}
+          <Grid item md={6} sm={6} xs={12}>
+            <Stack spacing={2} sx={{ padding: 3 }}>
+              <Skeleton variant="text" animation="wave" width="80%" height={40} />
+              <Skeleton variant="text" animation="wave" width="90%" height={20} />
+              {/* <Skeleton variant="text" animation="wave" width="40%" height={20} /> */}
+              {/* <Skeleton variant="rectangular" animation="wave" width="100%" height={100} sx={{ borderRadius: 2 }} /> */}
+              <Skeleton variant="text" animation="wave" width="30%" height={20} />
+              <Typography
+              variant="h6"
+              color={theme.palette.background.paper}
+              sx={{ mt: 2 }}
+            >
+              KK Trading 1.0.0
+            </Typography>
+            </Stack>
+          </Grid>
+          {/* Right Section Skeleton */}
+          {/* <Grid item md={6} sm={6} xs={12} sx={{ display: { xs: 'none', sm: 'block' } }}>
+            <Stack
+              sx={{ position: 'relative', pr: { sm: 3, md: 8 } }}
+              justifyContent="center"
+              alignItems="flex-end"
+            >
+              <Skeleton variant="rectangular" animation="wave" width="200px" height="200px" sx={{ borderRadius: 2 }} />
+            </Stack>
+          </Grid> */}
+
+          <Grid item md={6} sm={6} xs={12} sx={{ display: { xs: 'none', sm: 'block' } }}>
+          <Stack
+            sx={{ position: 'relative', pr: { sm: 3, md: 8 }, zIndex: 2, height: '100%' }}
+            justifyContent="center"
+            alignItems="flex-end"
+          >
+            <img src={WelcomeImage} alt="Welcome" width="200px" />
+          </Stack>
         </Grid>
 
-        {/* Skeleton for Low Stock Preview
-        <Grid item xs={12}>
-          <Skeleton 
-            variant="rectangular" 
-            animation="wave" 
-            height={150} 
-            sx={{ borderRadius: '12px' }} 
-          />
-        </Grid> */}
+        </Grid>
+      </MainCard>
+        </Grid>
+
 
         {/* Skeletons for the Dashboard Cards */}
-        {Array.from(new Array(6)).map((_, index) => (
+        {Array.from(new Array(8)).map((_, index) => (
           <Grid item xs={12} sm={6} lg={3} key={index}>
             <Box 
               sx={{ 

@@ -168,10 +168,17 @@ export default function WelcomeBanner() {
               {/* <Skeleton variant="text" animation="wave" width="40%" height={20} /> */}
               {/* <Skeleton variant="rectangular" animation="wave" width="100%" height={100} sx={{ borderRadius: 2 }} /> */}
               <Skeleton variant="text" animation="wave" width="30%" height={20} />
+              <Typography
+              variant="h6"
+              color={theme.palette.background.paper}
+              sx={{ mt: 2 }}
+            >
+              KK Trading 1.0.0
+            </Typography>
             </Stack>
           </Grid>
           {/* Right Section Skeleton */}
-          <Grid item md={6} sm={6} xs={12} sx={{ display: { xs: 'none', sm: 'block' } }}>
+          {/* <Grid item md={6} sm={6} xs={12} sx={{ display: { xs: 'none', sm: 'block' } }}>
             <Stack
               sx={{ position: 'relative', pr: { sm: 3, md: 8 } }}
               justifyContent="center"
@@ -179,7 +186,18 @@ export default function WelcomeBanner() {
             >
               <Skeleton variant="rectangular" animation="wave" width="200px" height="200px" sx={{ borderRadius: 2 }} />
             </Stack>
-          </Grid>
+          </Grid> */}
+
+          <Grid item md={6} sm={6} xs={12} sx={{ display: { xs: 'none', sm: 'block' } }}>
+          <Stack
+            sx={{ position: 'relative', pr: { sm: 3, md: 8 }, zIndex: 2, height: '100%' }}
+            justifyContent="center"
+            alignItems="flex-end"
+          >
+            <img src={WelcomeImage} alt="Welcome" width="200px" />
+          </Stack>
+        </Grid>
+
         </Grid>
       </MainCard>
     );
