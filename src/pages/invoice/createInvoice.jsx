@@ -830,7 +830,16 @@ const itemDiscount = itemBase * discountRatio;
     setError('');
 
     const parsedDate = new Date(receivedDate);
+   // This row's discount portion: "itemBase / sumOfBase * discount"
+   let sumOfBase = 0;
+   products.forEach((p) => {
+     sumOfBase += (parseFloat(p.quantity) || 0) * (parseFloat(p.sellingPriceinQty) || 0);
+   });
 
+// Parse the discount value and compute the discount ratio.
+const parsedDiscount = parseFloat(discount) || 0;
+const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
+    
     const billingData = {
       invoiceNo,
       invoiceDate,
@@ -838,44 +847,65 @@ const itemDiscount = itemBase * discountRatio;
       expectedDeliveryDate,
       deliveryStatus,
       paymentStatus,
+      userId: userInfo._id,
       billingAmount: totalAmount,
       grandTotal: grandTotal,
+      cgst,
+      sgst,
       paymentAmount: receivedAmount,
       paymentMethod,
       paymentReceivedDate: parsedDate,
       customerName,
       customerAddress,
-      customerId,
       customerContactNumber,
-      salesmanPhoneNumber,
-      userId: userInfo._id,
+      customerId,
       roundOff,
+      salesmanPhoneNumber,
       marketedBy,
       unloading,
-      transportation,
-      handlingCharge: handlingcharge,
-      isApproved: isApproved,
-      remark,
       showroom,
+      transportation,
+      handlingCharge: handlingcharge, // shorthand for handlingCharge: handlingCharge
+      isApproved,     // shorthand for isApproved: isApproved
+      remark,
       discount,
-      products: products.map((product) => ({
-        item_id: product.item_id,
-        name: product.name,
-        category: product.category,
-        brand: product.brand,
-        quantity: parseFloat(product.quantity).toFixed(2),
-        sellingPrice: product.sellingPrice,
-        enteredQty: product.enteredQty,
-        sellingPriceinQty: product.sellingPriceinQty,
-        unit: product.unit,
-        length: product.length || 0,
-        breadth: product.breadth || 0,
-        size: product.size || 0,
-        psRatio: product.psRatio || 0,
-        itemRemark: product.itemRemark,
-        // Include the per-product GST rate
-        gstRate: parseFloat(product.gstRate) || 0,
-      })),
+      products: products.map((p) => {
+        const quantity = parseFloat(p.quantity) || 0;
+        const sellingPriceInQty = parseFloat(p.sellingPriceinQty) || 0;
+        const itemBase = quantity * sellingPriceInQty;
+        const itemDiscount = itemBase * discountRatio;
+    
+        const rateWithoutGST = itemBase / (1 + p.gstRate / 100) - itemDiscount;
+    
+    // After discount
+    const netBase = itemBase - itemDiscount;
+    
+    // GST on discounted base
+    const gstAmount = rateWithoutGST * (1 + p.gstRate / 100) - rateWithoutGST;
+    
+    // Final net per item
+    const netTotal = rateWithoutGST + gstAmount;
+        
+        return {
+          item_id: p.item_id,
+          name: p.name,
+          category: p.category,
+          brand: p.brand,
+          quantity: quantity.toFixed(2),
+          sellingPrice: p.sellingPrice,
+          enteredQty: p.enteredQty,
+          sellingPriceinQty: p.sellingPriceinQty,
+          unit: p.unit,
+          length: p.length || 0,
+          breadth: p.breadth || 0,
+          size: p.size || 0,
+          psRatio: p.psRatio || 0,
+          selledPrice: netTotal / quantity.toFixed(2),
+          // product-level GST
+          gstRate: parseFloat(p.gstRate) || 0,
+          itemRemark: p.itemRemark,
+        };
+      }),
     };
 
     try {

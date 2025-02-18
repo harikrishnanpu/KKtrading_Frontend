@@ -108,18 +108,19 @@ const NeedToPurchaseList = () => {
                     {item.invoiceNo}
                   </td>
                   <td className="px-4 py-2">
-                    {product.image ? (
-                      <img
-                        src={product.image}
-                        alt={item.name}
-                        className="h-12 w-12 object-cover rounded"
-                      />
-                    ) : (
-                      <div className="h-12 w-12 bg-gray-300 flex items-center justify-center rounded">
-                        N/A
-                      </div>
-                    )}
-                  </td>
+  {product.image.length > 10 ? (
+    <img
+      src={product.image}
+      alt={product.name}
+      className="h-12 w-12 object-cover rounded"
+    />
+  ) : (
+    <div className="h-12 w-50 bg-gray-300 flex items-center justify-center rounded">
+      No Image
+    </div>
+  )}
+</td>
+
                   <td className="px-4 py-2">{item.name}</td>
                   <td className="px-4 py-2">{item.quantityOrdered}</td>
                   <td className="px-4 py-2">{item.quantityNeeded}</td>

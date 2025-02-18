@@ -168,7 +168,7 @@ const handleNeedPurchase = (billing) => {
       const product = productMap[p.item_id];
       const ItemSellingPrice = billing.total
       const cost = parseFloat(product?.price || 0);
-      const revenue = p.sellingPriceinQty * p.quantity;
+      const revenue = parseFloat(p.selledPrice) * p.quantity;
       totalCost += cost * p.quantity;
       totalRevenue += revenue;
     });
@@ -419,7 +419,7 @@ const handleNeedPurchase = (billing) => {
           quantity: product.quantity,
           sellingPrice: product.sellingPrice,
           enteredQty: product.enteredQty,
-          sellingPriceinQty: product.sellingPriceinQty,
+          selledPrice: product.selledPrice,
           unit: product.unit,
           size: product.size,
         })),
@@ -1173,6 +1173,7 @@ const handleNeedPurchase = (billing) => {
                   <table className="w-full text-sm text-gray-500">
                     <thead className="bg-gray-100 text-xs uppercase text-gray-700">
                       <tr>
+                      <th className="px-4 py-3">Id</th>
                         <th className="px-4 py-3">Product</th>
                         <th className="px-4 py-3">Cost Price</th>
                         <th className="px-4 py-3">Selling Price</th>
@@ -1189,7 +1190,7 @@ const handleNeedPurchase = (billing) => {
                       {selectedBilling.products.map((product, index) => {
                         const prodDetails = productMap[product.item_id];
                         const cost = parseFloat(prodDetails?.price || 0).toFixed(2);
-                        const selling = product.sellingPriceinQty;
+                        const selling = parseFloat(product.selledPrice);
                         const qty = product.quantity;
                         const profitPerUnit = selling - cost;
                         const totalProfit = profitPerUnit * qty;
@@ -1200,6 +1201,7 @@ const handleNeedPurchase = (billing) => {
                             key={index}
                             className="hover:bg-gray-50 text-center border-b"
                           >
+                            <td className="px-4 py-3 font-semibold">{product.item_id}</td>
                             <td className="px-4 py-3 font-semibold">{product.name}</td>
                             <td className="px-4 py-3">₹{cost}</td>
                             <td className="px-4 py-3">₹{selling.toFixed(2)}</td>

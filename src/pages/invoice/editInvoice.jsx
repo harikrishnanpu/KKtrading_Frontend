@@ -366,7 +366,7 @@ const [printOptions, setPrintOptions] = useState({
         const fetchedProducts = data.products.map((p) => ({
           ...p,
           quantity: parseFloat(p.quantity) || 0,
-          sellingPriceinQty: parseFloat(p.sellingPrice * parseFloat(parseFloat(p.length) * parseFloat(p.breadth))) || 0,
+          sellingPriceinQty: parseFloat(p.sellingPriceinQty) || 0,
           // If there's a product-level GST in the DB, we keep it; otherwise default 18:
           gstRate: p.gstRate !== undefined ? parseFloat(p.gstRate) : 18,
         }));
@@ -746,55 +746,85 @@ const itemDiscount = itemBase * discountRatio;
     setError('');
 
     const parsedDate = new Date(receivedDate);
+   
+   // This row's discount portion: "itemBase / sumOfBase * discount"
+   let sumOfBase = 0;
+   products.forEach((p) => {
+     sumOfBase += (parseFloat(p.quantity) || 0) * (parseFloat(p.sellingPriceinQty) || 0);
+   });
 
-    const billingData = {
-      invoiceNo,
-      invoiceDate,
-      salesmanName,
-      expectedDeliveryDate,
-      deliveryStatus,
-      paymentStatus,
-      userId: userInfo._id,
-      billingAmount: totalAmount,
-      grandTotal: grandTotal,
-      cgst,
-      sgst,
-      paymentAmount: receivedAmount,
-      paymentMethod,
-      paymentReceivedDate: parsedDate,
-      customerName,
-      customerAddress,
-      customerContactNumber,
-      customerId,
-      roundOff,
-      salesmanPhoneNumber,
-      marketedBy,
-      unloading,
-      showroom,
-      transportation,
-      handlingCharge: handlingCharge,
-      isApproved: isApproved,
-      remark,
-      discount,
-      products: products.map((p) => ({
-        item_id: p.item_id,
-        name: p.name,
-        category: p.category,
-        brand: p.brand,
-        quantity: parseFloat(p.quantity).toFixed(2),
-        sellingPrice: p.sellingPrice,
-        enteredQty: p.enteredQty,
-        sellingPriceinQty: p.sellingPriceinQty,
-        unit: p.unit,
-        length: p.length || 0,
-        breadth: p.breadth || 0,
-        size: p.size || 0,
-        psRatio: p.psRatio || 0,
-        // product-level GST
-        gstRate: parseFloat(p.gstRate) || 0,
-        itemRemark: p.itemRemark,
-      })),
+// Parse the discount value and compute the discount ratio.
+const parsedDiscount = parseFloat(discount) || 0;
+const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
+
+const billingData = {
+  invoiceNo,
+  invoiceDate,
+  salesmanName,
+  expectedDeliveryDate,
+  deliveryStatus,
+  paymentStatus,
+  userId: userInfo._id,
+  billingAmount: totalAmount,
+  grandTotal: grandTotal,
+  cgst,
+  sgst,
+  paymentAmount: receivedAmount,
+  paymentMethod,
+  paymentReceivedDate: parsedDate,
+  customerName,
+  customerAddress,
+  customerContactNumber,
+  customerId,
+  roundOff,
+  salesmanPhoneNumber,
+  marketedBy,
+  unloading,
+  showroom,
+  transportation,
+  handlingCharge, // shorthand for handlingCharge: handlingCharge
+  isApproved,     // shorthand for isApproved: isApproved
+  remark,
+  discount,
+  products: products.map((p) => {
+    const quantity = parseFloat(p.quantity) || 0;
+    const sellingPriceInQty = parseFloat(p.sellingPriceinQty) || 0;
+    const itemBase = quantity * sellingPriceInQty;
+    const itemDiscount = itemBase * discountRatio;
+
+    const rateWithoutGST = itemBase / (1 + p.gstRate / 100) - itemDiscount;
+
+// After discount
+const netBase = itemBase - itemDiscount;
+
+// GST on discounted base
+const gstAmount = rateWithoutGST * (1 + p.gstRate / 100) - rateWithoutGST;
+
+// Final net per item
+const netTotal = rateWithoutGST + gstAmount;
+    
+    return {
+      item_id: p.item_id,
+      name: p.name,
+      category: p.category,
+      brand: p.brand,
+      quantity: quantity.toFixed(2),
+      sellingPrice: p.sellingPrice,
+      enteredQty: p.enteredQty,
+      sellingPriceinQty: p.sellingPriceinQty,
+      unit: p.unit,
+      length: p.length || 0,
+      breadth: p.breadth || 0,
+      size: p.size || 0,
+      psRatio: p.psRatio || 0,
+      selledPrice: netTotal / quantity.toFixed(2),
+      // product-level GST
+      gstRate: parseFloat(p.gstRate) || 0,
+      itemRemark: p.itemRemark,
     };
+  }),
+};
+
 
     try {
      const response = await api.post(`/api/billing/edit/${id}`, billingData);
