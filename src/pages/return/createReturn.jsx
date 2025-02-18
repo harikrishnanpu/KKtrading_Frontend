@@ -131,7 +131,7 @@ export default function ReturnBillingScreen() {
     // 1) Sum up products
     products.forEach((prod) => {
       const qty = parseFloat(prod.quantity) || 0;
-      const lineBase = (prod.returnPrice || 0) * qty;
+      const lineBase = parseFloat(prod.returnPrice || 0) * qty;
       subtotal += lineBase;
 
       let gstRate = 0;
@@ -238,30 +238,48 @@ export default function ReturnBillingScreen() {
         const billDiscount = parseFloat(data.discount) || 0;
         setDiscount(billDiscount);
 
-        // Distribute discount across total quantity
-        const totalQty = data.products.reduce(
-          (acc, product) => acc + parseFloat(product.quantity || 0),
-          0
-        );
-        const calculatedPerItemDiscount =
-          totalQty > 0 ? billDiscount / totalQty : 0;
-        setPerItemDiscount(parseFloat(calculatedPerItemDiscount.toFixed(2)));
+
+
+    let sumOfBase = 0;
+    data.products.forEach((p) => {
+      sumOfBase += (parseFloat(p.quantity) || 0) * (parseFloat(p.sellingPriceinQty) || 0);
+    });
+ 
+ // Parse the discount value and compute the discount ratio.
+ const parsedDiscount = parseFloat(discount) || 0;
+ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
 
         // Prepare each product for the return
         const productsWithReturnPrice = data.products.map((product) => {
+
           const gstRate = parseFloat(product.gstRate) || 0;
-          const spQty = parseFloat(product.sellingPriceinQty) || 0; // safer fallback
+          const spQty = parseFloat(product.selledPrice) || 0; // safer fallback
+
+          const quantity = parseFloat(product.quantity) || 0;
+          const sellingPriceInQty = parseFloat(product.sellingPriceinQty) || 0;
+          const itemBase = quantity * sellingPriceInQty;
+          const itemDiscount = itemBase * discountRatio;
+      
+          const rateWithoutGST = itemBase / (1 + product.gstRate / 100) - itemDiscount;
+      
+      // After discount
+      const netBase = itemBase - itemDiscount;
+      
+      // GST on discounted base
+      const gstAmount = rateWithoutGST * (1 + product.gstRate / 100) - rateWithoutGST;
+      
+      // Final net per item
+      const netTotal = rateWithoutGST + gstAmount;
 
           // Base (excluding GST)
           const baseExclGst = spQty / (1 + gstRate / 100);
 
           // Discount for that product
-          const discountForThisProduct =
-            (parseFloat(product.quantity) || 0) * calculatedPerItemDiscount;
+          const discountForThisProduct = itemBase * discountRatio;
 
           // Final "returnPrice" is baseExclGst minus the share of discount
           const returnPriceVal = parseFloat(
-            (baseExclGst - discountForThisProduct).toFixed(2)
+            (baseExclGst - discountForThisProduct)
           );
           return {
             ...product,
