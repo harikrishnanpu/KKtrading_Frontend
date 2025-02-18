@@ -27,6 +27,7 @@ const EditInvoice = Loadable(lazy(() => import('pages/invoice/editInvoice')));
 const ListInvoice = Loadable(lazy(() => import('pages/invoice/listInvoice')));
 const SalesReport = Loadable(lazy(() => import('pages/invoice/salesReport')));
 const InvoiceDetails = Loadable(lazy(() => import('pages/invoice/Invoicedetails')));
+const NeededToPurchase = Loadable(lazy(() => import('pages/invoice/needToPurchasePage')));
 
 const CreatePurchase = Loadable(lazy(() => import('pages/purchase/createPurchase')));
 const EditPurchase = Loadable(lazy(() => import('pages/purchase/editPurchase')));
@@ -178,6 +179,10 @@ const MainRoutes = {
             {
               path: 'payment',
               element: <BillPayment />
+            },
+            {
+              path: 'need-to-purchase',
+              element: <NeededToPurchase />
             },
             {
               path: 'details/:id',

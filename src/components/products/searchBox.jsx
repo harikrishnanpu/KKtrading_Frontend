@@ -71,7 +71,7 @@ export default function SearchBox() {
     setSuggestions([]);
     setShowSuggestions(false);
     const cleanName = searchTerm.replace(/\s*\(.*?\)\s*/g, '').trim();
-    navigate(`/search/name/${cleanName}`);
+    // navigate(`/products/${cleanName}`);
   };
 
   const handleKeyPress = (e) => {
@@ -110,7 +110,7 @@ export default function SearchBox() {
         onFocus={() => { setShowSuggestions(true)}}
       />
       <button
-        onClick={()=> navigate('/search/name/')}
+        onClick={()=> navigate('/products/all')}
         className="px-2.5 mx-2 ms-2 text-xs font-medium text-white bg-red-600 rounded-lg border border-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800"
       >
         <svg

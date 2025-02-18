@@ -149,7 +149,7 @@ const BillingCard = ({
               View
             </ActionButton>
             {userInfo.isAdmin && (
-              <ActionButton variant="outlined" color="error" onClick={() => handleRemove(billing._id)}>
+              <ActionButton variant="outlined" color="error" onClick={() => handleRemove(billing._id,billing.invoiceNo)}>
                 <i className="fa fa-trash" style={{ marginRight: 4 }}></i>
                 Delete
               </ActionButton>

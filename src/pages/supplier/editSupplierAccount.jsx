@@ -228,7 +228,7 @@ const SupplierAccountEdit = () => {
         // Optionally, redirect to the suppliers list after a delay
         setTimeout(() => {
           setSuccessMessage('');
-          navigate('/'); // Adjust the path as needed
+          navigate('/dashboard/default/');
         }, 2000);
       } else {
         setError('Failed to update supplier account. Please try again.');

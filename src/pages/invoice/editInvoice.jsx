@@ -19,6 +19,7 @@ import {
   Checkbox,
   Button
 } from '@mui/material';
+import ItemSuggestionsSidebar from 'components/products/itemSuggestionSidebar';
 
 
 const Transition = forwardRef(function Transition(props, ref) {
@@ -89,6 +90,10 @@ export default function EditBillScreen() {
   const [displaysellingPrice, setDisplaysellingPrice] = useState('');
   const [fetchItemPrice, setFetchItemPrice] = useState('');
     const [itemRemark, setItemRemark] = useState('');
+      const [showSuggestionsSidebar, setShowSuggestionsSidebar] = useState(false);
+        const [neededToPurchase, setNeededToPurchase] = useState(false);
+        const [isApproved, setIsApproved] = useState(false);
+    
   
 
   // NEW: GST Rate for adding a product
@@ -297,14 +302,19 @@ const [printOptions, setPrintOptions] = useState({
       if (selectedProduct.category === 'TILES') {
         if (unit === 'SQFT') {
           setDisplaysellingPrice(
-            (parseFloat(selectedProduct.price / 0.80) / parsedArea).toFixed(2)
+            (
+              parseFloat(selectedProduct.price / 0.80) / parsedArea
+            ).toFixed(2)
           );
         } else if (unit === 'BOX') {
           setDisplaysellingPrice(
-            (parseFloat(selectedProduct.price / 0.80) * selectedProduct.psRatio).toFixed(2)
+            (parseFloat(selectedProduct.price / 0.80) * selectedProduct.psRatio
+            ).toFixed(2)
           );
         } else {
-          setDisplaysellingPrice(parseFloat(selectedProduct.price / 0.80).toFixed(2));
+          setDisplaysellingPrice(
+            parseFloat((selectedProduct.price / 0.80).toFixed(2))
+          );
         }
       } else if (selectedProduct.category === 'GRANITE') {
         setDisplaysellingPrice(
@@ -351,11 +361,12 @@ const [printOptions, setPrintOptions] = useState({
         setRoundOff(data.roundOff);
         setRemark(data.remark);
 
+        console.log(data.products);
         // Convert product numeric fields
         const fetchedProducts = data.products.map((p) => ({
           ...p,
           quantity: parseFloat(p.quantity) || 0,
-          sellingPriceinQty: parseFloat(p.sellingPriceinQty) || 0,
+          sellingPriceinQty: parseFloat(p.sellingPrice * parseFloat(parseFloat(p.length) * parseFloat(p.breadth))) || 0,
           // If there's a product-level GST in the DB, we keep it; otherwise default 18:
           gstRate: p.gstRate !== undefined ? parseFloat(p.gstRate) : 18,
         }));
@@ -389,23 +400,28 @@ const [printOptions, setPrintOptions] = useState({
   const itemIdChange = async (e) => {
     const newValue = e.target.value;
     setItemId(newValue);
-
+  
     if (!newValue.trim()) {
       setSuggestions([]);
       setError('');
+      setShowSuggestionsSidebar(false);
       return;
     }
-
+  
     try {
-      const { data } = await api.get(
-        `/api/products/search/itemId?query=${newValue}`
-      );
+      const { data } = await api.get(`/api/products/searchform/search?q=${newValue}`);
       setSuggestions(data);
       setError('');
+      if (data && data.length > 0) {
+        setShowSuggestionsSidebar(true);
+      } else {
+        setShowSuggestionsSidebar(false);
+      }
     } catch (err) {
       console.error('Error fetching suggestions:', err);
       setSuggestions([]);
-      setError('Error fetching product suggestions.');
+      // setError('Error fetching product suggestions.');
+      setShowSuggestionsSidebar(false);
     }
   };
 
@@ -757,6 +773,7 @@ const itemDiscount = itemBase * discountRatio;
       showroom,
       transportation,
       handlingCharge: handlingCharge,
+      isApproved: isApproved,
       remark,
       discount,
       products: products.map((p) => ({
@@ -780,13 +797,14 @@ const itemDiscount = itemBase * discountRatio;
     };
 
     try {
-      await api.post(`/api/billing/edit/${id}`, billingData);
+     const response = await api.post(`/api/billing/edit/${id}`, billingData);
       setShowSummaryModal(false);
       setShowSuccessModal(true);
+      console.log(response.data.existingBilling);
 
       setTimeout(() => {
-        setShowSuccessModal(false);
-        navigate('/');
+          setShowSuccessModal(false);
+          navigate('/dashboard/default/');
       }, 2000);
     } catch (error) {
       console.error('Error submitting billing data:', error?.message);
@@ -1636,9 +1654,7 @@ const netTotal = rateWithoutGST + gstAmount;
                                 if (e.key === 'ArrowDown') {
                                   e.preventDefault();
                                   setSelectedSuggestionIndex((prev) =>
-                                    prev < suggestions.length - 1
-                                      ? prev + 1
-                                      : prev
+                                    prev < suggestions.length - 1 ? prev + 1 : prev
                                   );
                                 } else if (e.key === 'ArrowUp') {
                                   e.preventDefault();
@@ -1648,22 +1664,21 @@ const netTotal = rateWithoutGST + gstAmount;
                                 } else if (e.key === 'Enter') {
                                   if (
                                     selectedSuggestionIndex >= 0 &&
-                                    selectedSuggestionIndex <
-                                      suggestions.length
+                                    selectedSuggestionIndex < suggestions.length
                                   ) {
                                     e.preventDefault();
-                                    addProductByItemId(
-                                      suggestions[selectedSuggestionIndex]
-                                    );
-                                    const selected =
-                                      suggestions[selectedSuggestionIndex];
+                                    const selected = suggestions[selectedSuggestionIndex];
+                                    addProductByItemId(selected);
                                     setItemId(selected.item_id);
                                     setItemName(selected.name);
                                     setItemCategory(selected.category);
                                     setItemBrand(selected.brand);
+                                    setSuggestions([]);
+                                    setShowSuggestionsSidebar(false);
                                     itemNameRef.current?.focus();
                                   } else {
                                     handleDoubleClick(e);
+                                    itemNameRef.current?.focus();
                                   }
                                 }
                               }}
@@ -1674,30 +1689,6 @@ const netTotal = rateWithoutGST + gstAmount;
                               <p className="text-red-500 truncate text-xs">
                                 {error}
                               </p>
-                            )}
-                            {suggestions.length > 0 && (
-                              <div className="mt-1 bg-white border rounded-md max-h-40 divide-y overflow-y-auto">
-                                {suggestions.map((suggestion, index) => (
-                                  <div
-                                    key={index}
-                                    onClick={() => {
-                                      addProductByItemId(suggestion);
-                                      setItemName(suggestion.name);
-                                      setItemCategory(suggestion.category);
-                                      setItemBrand(suggestion.brand);
-                                      setSuggestions([]);
-                                      itemNameRef.current?.focus();
-                                    }}
-                                    className={`p-2 text-xs cursor-pointer hover:bg-gray-100 ${
-                                      index === selectedSuggestionIndex
-                                        ? 'bg-gray-200'
-                                        : ''
-                                    }`}
-                                  >
-                                    {suggestion.name} - {suggestion.item_id}
-                                  </div>
-                                ))}
-                              </div>
                             )}
                           </div>
 
@@ -2446,6 +2437,10 @@ const netTotal = rateWithoutGST + gstAmount;
           roundOff={roundOff}
           setRoundOff={setRoundOff}
           roundOffRef={roundOffRef}
+          neededToPurchase={neededToPurchase}
+          setNeededToPurchase={setNeededToPurchase}
+          isApproved={isApproved}
+          setIsApproved={setIsApproved}
           changeRef={changeRef}
           onClose={() => setShowSummaryModal(false)}
           onSubmit={submitBillingData}
@@ -2697,6 +2692,26 @@ const netTotal = rateWithoutGST + gstAmount;
   </DialogActions>
 </Dialog>
 
+
+
+{showSuggestionsSidebar && suggestions.length > 0 && (
+  <ItemSuggestionsSidebar
+    open={showSuggestionsSidebar}
+    suggestions={suggestions}
+    selectedIndex={selectedSuggestionIndex}
+    onSelect={(suggestion) => {
+      addProductByItemId(suggestion);
+      setItemId(suggestion.item_id);
+      setItemName(suggestion.name);
+      setItemCategory(suggestion.category);
+      setItemBrand(suggestion.brand);
+      setSuggestions([]);
+      setShowSuggestionsSidebar(false);
+      itemNameRef.current?.focus();
+    }}
+    onClose={() => setShowSuggestionsSidebar(false)}
+  />
+)}
 
 
       {/* Error Message */}

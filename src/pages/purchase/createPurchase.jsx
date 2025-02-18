@@ -5,6 +5,7 @@ import BillingSuccess from "components/invoice/billingsuccess";
 import { useGetMenuMaster } from "api/menu";
 import useAuth from "hooks/useAuth";
 import ErrorModal from "components/ErrorModal";
+import ItemSuggestionsSidebar from "components/products/itemSuggestionSidebar";
 
 export default function PurchasePage() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -76,12 +77,15 @@ export default function PurchasePage() {
   const [lastItemId, setLastItemId] = useState("");
   const [sellerSuggesstionIndex, setSellerSuggestionIndex] = useState(-1);
   const [itemstock, setItemStock] = useState("0");
+  const [showSuggestionsSidebar, setShowSuggestionsSidebar] = useState(false);
+
 
   // Other States
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [showErrorModal, setShowErrorModal] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
 
   const navigate = useNavigate();
 
@@ -382,15 +386,15 @@ export default function PurchasePage() {
   };
 
   // Function to handle searching for an item by ID
-  const handleSearchItem = async () => {
-    if (itemId.trim() === "") {
-      setError("Please enter an Item ID to search.");
+  const handleSearchItem = async (item) => {
+    if(!item){
+      setError("Item Not Found.");
       setShowErrorModal(true);
-      return;
-    }
+      clearItemFields();
+      }
     try {
       setItemLoading(true);
-      const { data } = await api.get(`/api/products/itemId/${itemId}`);
+      const { data } = await api.get(`/api/products/itemId/${item.item_id}`);
       if (data) {
         setItemId(data.item_id);
         setItemName(data.name);
@@ -763,24 +767,29 @@ export default function PurchasePage() {
 
   const itemIdChange = async (e) => {
     const newValue = e.target.value;
-    setItemId(newValue); // Update the item ID as the user types
-
+    setItemId(newValue);
+  
     if (!newValue.trim()) {
       setSuggestions([]);
       setError('');
-      return; // Skip empty input to prevent unnecessary API calls
+      setShowSuggestionsSidebar(false);
+      return;
     }
-
+  
     try {
-      const { data } = await api.get(
-        `/api/products/search/itemId?query=${newValue}`
-      );
+      const { data } = await api.get(`/api/products/searchform/search?q=${newValue}`);
       setSuggestions(data);
-      setError(''); // Clear errors on successful fetch
+      setError('');
+      if (data && data.length > 0) {
+        setShowSuggestionsSidebar(true);
+      } else {
+        setShowSuggestionsSidebar(false);
+      }
     } catch (err) {
       console.error('Error fetching suggestions:', err);
       setSuggestions([]);
-      setError('Error fetching product suggestions.');
+      // setError('Error fetching product suggestions.');
+      setShowSuggestionsSidebar(false);
     }
   };
 
@@ -1427,12 +1436,35 @@ export default function PurchasePage() {
                               type="text"
                               ref={itemIdRef}
                               value={itemId}
+                              onChange={(e) => itemIdChange(e)}
                               onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  handleSearchItem();
+                                if (e.key === 'ArrowDown') {
+                                  e.preventDefault();
+                                  setSelectedSuggestionIndex((prev) =>
+                                    prev < suggestions.length - 1 ? prev + 1 : prev
+                                  );
+                                } else if (e.key === 'ArrowUp') {
+                                  e.preventDefault();
+                                  setSelectedSuggestionIndex((prev) =>
+                                    prev > 0 ? prev - 1 : prev
+                                  );
+                                } else if (e.key === 'Enter') {
+                                  if (
+                                    selectedSuggestionIndex >= 0 &&
+                                    selectedSuggestionIndex < suggestions.length
+                                  ) {
+                                    e.preventDefault();
+                                    const selected = suggestions[selectedSuggestionIndex];
+                                    handleSearchItem(selected);
+                                    setSuggestions([]);
+                                    setShowSuggestionsSidebar(false);
+                                    itemNameRef.current?.focus();
+                                  } else {
+                                    handleDoubleClick(e);
+                                    itemNameRef.current?.focus();
+                                  }
                                 }
-                              }}
-                              onChange={(e) => setItemId(e.target.value)}
+                              }}       
                               className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
                               required
                             />
@@ -2149,6 +2181,28 @@ export default function PurchasePage() {
           </div>
         </div>
       </div>
+
+
+
+      {showSuggestionsSidebar && suggestions.length > 0 && (
+  <ItemSuggestionsSidebar
+    open={showSuggestionsSidebar}
+    suggestions={suggestions}
+    selectedIndex={selectedSuggestionIndex}
+    onSelect={(suggestion) => {
+      handleSearchItem(suggestion);
+      setItemId(suggestion.item_id);
+      setItemName(suggestion.name);
+      setItemCategory(suggestion.category);
+      setItemBrand(suggestion.brand);
+      setSuggestions([]);
+      setShowSuggestionsSidebar(false);
+      itemNameRef.current?.focus();
+    }}
+    onClose={() => setShowSuggestionsSidebar(false)}
+  />
+)}
+
     </div>
   );
 }

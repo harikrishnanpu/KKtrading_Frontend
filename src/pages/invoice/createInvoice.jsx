@@ -5,14 +5,9 @@ import SuccessModal from 'components/invoice/SccessModal';
 import SummaryModal from 'components/invoice/SummaryModal';
 import api from '../api';
 import OutOfStockModal from 'components/invoice/itemAddingModal';
-import axios from 'axios';
 import BillingSuccess from 'components/invoice/billingsuccess';
 import useAuth from 'hooks/useAuth';
 import { useGetMenuMaster } from 'api/menu';
-import Backdrop from '@mui/material/Backdrop';
-import CircularProgress from '@mui/material/CircularProgress';
-import Skeleton from '@mui/material/Skeleton';
-import { ArrowCircleLeft } from 'iconsax-react'; // Example icon, replace with desired icon
 import { openSnackbar } from 'api/snackbar';
 import { 
   Dialog,
@@ -26,6 +21,7 @@ import {
   Checkbox,
   Button
 } from '@mui/material';
+import ItemSuggestionsSidebar from 'components/products/itemSuggestionSidebar';
 
 
 
@@ -78,11 +74,11 @@ export default function BillingScreen() {
   const [products, setProducts] = useState([]);
   const [error, setError] = useState('');
   const [suggestions, setSuggestions] = useState([]);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [unit, setUnit] = useState('SQFT');
   const [sellingPrice, setSellingPrice] = useState('');
-  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
   const [filterText, setFilterText] = useState('');
   const [sqPrice, setSqPrice] = useState(0);
   const [customerSq, setCustomerSQ] = useState(0);
@@ -100,6 +96,9 @@ export default function BillingScreen() {
   const [accounts, setAccounts] = useState([]);
   const [fetchItemPrice, setFetchItemPrice] = useState('');
   const [displaysellingPrice, setDisplaysellingPrice] = useState('');
+  const [neededToPurchase, setNeededToPurchase] = useState(false);
+  const [isApproved, setIsApproved] = useState(false);
+
 
 
   const { user: userInfo } = useAuth(); // Get the logged-in user info
@@ -113,6 +112,8 @@ export default function BillingScreen() {
   // Modal Controls
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [showSuggestionsSidebar, setShowSuggestionsSidebar] = useState(false);
+
 
   // Loading States
   const [isLoading, setIsLoading] = useState(false);
@@ -155,7 +156,6 @@ export default function BillingScreen() {
   const itemRemarkRef = useRef();
   const mobileitemRemarkRef = useRef();
 
-  const {menuMaster} = useGetMenuMaster();
 
 
   // Add these at the top with your other useState hooks:
@@ -446,26 +446,32 @@ const [printOptions, setPrintOptions] = useState({
   // Fetch Suggestions for Item ID
   const itemIdChange = async (e) => {
     const newValue = e.target.value;
-    setItemId(newValue); // Update the item ID as the user types
-
+    setItemId(newValue);
+  
     if (!newValue.trim()) {
       setSuggestions([]);
       setError('');
-      return; // Skip empty input to prevent unnecessary API calls
+      setShowSuggestionsSidebar(false);
+      return;
     }
-
+  
     try {
-      const { data } = await api.get(
-        `/api/products/search/itemId?query=${newValue}`
-      );
+      const { data } = await api.get(`/api/products/searchform/search?q=${newValue}`);
       setSuggestions(data);
-      setError(''); // Clear errors on successful fetch
+      setError('');
+      if (data && data.length > 0) {
+        setShowSuggestionsSidebar(true);
+      } else {
+        setShowSuggestionsSidebar(false);
+      }
     } catch (err) {
       console.error('Error fetching suggestions:', err);
       setSuggestions([]);
-      setError('Error fetching product suggestions.');
+      // setError('Error fetching product suggestions.');
+      setShowSuggestionsSidebar(false);
     }
   };
+  
 
   const handleproductUpdate = async (newQ, product) => {
     if (newQ) {
@@ -848,6 +854,7 @@ const itemDiscount = itemBase * discountRatio;
       unloading,
       transportation,
       handlingCharge: handlingcharge,
+      isApproved: isApproved,
       remark,
       showroom,
       discount,
@@ -876,29 +883,32 @@ const itemDiscount = itemBase * discountRatio;
       console.log('Billing Response:', response.data);
       setReturnInvoice(response.data.billingData.invoiceNo);
 
-      // Reset Form Fields
-      setInvoiceNo('');
-      setInvoiceDate('');
-      setSalesmanName('');
-      setSalesmanPhoneNumber('');
-      setExpectedDeliveryDate('');
-      setDeliveryStatus('Pending');
-      setPaymentStatus('Unpaid');
-      setCustomerName('');
-      setCustomerAddress('');
-      setCustomerContactNumber('');
-      setMarketedBy('');
-      setProducts([]);
-      setDiscount(0);
-      setReceivedAmount(0);
-      setReceivedDate('');
-      setPaymentMethod();
-      setShowSummaryModal(false);
-      handleLocalClear();
-
-      // Optionally, navigate to another page or show a success message
-      setSuccess(true);
-      // navigate('/'); // Example navigation
+          // If the user checked the needed-to-purchase option, navigate to that page:
+          
+          // Reset Form Fields
+          setInvoiceNo('');
+          setInvoiceDate('');
+          setSalesmanName('');
+          setSalesmanPhoneNumber('');
+          setExpectedDeliveryDate('');
+          setDeliveryStatus('Pending');
+          setPaymentStatus('Unpaid');
+          setCustomerName('');
+          setCustomerAddress('');
+          setCustomerContactNumber('');
+          setMarketedBy('');
+          setProducts([]);
+          setDiscount(0);
+          setReceivedAmount(0);
+          setReceivedDate('');
+          setPaymentMethod();
+          setShowSummaryModal(false);
+          handleLocalClear();
+          setIsApproved(false);
+          setNeededToPurchase(false);
+          
+            setSuccess(true);
+          // navigate('/'); // Example navigation
     } catch (error) {
       console.error('Error submitting billing data:', error);
       setError(
@@ -1773,50 +1783,26 @@ const netTotal = rateWithoutGST + gstAmount;
                                   selectedSuggestionIndex < suggestions.length
                                 ) {
                                   e.preventDefault();
-                                  addProductByItemId(
-                                    suggestions[selectedSuggestionIndex]
-                                  );
                                   const selected = suggestions[selectedSuggestionIndex];
+                                  addProductByItemId(selected);
                                   setItemId(selected.item_id);
                                   setItemName(selected.name);
                                   setItemCategory(selected.category);
                                   setItemBrand(selected.brand);
+                                  setSuggestions([]);
+                                  setShowSuggestionsSidebar(false);
                                   itemNameRef.current?.focus();
                                 } else {
                                   handleDoubleClick(e);
                                   itemNameRef.current?.focus();
                                 }
                               }
-                            }}
+                            }}                            
                             className="w-full border border-gray-300 px-2 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
                             placeholder="Enter Item ID or Name"
                           />
                           {error && (
                             <p className="text-red-500 truncate text-xs">{error}</p>
-                          )}
-                          {suggestions.length > 0 && (
-                            <div className="mt-1 bg-white border rounded-md max-h-40 divide-y overflow-y-auto">
-                              {suggestions.map((suggestion, index) => (
-                                <div
-                                  key={index}
-                                  onClick={() => {
-                                    addProductByItemId(suggestion);
-                                    setItemName(suggestion.name);
-                                    setItemCategory(suggestion.category);
-                                    setItemBrand(suggestion.brand);
-                                    setSuggestions([]);
-                                    itemNameRef.current?.focus();
-                                  }}
-                                  className={`p-2 text-xs cursor-pointer hover:bg-gray-100 ${
-                                    index === selectedSuggestionIndex
-                                      ? 'bg-gray-200'
-                                      : ''
-                                  }`}
-                                >
-                                  {suggestion.name} - {suggestion.item_id}
-                                </div>
-                              ))}
-                            </div>
                           )}
                         </div>
 
@@ -2561,6 +2547,10 @@ const netTotal = rateWithoutGST + gstAmount;
           roundOff={roundOff}
           setRoundOff={setRoundOff}
           roundOffRef={roundOffRef}
+          neededToPurchase={neededToPurchase}
+          setNeededToPurchase={setNeededToPurchase}
+          isApproved={isApproved}
+          setIsApproved={setIsApproved}
           changeRef={changeRef}
           onClose={() => setShowSummaryModal(false)}
           onSubmit={handleBillingSubmit}
@@ -2783,6 +2773,27 @@ const netTotal = rateWithoutGST + gstAmount;
     </Button>
   </DialogActions>
 </Dialog>
+
+
+{showSuggestionsSidebar && suggestions.length > 0 && (
+  <ItemSuggestionsSidebar
+    open={showSuggestionsSidebar}
+    suggestions={suggestions}
+    selectedIndex={selectedSuggestionIndex}
+    onSelect={(suggestion) => {
+      addProductByItemId(suggestion);
+      setItemId(suggestion.item_id);
+      setItemName(suggestion.name);
+      setItemCategory(suggestion.category);
+      setItemBrand(suggestion.brand);
+      setSuggestions([]);
+      setShowSuggestionsSidebar(false);
+      itemNameRef.current?.focus();
+    }}
+    onClose={() => setShowSuggestionsSidebar(false)}
+  />
+)}
+
 
 
 

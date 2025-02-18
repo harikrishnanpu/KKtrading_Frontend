@@ -45,7 +45,8 @@ const BillingSuccess = ({ estimationNo, isAdmin }) => {
 
   const handleClose = () => {
     setOpen(false);
-    navigate('/');
+    navigate('/dashboard/default/');
+
   };
 
   return (

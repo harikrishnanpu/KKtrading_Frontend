@@ -219,7 +219,7 @@ export default function SupplierAccountForm() {
         // Optionally, navigate to another page after a delay
         setTimeout(() => {
           setShowSuccessMessage('');
-          navigate('/'); // Adjust the path as needed
+          navigate('/dashboard/default/');
         }, 2000);
       } else {
         setShowErrorMessage('Failed to create supplier account. Please try again.');

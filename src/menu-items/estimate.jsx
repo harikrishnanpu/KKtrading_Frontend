@@ -13,7 +13,7 @@ const icons = {
   purchase: Receipt,
   return: RotateLeft,
   damage: Danger,
-  sub: SecurityUser
+  sub: SecurityUser,
 };
 
 // ==============================|| MENU ITEMS - PAGES ||============================== //
@@ -38,7 +38,16 @@ const estimate = {
           url: '/invoice/list/',
           target: false,
           breadcrumbs: true
+        },
+        {
+          id: 'Need To Purchase',
+          title: <FormattedMessage id="Need To Purchase" />,
+          type: 'item',
+          url: '/invoice/need-to-purchase/',
+          target: false,
+          breadcrumbs: false
         }
+
     ],
 }
 

@@ -86,7 +86,7 @@ export default function SearchBox() {
           localStorage.setItem('recentSearches', JSON.stringify(updatedSearches));
   
           // Navigate using product _id
-          navigate(`/products/product/${selectedProduct._id}`);
+          navigate(`/products/${selectedProduct._id}`);
           return; // Stop execution after navigating
         }
       }

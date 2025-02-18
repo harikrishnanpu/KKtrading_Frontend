@@ -197,7 +197,8 @@ export default function CustomerAccountForm() {
         // Optionally, navigate to another page after a delay
         setTimeout(() => {
           setShowSuccessMessage('');
-          navigate('/'); // Adjust the path as needed
+          navigate('/dashboard/default/');
+
         }, 2000);
       } else {
         setShowErrorMessage('Failed to create account. Please try again.');

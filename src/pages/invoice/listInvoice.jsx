@@ -23,6 +23,7 @@ import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
 import MainCard from 'components/MainCard';
 import BillingCard from './components/mobileviewCard';
+import NeededToPurchaseDialog from './neededtoPurchase';
 
 // =============================================================================
 // Transition Component for Dialog (Slide Up Animation)
@@ -79,9 +80,16 @@ const ProfitBadge = ({ value }) => (
 const BillingList = () => {
   const navigate = useNavigate();
   const { user: userInfo } = useAuth();
-  const { menuMaster } = useGetMenuMaster();
 
-  console.log(userInfo);
+// Add after your existing state declarations
+const [neededToPurchaseOpen, setNeededToPurchaseOpen] = useState(false);
+const [needtopurchaseBill, setNeededToPurchaseBill] = useState(null);
+
+const handleNeedPurchase = (billing) => {
+  setNeededToPurchaseBill(billing._id);
+  setNeededToPurchaseOpen(true);
+};
+
 
   // ---------------------------------------------------------------------------
   // State Variables
@@ -209,6 +217,10 @@ const BillingList = () => {
       Paid: (b) => b.paymentStatus === 'Paid',
       Pending: (b) => b.paymentStatus !== 'Paid' && b.isApproved,
       Unapproved: (b) => !b.isApproved,
+      'Need to Purchase': (b) =>
+    b.neededToPurchase &&
+     b.neededToPurchase.length > 0 &&
+     b.neededToPurchase.some(item => !item.purchased || !item.verified)
     };
     data = data.filter(statusFilters[statusTab]);
 
@@ -430,17 +442,18 @@ const BillingList = () => {
     }
   };
 
-  const handleRemove = async (id) => {
-    if (window.confirm('Are you sure you want to remove this billing?')) {
+  const handleRemove = async (id, bill) => {
+    if (window.confirm(`Are you sure you want to remove this billing ${bill}`)) {
       try {
         await api.delete(`/api/billing/billings/delete/${id}?userId=${userInfo._id}`);
-        setBillings(billings.filter((billing) => billing._id !== id));
+        setBillings((prevBillings) => prevBillings.filter((billing) => billing._id !== id));
       } catch (error) {
         setError('Error occurred while deleting the billing.');
         console.error(error);
       }
     }
   };
+  
 
   const handleApprove = async (bill) => {
     try {
@@ -502,19 +515,23 @@ const BillingList = () => {
 
 
   // Render Mobile Card for each Billing
+
   const renderCard = (billing) => {
     const profit = calculateProfit(billing);
     return (
-      <BillingCard   billing={billing}
-      userInfo={userInfo}
-      profit={profit}
-      handleView={handleView}
-      handleRemove={handleRemove}
-      handleApprove={handleApprove}
-      generatePDF={generatePDF}
-       />
+      <BillingCard
+        key={billing._id}
+        billing={billing}
+        userInfo={userInfo}
+        profit={profit}
+        handleView={handleView}
+        handleRemove={handleRemove}
+        handleApprove={handleApprove}
+        generatePDF={generatePDF}
+      />
     );
   };
+  
 
   // =============================================================================
   // Main Render Return
@@ -711,7 +728,7 @@ const BillingList = () => {
           Tabs for Status Filter (Desktop)
       ------------------------------------------------------------------------- */}
       <div className="flex flex-wrap justify-center sm:justify-start space-x-2 mb-4">
-        {['All', 'Paid', 'Pending', 'Unapproved'].map((tab) => (
+      {['All', 'Paid', 'Pending', 'Unapproved', 'Need to Purchase'].map((tab) => (
           <button
             key={tab}
             onClick={() => {
@@ -876,7 +893,7 @@ const BillingList = () => {
                   const profit = calculateProfit(billing);
                   return (
                     <motion.tr
-                      key={billing.invoiceNo}
+                      key={billing._id}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
@@ -959,7 +976,7 @@ const BillingList = () => {
                           </button>
                           {userInfo.isAdmin && (
                             <button
-                              onClick={() => handleRemove(billing._id)}
+                              onClick={() => handleRemove(billing._id,billing.invoiceNo)}
                               className="bg-red-500 hover:bg-red-600 text-white px-2 font-bold py-1 rounded flex items-center"
                             >
                               <i className="fa fa-trash mr-1"></i> Delete
@@ -973,6 +990,15 @@ const BillingList = () => {
                               Approve
                             </button>
                           )}
+
+{userInfo.isAdmin && (
+    <button
+      onClick={() => handleNeedPurchase(billing)}
+      className="bg-blue-500 hover:bg-blue-600 text-white px-2 font-bold py-1 rounded flex items-center"
+    >
+      Need Purchase
+    </button>
+  )}
                         </div>
                       </td>
                     </motion.tr>
@@ -1271,6 +1297,22 @@ const BillingList = () => {
           </AnimatePresence>
         </DialogContent>
       </Dialog>
+
+
+      <NeededToPurchaseDialog 
+  open={neededToPurchaseOpen}
+  onClose={() => {
+    setNeededToPurchaseOpen(false);
+    setNeededToPurchaseBill(null);
+  }}
+  billingId={needtopurchaseBill}
+  onSubmitSuccess={() => {
+    // Optionally refresh your billing data here
+    setNeededToPurchaseOpen(false);
+    setCurrentBillingId(null);
+  }}
+/>
+
     </div>
   );
 };

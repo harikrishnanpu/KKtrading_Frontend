@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../api";
 import { useGetMenuMaster } from "api/menu";
+import ItemSuggestionsSidebar from "components/products/itemSuggestionSidebar";
 
 export default function EditPurchaseScreen() {
   const { id } = useParams(); // Purchase ID from URL
@@ -44,6 +45,8 @@ export default function EditPurchaseScreen() {
   const [itemCategory, setItemCategory] = useState("");
   const [itemBillPrice, setItemBillPrice] = useState("");
   const [itemCashPrice, setItemCashPrice] = useState("");
+    const [showSuggestionsSidebar, setShowSuggestionsSidebar] = useState(false);
+    const [suggestions, setSuggestions] = useState([]);
 
   // NEW: GST field for each item
   const [itemGst, setItemGst] = useState("18"); 
@@ -349,6 +352,36 @@ export default function EditPurchaseScreen() {
     }
   };
 
+
+  const itemIdChange = async (e) => {
+    const newValue = e.target.value;
+    setItemId(newValue);
+  
+    if (!newValue.trim()) {
+      setSuggestions([]);
+      setError('');
+      setShowSuggestionsSidebar(false);
+      return;
+    }
+  
+    try {
+      const { data } = await api.get(`/api/products/searchform/search?q=${newValue}`);
+      setSuggestions(data);
+      setError('');
+      if (data && data.length > 0) {
+        setShowSuggestionsSidebar(true);
+      } else {
+        setShowSuggestionsSidebar(false);
+      }
+    } catch (err) {
+      console.error('Error fetching suggestions:', err);
+      setSuggestions([]);
+      // setError('Error fetching product suggestions.');
+      setShowSuggestionsSidebar(false);
+    }
+  };
+
+
   // ----------------------------
   // Item Add / Edit Logic
   // ----------------------------
@@ -485,15 +518,15 @@ export default function EditPurchaseScreen() {
     setItemGst("18"); // reset GST to default or empty
   };
 
-  const handleSearchItem = async () => {
-    if (itemId.trim() === "") {
-      setError("Please enter an Item ID to search.");
+  const handleSearchItem = async (item) => {
+    if(!item){
+      setError("Item Not Found.");
       setShowErrorModal(true);
-      return;
-    }
+      clearItemFields();
+      }
     try {
       setItemLoading(true);
-      const { data } = await api.get(`/api/products/itemId/${itemId}`);
+      const { data } = await api.get(`/api/products/itemId/${item.item_id}`);
       if (data) {
         setItemId(data.item_id);
         setItemName(data.name);
@@ -507,11 +540,11 @@ export default function EditPurchaseScreen() {
         setSize(data.size);
         setSUnit(data.sUnit);
         setItemUnit(data.pUnit);
-        setItemStock(data.countInStock);
         setHsnCode(data.hsnCode);
+        setItemStock(data.countInStock);
         setActLength(data.actLength);
         setActBreadth(data.actBreadth);
-        // If your backend has an item GST field, use it; else default to "18"
+        // If your backend has an item GST field, set it here; else default:
         setItemGst(data.gstPercent || "18");
         itemNameRef.current?.focus();
       } else {
@@ -523,6 +556,7 @@ export default function EditPurchaseScreen() {
       setError("Error fetching item details.");
       setShowErrorModal(true);
       clearItemFields();
+      setItemId(itemId);
     } finally {
       setItemLoading(false);
     }
@@ -1438,12 +1472,35 @@ export default function EditPurchaseScreen() {
                               type="text"
                               ref={itemIdRef}
                               value={itemId}
+                              onChange={(e) => itemIdChange(e)}
                               onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  handleSearchItem();
+                                if (e.key === 'ArrowDown') {
+                                  e.preventDefault();
+                                  setSelectedSuggestionIndex((prev) =>
+                                    prev < suggestions.length - 1 ? prev + 1 : prev
+                                  );
+                                } else if (e.key === 'ArrowUp') {
+                                  e.preventDefault();
+                                  setSelectedSuggestionIndex((prev) =>
+                                    prev > 0 ? prev - 1 : prev
+                                  );
+                                } else if (e.key === 'Enter') {
+                                  if (
+                                    selectedSuggestionIndex >= 0 &&
+                                    selectedSuggestionIndex < suggestions.length
+                                  ) {
+                                    e.preventDefault();
+                                    const selected = suggestions[selectedSuggestionIndex];
+                                    handleSearchItem(selected);
+                                    setSuggestions([]);
+                                    setShowSuggestionsSidebar(false);
+                                    itemNameRef.current?.focus();
+                                  } else {
+                                    handleDoubleClick(e);
+                                    itemNameRef.current?.focus();
+                                  }
                                 }
                               }}
-                              onChange={(e) => setItemId(e.target.value)}
                               className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
                               required
                             />
@@ -1706,7 +1763,7 @@ export default function EditPurchaseScreen() {
 
                           <div className="flex flex-col">
                             <label className="text-xs text-gray-700 mb-1">
-                              Purchase Expense Price (₹)
+                              P. Expense Price (₹)
                             </label>
                             <input
                               type="number"
@@ -2190,6 +2247,25 @@ export default function EditPurchaseScreen() {
           </div>
         </div>
       </div>
+
+      {showSuggestionsSidebar && suggestions.length > 0 && (
+  <ItemSuggestionsSidebar
+    open={showSuggestionsSidebar}
+    suggestions={suggestions}
+    selectedIndex={selectedSuggestionIndex}
+    onSelect={(suggestion) => {
+      handleSearchItem(suggestion);
+      setItemId(suggestion.item_id);
+      setItemName(suggestion.name);
+      setItemCategory(suggestion.category);
+      setItemBrand(suggestion.brand);
+      setSuggestions([]);
+      setShowSuggestionsSidebar(false);
+      itemNameRef.current?.focus();
+    }}
+    onClose={() => setShowSuggestionsSidebar(false)}
+  />
+)}
     </div>
   );
 }

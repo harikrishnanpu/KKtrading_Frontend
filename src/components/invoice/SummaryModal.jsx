@@ -16,6 +16,8 @@ import {
   Grid,
   Slide,
   Box,
+  FormControlLabel,
+  Checkbox,
 } from '@mui/material';
 import { CloseCircle } from 'iconsax-react'; // Importing CloseCircle from iconsax-react
 import SubmitButton from 'components/submitButton';
@@ -68,6 +70,10 @@ export default function SummaryModal({
   remarkRef,
   changeRef,
   receivedAmountRef,
+  neededToPurchase,
+  setNeededToPurchase,
+  isApproved,
+  setIsApproved,
 }) {
   const remainingAmount = (parseFloat(parseFloat(grandTotal)) - parseFloat(receivedAmount)).toFixed(2);
 
@@ -291,6 +297,31 @@ export default function SummaryModal({
   className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
 />
 </div>
+
+<Box mt={2}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={neededToPurchase}
+                onChange={(e) => setNeededToPurchase(e.target.checked)}
+              />
+            }
+            label="Needed to Purchase Items"
+          />
+        </Box>
+
+        <Box mt={2}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={isApproved}
+                onChange={(e) => setIsApproved(e.target.checked)}
+              />
+            }
+            label="Is Approved"
+          />
+        </Box>
+
           </div> }
 
         {/* Additional Information (if any) can be added here */}
