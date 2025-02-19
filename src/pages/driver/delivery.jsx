@@ -42,7 +42,6 @@ const DriverBillingPage = () => {
   useEffect(() => {
     const storedAssignedBills = localStorage.getItem("assignedBills");
     const storedDeliveryStarted = localStorage.getItem("deliveryStarted");
-    const storedDriverName = localStorage.getItem("driverName");
 
     if (storedAssignedBills) {
       setAssignedBills(JSON.parse(storedAssignedBills));
@@ -52,15 +51,13 @@ const DriverBillingPage = () => {
       setDeliveryStarted(true);
     }
 
-    if (storedDriverName) {
-      setDriverName(storedDriverName);
-    }
+    setDriverName(userInfo?.name);
   }, []);
 
   // Fetch payment accounts
   useEffect(() => {
     const fetchAccounts = async () => {
-      setIsLoading(true);
+      // setIsLoading(true);
       try {
         const response = await api.get("/api/accounts/allaccounts");
         setAccounts(response.data);
@@ -68,7 +65,7 @@ const DriverBillingPage = () => {
         setError("Failed to fetch payment accounts.");
         console.error(err);
       } finally {
-        setIsLoading(false);
+        // setIsLoading(false);
       }
     };
     fetchAccounts();
@@ -197,58 +194,64 @@ const DriverBillingPage = () => {
     }
   };
 
-  const getCurrentLocation = (callback) => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const location = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        };
-        if (callback) callback(location);
-      },
-      (error) => {
-        console.error("Error fetching location:", error);
-      }
-    );
+  const getCurrentLocation = () => {
+    return new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          resolve({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.error("Error fetching location:", error);
+          reject(error);
+        }
+      );
+    });
   };
-
+  
+  
   const handleStartDelivery = async () => {
     if (assignedBills.length === 0) {
       setError("No bills assigned to start delivery.");
       return;
     }
-
     setError("");
     setDeliveryStarted(true);
-
-    getCurrentLocation(async (startLocation) => {
-      if (startLocation) {
-        for (let i = 0; i < assignedBills.length; i++) {
-          const bill = assignedBills[i];
-          try {
-            const deliveryId = `${userInfo._id}-${bill.invoiceNo}-${Date.now()}`;
-
-            await api.post("/api/users/billing/start-delivery", {
-              userId: userInfo._id,
-              driverName,
-              invoiceNo: bill.invoiceNo,
-              startLocation: [startLocation.longitude, startLocation.latitude],
-              deliveryId,
-            });
-
-            setAssignedBills((prevBills) => {
-              const updatedBills = [...prevBills];
-              updatedBills[i].deliveryId = deliveryId;
-              return updatedBills;
-            });
-          } catch (error) {
-            console.error(`Error starting delivery for invoice ${bill.invoiceNo}:`, error);
-            alert(`Error starting delivery for invoice ${bill.invoiceNo}.`);
-          }
+    try {
+      setIsLoading(true);
+      const startLocation = await getCurrentLocation();
+      for (let i = 0; i < assignedBills.length; i++) {
+        const bill = assignedBills[i];
+        try {
+          const deliveryId = `${userInfo._id}-${bill.invoiceNo}-${Date.now()}`;
+          await api.post("/api/users/billing/start-delivery", {
+            userId: userInfo._id,
+            driverName,
+            invoiceNo: bill.invoiceNo,
+            startLocation: [startLocation.longitude, startLocation.latitude],
+            deliveryId,
+          });
+          setAssignedBills((prevBills) => {
+            const updatedBills = [...prevBills];
+            updatedBills[i].deliveryId = deliveryId;
+            return updatedBills;
+          });
+        } catch (error) {
+          console.error(`Error starting delivery for invoice ${bill.invoiceNo}:`, error);
+          alert(`Error starting delivery for invoice ${bill.invoiceNo}.`);
         }
       }
-    });
+    } catch (error) {
+      console.error("Failed to get start location", error);
+      setError("Failed to get current location.");
+    } finally {
+      setIsLoading(false);
+    }
   };
+  
+  
 
   const handleSuggestionClick = (suggestion) => {
     setSuggestions([]);
@@ -367,58 +370,47 @@ const DriverBillingPage = () => {
       updatedBills[billIndex].showModal = false;
       return updatedBills;
     });
-
     try {
-      await getCurrentLocation(async (endLocation) => {
-        setIsLoading(true);
-        if (endLocation) {
-          const deliveredProducts = bill.deliveredProducts.map((dp) => ({
-            item_id: dp.item_id,
-            deliveredQuantity: dp.deliveredQuantity,
+      const endLocation = await getCurrentLocation();
+      if (endLocation) {
+        const deliveredProducts = bill.deliveredProducts.map((dp) => ({
+          item_id: dp.item_id,
+          deliveredQuantity: dp.deliveredQuantity,
+        }));
+        const updatedOtherExpenses = bill.otherExpenses
+          .filter((exp) => exp.isNew || exp.isEdited || (exp.amount > 0 && exp.remark))
+          .map((exp) => ({
+            id: exp._id || null,
+            amount: parseFloat(exp.amount) || 0,
+            remark: exp.remark || "",
           }));
-
-          // Filter only new or edited expenses
-          const updatedOtherExpenses = bill.otherExpenses
-            .filter((exp) => exp.isNew || exp.isEdited || (exp.amount > 0 && exp.remark))
-            .map((exp) => ({
-              id: exp._id || null,
-              amount: parseFloat(exp.amount) || 0,
-              remark: exp.remark || "",
-            }));
-
-          const payload = {
-            userId: userInfo._id,
-            invoiceNo: bill.invoiceNo,
-            driverName,
-            endLocation: [endLocation.longitude, endLocation.latitude],
-            deliveredProducts,
-            kmTravelled: parseFloat(bill.kmTravelled) || 0,
-            startingKm: parseFloat(bill.startingKm) || 0,
-            endKm: parseFloat(bill.endKm) || 0,
-            deliveryId: bill.deliveryId,
-            fuelCharge: parseFloat(bill.fuelCharge) || 0,
-            otherExpenses: updatedOtherExpenses,
-            method: bill.method || "",
-          };
-
-          await api.post("/api/users/billing/end-delivery", payload);
-
-          setCurrentDelivered({ invoiceNo: bill.invoiceNo, deliveryId: bill.deliveryId });
-
-          setAssignedBills((prevBills) => {
-            const updatedBills = [...prevBills];
-            updatedBills.splice(billIndex, 1);
-            return updatedBills;
-          });
-
-          if (assignedBills.length === 1) {
+        const payload = {
+          userId: userInfo._id,
+          invoiceNo: bill.invoiceNo,
+          driverName,
+          endLocation: [endLocation.longitude, endLocation.latitude],
+          deliveredProducts,
+          kmTravelled: parseFloat(bill.kmTravelled) || 0,
+          startingKm: parseFloat(bill.startingKm) || 0,
+          endKm: parseFloat(bill.endKm) || 0,
+          deliveryId: bill.deliveryId,
+          fuelCharge: parseFloat(bill.fuelCharge) || 0,
+          otherExpenses: updatedOtherExpenses,
+          method: bill.method || "",
+        };
+        await api.post("/api/users/billing/end-delivery", payload);
+        setCurrentDelivered({ invoiceNo: bill.invoiceNo, deliveryId: bill.deliveryId });
+        setAssignedBills((prevBills) => {
+          const updatedBills = [...prevBills];
+          updatedBills.splice(billIndex, 1);
+          if (updatedBills.length === 0) {
             setDeliveryStarted(false);
           }
-
-          setShowDeliveredModal(true);
-          setTimeout(() => setShowSuccessModal(false), 3000);
-        }
-      });
+          return updatedBills;
+        });
+        setShowDeliveredModal(true);
+        setTimeout(() => setShowSuccessModal(false), 3000);
+      }
     } catch (error) {
       console.error("Error updating delivery status:", error);
       setError("Error updating delivery status.");
@@ -426,6 +418,7 @@ const DriverBillingPage = () => {
       setIsLoading(false);
     }
   };
+  
 
   const handleOtherExpensesChange = (billIndex, index, field, value) => {
     setAssignedBills((prevBills) => {
@@ -449,47 +442,44 @@ const DriverBillingPage = () => {
   const handleCancel = async (billIndex) => {
     const bill = assignedBills[billIndex];
     
-    // If deliveryId does not exist, then no delivery was started – just remove it
     if (!bill.deliveryId) {
       setAssignedBills((prevBills) => {
         const updatedBills = [...prevBills];
         updatedBills.splice(billIndex, 1);
+        if (updatedBills.length === 0) {
+          setDeliveryStarted(false);
+        }
         return updatedBills;
       });
-      if (assignedBills.length === 1) {
-        setDeliveryStarted(false);
-      }
       return;
     }
     
     try {
       setIsLoading(true);
-      // Call the cancel delivery endpoint
       await api.post("/api/users/billing/cancel-delivery", {
         userId: userInfo._id,
         driverName,
         invoiceNo: bill.invoiceNo,
         deliveryId: bill.deliveryId,
-        cancelReason: "Cancelled by driver" // optional reason
+        cancelReason: "Cancelled by driver"
       });
-      
-      // Remove the cancelled bill from the assigned bills list
       setAssignedBills((prevBills) => {
         const updatedBills = [...prevBills];
         updatedBills.splice(billIndex, 1);
+        if (updatedBills.length === 0) {
+          setDeliveryStarted(false);
+        }
         return updatedBills;
       });
-      if (assignedBills.length === 1) {
-        setDeliveryStarted(false);
-      }
-      setIsLoading(false);
       alert("Delivery cancelled successfully.");
     } catch (error) {
       console.error("Error cancelling delivery:", error);
-      setIsLoading(false);
       alert("Failed to cancel delivery. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
+  
   
 
   const handleUpdateDelivery = async () => {
@@ -1289,7 +1279,7 @@ const DriverBillingPage = () => {
             />
           )}
 
-          {activeSection === "home" && !deliveryStarted && <LowStockPreview driverPage={true} />}
+          {/* {activeSection === "home" && !deliveryStarted && <LowStockPreview driverPage={true} />} */}
 
           {activeSection === "my" && (
             <div className="my-deliveries-section mt-8">

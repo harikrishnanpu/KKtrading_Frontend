@@ -10,19 +10,16 @@ const PurchaseReport = () => {
   const navigate = useNavigate();
   const { user: userInfo } = useAuth();
 
-  // State for all purchases from API
+  // States for purchases and filters
   const [purchases, setPurchases] = useState([]);
-  // Filtered or flattened data for display
   const [filteredData, setFilteredData] = useState([]);
-
-  // UI states
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Drawer/Sidebar state
+  // Sidebar (filter panel) state
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // Filters
+  // Filter values
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [sellerName, setSellerName] = useState('');
@@ -30,11 +27,11 @@ const PurchaseReport = () => {
   const [itemName, setItemName] = useState('');
   const [amountThreshold, setAmountThreshold] = useState('');
 
-  // Sorting
+  // Sorting options
   const [sortField, setSortField] = useState('totals.totalPurchaseAmount');
   const [sortDirection, setSortDirection] = useState('asc');
 
-  // Report type
+  // Report type: Purchase vs. Purchase Item Report
   const [isItemReport, setIsItemReport] = useState(false);
 
   // Autocomplete suggestions
@@ -49,7 +46,16 @@ const PurchaseReport = () => {
   // Computed total amount
   const [totalAmount, setTotalAmount] = useState(0);
 
-  // Fetch purchase data from server
+  // Helper to format numbers with two decimals
+  const formatNumber = (value) => {
+    return typeof value === 'number' && !isNaN(value)
+      ? value.toFixed(2)
+      : value !== undefined && value !== null
+      ? value
+      : '-';
+  };
+
+  // Fetch purchase data
   const fetchPurchases = async () => {
     setLoading(true);
     setError('');
@@ -68,7 +74,7 @@ const PurchaseReport = () => {
     fetchPurchases();
   }, []);
 
-  // Flattened list of items for Item Report
+  // Create flattened items list for item report
   const getItemsList = useMemo(() => {
     return purchases.flatMap((purchase) =>
       purchase.items.map((item) => ({
@@ -99,14 +105,13 @@ const PurchaseReport = () => {
     );
   }, [purchases]);
 
-  // Helper to get nested field value for sorting
+  // Helper: Get nested field value for sorting
   const getFieldValue = (obj, field) => {
     return field.split('.').reduce((o, i) => (o ? o[i] : null), obj);
   };
 
-  // Filter and sort data based on states
+  // Filter and sort data based on filters and sorting options
   const filterAndSortData = () => {
-    // Decide which dataset to use
     let data = isItemReport ? getItemsList : purchases;
 
     // Filter by date range
@@ -125,28 +130,24 @@ const PurchaseReport = () => {
       });
     }
 
-    // Filter by seller name
+    // Filter by Seller Name and Invoice No
     if (sellerName.trim()) {
       data = data.filter((entry) =>
         entry.sellerName.toLowerCase().includes(sellerName.toLowerCase())
       );
     }
-
-    // Filter by invoice number
     if (invoiceNo.trim()) {
       data = data.filter((entry) =>
         entry.invoiceNo.toLowerCase().includes(invoiceNo.toLowerCase())
       );
     }
-
-    // Filter by item name (only if item report)
+    // Filter by Item Name (only if item report)
     if (isItemReport && itemName.trim()) {
       data = data.filter((entry) =>
         entry.itemName.toLowerCase().includes(itemName.toLowerCase())
       );
     }
-
-    // Filter by amount threshold
+    // Filter by Amount Threshold
     if (amountThreshold.trim()) {
       const threshold = parseFloat(amountThreshold) || 0;
       if (isItemReport) {
@@ -160,7 +161,7 @@ const PurchaseReport = () => {
       }
     }
 
-    // Sort data
+    // Sorting
     if (sortField) {
       data.sort((a, b) => {
         const fieldA = getFieldValue(a, sortField);
@@ -177,7 +178,6 @@ const PurchaseReport = () => {
     setCurrentPage(1);
   };
 
-  // Run filterAndSortData whenever relevant states change
   useEffect(() => {
     filterAndSortData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -194,7 +194,7 @@ const PurchaseReport = () => {
     isItemReport,
   ]);
 
-  // Compute total amount
+  // Compute total amount based on report type
   useEffect(() => {
     let total = 0;
     if (isItemReport) {
@@ -211,7 +211,7 @@ const PurchaseReport = () => {
     setTotalAmount(total);
   }, [filteredData, isItemReport]);
 
-  // Autocomplete suggestions
+  // Autocomplete suggestions for filters
   useEffect(() => {
     const sellerNames = [...new Set(purchases.map((p) => p.sellerName))];
     setSellerSuggestions(sellerNames);
@@ -225,7 +225,7 @@ const PurchaseReport = () => {
     setItemSuggestions(items);
   }, [purchases]);
 
-  // Pagination
+  // Pagination helpers
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const paginateData = () => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -238,7 +238,7 @@ const PurchaseReport = () => {
     }
   };
 
-  // Generate PDF
+  // Generate PDF Report
   const generatePDF = () => {
     const doc = new jsPDF({
       orientation: 'portrait',
@@ -256,9 +256,15 @@ const PurchaseReport = () => {
     doc.text(title, 40, 40);
 
     doc.setFontSize(10);
-    doc.text(`Date Range: ${fromDate || 'All'} to ${toDate || 'All'}`, 40, 60);
+    doc.text(
+      `Date Range: ${
+        fromDate ? new Date(fromDate).toLocaleDateString() : 'All'
+      } to ${toDate ? new Date(toDate).toLocaleDateString() : 'All'}`,
+      40,
+      60
+    );
     doc.text(`Seller Name: ${sellerName || 'All'}`, 40, 75);
-    doc.text(`Total Amount: Rs. ${totalAmount.toFixed(2)}`, 40, 90);
+    doc.text(`Total Amount: Rs. ${formatNumber(totalAmount)}`, 40, 90);
 
     let tableColumn = [];
     let tableRows = [];
@@ -296,23 +302,33 @@ const PurchaseReport = () => {
           item.sellerName,
           item.sellerAddress,
           item.itemName,
-          item.quantity,
-          item.quantityInNumbers,
+          formatNumber(item.quantity),
+          formatNumber(item.quantityInNumbers),
           item.sUnit || '-',
-          item.psRatio !== undefined ? item.psRatio : '-',
-          item.length !== undefined ? item.length : '-',
-          item.breadth !== undefined ? item.breadth : '-',
-          item.actLength !== undefined ? item.actLength : '-',
-          item.actBreadth !== undefined ? item.actBreadth : '-',
+          item.psRatio !== undefined ? formatNumber(item.psRatio) : '-',
+          item.length !== undefined ? formatNumber(item.length) : '-',
+          item.breadth !== undefined ? formatNumber(item.breadth) : '-',
+          item.actLength !== undefined ? formatNumber(item.actLength) : '-',
+          item.actBreadth !== undefined ? formatNumber(item.actBreadth) : '-',
           item.size || '-',
           item.pUnit || '-',
-          `Rs. ${item.cashPartPrice?.toFixed(2) || '0.00'}`,
-          `Rs. ${item.billPartPrice?.toFixed(2) || '0.00'}`,
-          item.cashPartPriceInNumbers ?? '-',
-          item.billPartPriceInNumbers ?? '-',
-          `Rs. ${item.allocatedOtherExpense?.toFixed(2) || '0.00'}`,
-          item.totalPriceInNumbers ?? '-',
-          item.gstPercent !== undefined ? `${item.gstPercent}%` : '-',
+          `Rs. ${formatNumber(item.cashPartPrice)}`,
+          `Rs. ${formatNumber(item.billPartPrice)}`,
+          item.cashPartPriceInNumbers !== undefined
+            ? formatNumber(item.cashPartPriceInNumbers)
+            : '-',
+          item.billPartPriceInNumbers !== undefined
+            ? formatNumber(item.billPartPriceInNumbers)
+            : '-',
+          `Rs. ${
+            item.allocatedOtherExpense !== undefined
+              ? formatNumber(item.allocatedOtherExpense)
+              : '0.00'
+          }`,
+          item.totalPriceInNumbers !== undefined
+            ? formatNumber(item.totalPriceInNumbers)
+            : '-',
+          item.gstPercent !== undefined ? `${formatNumber(item.gstPercent)}%` : '-',
         ]);
       });
     } else {
@@ -331,9 +347,15 @@ const PurchaseReport = () => {
           new Date(purchase.invoiceDate).toLocaleDateString(),
           purchase.sellerName,
           purchase.sellerAddress || '-',
-          `Rs. ${purchase.totals?.totalPurchaseAmount?.toFixed(2) || '0.00'}`,
           `Rs. ${
-            purchase.totals?.grandTotalPurchaseAmount?.toFixed(2) || '0.00'
+            purchase.totals?.totalPurchaseAmount !== undefined
+              ? formatNumber(purchase.totals.totalPurchaseAmount)
+              : '0.00'
+          }`,
+          `Rs. ${
+            purchase.totals?.grandTotalPurchaseAmount !== undefined
+              ? formatNumber(purchase.totals.grandTotalPurchaseAmount)
+              : '0.00'
           }`,
         ]);
       });
@@ -344,7 +366,7 @@ const PurchaseReport = () => {
       head: [tableColumn],
       body: tableRows,
       styles: { fontSize: 7 },
-      headStyles: { fillColor: [220, 20, 60] }, // Crimson red
+      headStyles: { fillColor: [220, 20, 60] },
       margin: { left: 40, right: 40 },
       didDrawPage: (data) => {
         const pageCount = doc.internal.getNumberOfPages();
@@ -364,7 +386,7 @@ const PurchaseReport = () => {
     doc.save(fileName);
   };
 
-  // Export to CSV
+  // Export report as CSV
   const exportToCSV = () => {
     let headers = [];
     const rows = [];
@@ -402,23 +424,29 @@ const PurchaseReport = () => {
           item.sellerName,
           item.sellerAddress,
           item.itemName,
-          item.quantity,
-          item.quantityInNumbers,
+          formatNumber(item.quantity),
+          formatNumber(item.quantityInNumbers),
           item.sUnit || '-',
-          item.psRatio !== undefined ? item.psRatio : '-',
-          item.length !== undefined ? item.length : '-',
-          item.breadth !== undefined ? item.breadth : '-',
-          item.actLength !== undefined ? item.actLength : '-',
-          item.actBreadth !== undefined ? item.actBreadth : '-',
+          item.psRatio !== undefined ? formatNumber(item.psRatio) : '-',
+          item.length !== undefined ? formatNumber(item.length) : '-',
+          item.breadth !== undefined ? formatNumber(item.breadth) : '-',
+          item.actLength !== undefined ? formatNumber(item.actLength) : '-',
+          item.actBreadth !== undefined ? formatNumber(item.actBreadth) : '-',
           item.size || '-',
           item.pUnit || '-',
-          item.cashPartPrice?.toFixed(2) || '0.00',
-          item.billPartPrice?.toFixed(2) || '0.00',
-          item.cashPartPriceInNumbers ?? '-',
-          item.billPartPriceInNumbers ?? '-',
-          item.allocatedOtherExpense?.toFixed(2) || '0.00',
-          item.totalPriceInNumbers ?? '-',
-          item.gstPercent !== undefined ? `${item.gstPercent}%` : '-',
+          formatNumber(item.cashPartPrice),
+          formatNumber(item.billPartPrice),
+          item.cashPartPriceInNumbers !== undefined
+            ? formatNumber(item.cashPartPriceInNumbers)
+            : '-',
+          item.billPartPriceInNumbers !== undefined
+            ? formatNumber(item.billPartPriceInNumbers)
+            : '-',
+          formatNumber(item.allocatedOtherExpense),
+          item.totalPriceInNumbers !== undefined
+            ? formatNumber(item.totalPriceInNumbers)
+            : '-',
+          item.gstPercent !== undefined ? `${formatNumber(item.gstPercent)}%` : '-',
         ]);
       });
     } else {
@@ -437,25 +465,29 @@ const PurchaseReport = () => {
           new Date(purchase.invoiceDate).toLocaleDateString(),
           purchase.sellerName,
           purchase.sellerAddress || '-',
-          purchase.totals?.totalPurchaseAmount?.toFixed(2) || '0.00',
-          purchase.totals?.grandTotalPurchaseAmount?.toFixed(2) || '0.00',
+          purchase.totals?.totalPurchaseAmount !== undefined
+            ? formatNumber(purchase.totals.totalPurchaseAmount)
+            : '0.00',
+          purchase.totals?.grandTotalPurchaseAmount !== undefined
+            ? formatNumber(purchase.totals.grandTotalPurchaseAmount)
+            : '0.00',
         ]);
       });
     }
 
-    // Build CSV content
     const csvContent = [
-      headers.join(','), // header row
+      headers.join(','),
       ...rows.map((r) =>
         r
           .map((val) =>
-            typeof val === 'string' ? `"${val.replace(/"/g, '""')}"` : val
+            typeof val === 'string'
+              ? `"${val.replace(/"/g, '""')}"`
+              : val
           )
           .join(',')
       ),
     ].join('\n');
 
-    // Download as CSV file
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -483,120 +515,123 @@ const PurchaseReport = () => {
     setCurrentPage(1);
   };
 
-  // Renders the filter sidebar content
+  // Render Filter Sidebar (using Tailwind only)
   const renderFilterSidebar = () => (
-    <div className="bg-white w-64 min-h-full border-r p-3 flex flex-col">
-      {/* Toggle between Purchase or Item Report */}
-      <div className="flex items-center mb-2">
+    <div className="bg-white h-full p-6 space-y-6 border-r">
+      <h2 className="text-lg font-semibold text-gray-800 border-b pb-2">
+        Filters
+      </h2>
+
+      {/* Report Type Toggle */}
+      <div className="flex items-center space-x-2">
         <input
           type="checkbox"
+          id="itemReportToggle"
           checked={isItemReport}
           onChange={(e) => setIsItemReport(e.target.checked)}
-          className="mr-2"
+          className="form-checkbox h-5 w-5 text-red-500"
         />
-        <label className="text-sm font-bold text-gray-700">
+        <label htmlFor="itemReportToggle" className="text-sm font-medium text-gray-700">
           Purchase Item Report
         </label>
       </div>
 
-      {/* From Date */}
-      <div className="mb-2">
-        <label className="block text-xs font-bold mb-1">From Date</label>
+      {/* Date Range */}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">From Date</label>
         <input
           type="date"
           value={fromDate}
           onChange={(e) => setFromDate(e.target.value)}
-          className="w-full border border-gray-300 rounded p-1 text-xs"
+          className="w-full rounded border-gray-300 focus:ring-red-500 focus:border-red-500 text-sm p-2"
         />
       </div>
-
-      {/* To Date */}
-      <div className="mb-2">
-        <label className="block text-xs font-bold mb-1">To Date</label>
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">To Date</label>
         <input
           type="date"
           value={toDate}
           onChange={(e) => setToDate(e.target.value)}
-          className="w-full border border-gray-300 rounded p-1 text-xs"
+          className="w-full rounded border-gray-300 focus:ring-red-500 focus:border-red-500 text-sm p-2"
         />
       </div>
 
       {/* Seller Name */}
-      <div className="mb-2">
-        <label className="block text-xs font-bold mb-1">Seller Name</label>
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">Seller Name</label>
         <input
           type="text"
           value={sellerName}
           onChange={(e) => setSellerName(e.target.value)}
           list="sellerSuggestions"
-          className="w-full border border-gray-300 rounded p-1 text-xs"
           placeholder="Enter Seller Name"
+          className="w-full rounded border-gray-300 focus:ring-red-500 focus:border-red-500 text-sm p-2"
         />
         <datalist id="sellerSuggestions">
-          {sellerSuggestions.map((name, i) => (
-            <option key={i} value={name} />
+          {sellerSuggestions.map((name, idx) => (
+            <option key={idx} value={name} />
           ))}
         </datalist>
       </div>
 
       {/* Invoice No */}
-      <div className="mb-2">
-        <label className="block text-xs font-bold mb-1">Invoice No</label>
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">Invoice No</label>
         <input
           type="text"
           value={invoiceNo}
           onChange={(e) => setInvoiceNo(e.target.value)}
           list="invoiceSuggestions"
-          className="w-full border border-gray-300 rounded p-1 text-xs"
           placeholder="Enter Invoice No"
+          className="w-full rounded border-gray-300 focus:ring-red-500 focus:border-red-500 text-sm p-2"
         />
         <datalist id="invoiceSuggestions">
-          {invoiceSuggestions.map((no, i) => (
-            <option key={i} value={no} />
+          {invoiceSuggestions.map((no, idx) => (
+            <option key={idx} value={no} />
           ))}
         </datalist>
       </div>
 
-      {/* Item Name (only if Item Report) */}
+      {/* Item Name (if Item Report) */}
       {isItemReport && (
-        <div className="mb-2">
-          <label className="block text-xs font-bold mb-1">Item Name</label>
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">Item Name</label>
           <input
             type="text"
             value={itemName}
             onChange={(e) => setItemName(e.target.value)}
             list="itemSuggestions"
-            className="w-full border border-gray-300 rounded p-1 text-xs"
             placeholder="Enter Item Name"
+            className="w-full rounded border-gray-300 focus:ring-red-500 focus:border-red-500 text-sm p-2"
           />
           <datalist id="itemSuggestions">
-            {itemSuggestions.map((name, i) => (
-              <option key={i} value={name} />
+            {itemSuggestions.map((name, idx) => (
+              <option key={idx} value={name} />
             ))}
           </datalist>
         </div>
       )}
 
       {/* Amount Threshold */}
-      <div className="mb-2">
-        <label className="block text-xs font-bold mb-1">Amount ≥</label>
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">Amount ≥</label>
         <input
           type="number"
           value={amountThreshold}
           onChange={(e) => setAmountThreshold(e.target.value)}
-          className="w-full border border-gray-300 rounded p-1 text-xs"
-          min="0"
           placeholder="Enter Amount"
+          min="0"
+          className="w-full rounded border-gray-300 focus:ring-red-500 focus:border-red-500 text-sm p-2"
         />
       </div>
 
-      {/* Sort Field */}
-      <div className="mb-2">
-        <label className="block text-xs font-bold mb-1">Sort Field</label>
+      {/* Sorting Options */}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">Sort Field</label>
         <select
           value={sortField}
           onChange={(e) => setSortField(e.target.value)}
-          className="w-full border border-gray-300 rounded p-1 text-xs"
+          className="w-full rounded border-gray-300 focus:ring-red-500 focus:border-red-500 text-sm p-2"
         >
           {isItemReport ? (
             <>
@@ -607,26 +642,20 @@ const PurchaseReport = () => {
             </>
           ) : (
             <>
-              <option value="totals.totalPurchaseAmount">
-                Total Purchase Amount
-              </option>
-              <option value="totals.grandTotalPurchaseAmount">
-                Grand Total Purchase Amount
-              </option>
+              <option value="totals.totalPurchaseAmount">Total Purchase Amount</option>
+              <option value="totals.grandTotalPurchaseAmount">Grand Total Purchase Amount</option>
               <option value="invoiceDate">Invoice Date</option>
               <option value="sellerName">Seller Name</option>
             </>
           )}
         </select>
       </div>
-
-      {/* Sort Direction */}
-      <div className="mb-4">
-        <label className="block text-xs font-bold mb-1">Sort Direction</label>
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">Sort Direction</label>
         <select
           value={sortDirection}
           onChange={(e) => setSortDirection(e.target.value)}
-          className="w-full border border-gray-300 rounded p-1 text-xs"
+          className="w-full rounded border-gray-300 focus:ring-red-500 focus:border-red-500 text-sm p-2"
         >
           <option value="asc">Ascending</option>
           <option value="desc">Descending</option>
@@ -634,22 +663,22 @@ const PurchaseReport = () => {
       </div>
 
       {/* Action Buttons */}
-      <div className="flex flex-col space-y-1">
+      <div className="flex flex-col space-y-3 pt-3 border-t">
         <button
           onClick={generatePDF}
-          className="bg-red-500 hover:bg-red-600 text-white font-bold py-1 rounded text-xs"
+          className="w-full bg-red-500 hover:bg-red-600 text-white text-sm font-medium py-2 rounded"
         >
           Generate PDF
         </button>
         <button
           onClick={exportToCSV}
-          className="bg-red-500 hover:bg-red-600 text-white font-bold py-1 rounded text-xs"
+          className="w-full bg-red-500 hover:bg-red-600 text-white text-sm font-medium py-2 rounded"
         >
           Export CSV
         </button>
         <button
           onClick={resetFilters}
-          className="bg-red-500 hover:bg-red-600 text-white font-bold py-1 rounded text-xs"
+          className="w-full bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium py-2 rounded"
         >
           Reset Filters
         </button>
@@ -658,109 +687,114 @@ const PurchaseReport = () => {
   );
 
   return (
-    <div className="flex h-full w-full">
-      {/* Sidebar for larger screens (always visible on md+) */}
-      <div className="hidden md:flex">{renderFilterSidebar()}</div>
+    <div className="min-h-screen max-w-lg flex">
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:block md:w-80 border-r">
+        {renderFilterSidebar()}
+      </aside>
 
-      {/* Drawer overlay for mobile screens */}
+      {/* Mobile Sidebar Drawer */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-30 z-40 md:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
-      {/* Actual drawer content for mobile screens */}
-      <div
-        className={`fixed top-0 left-0 h-full z-50 bg-white border-r transform transition-transform md:hidden ${
+      <aside
+        className={`fixed top-0 left-0 z-50 h-full bg-white shadow-md transform transition-transform md:hidden ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-        style={{ width: '16rem' }}
+        } w-72`}
       >
         {renderFilterSidebar()}
-      </div>
+      </aside>
 
       {/* Main Content */}
-      <div className="flex-1 p-2">
-        {/* Button to open sidebar on mobile */}
-        <div className="md:hidden mb-2">
+      <main className="flex-1 p-4 md:p-6">
+        {/* Mobile: Button to open filters */}
+        <div className="md:hidden mb-4">
           <button
             onClick={() => setIsSidebarOpen(true)}
-            className="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded text-xs"
+            className="bg-red-500 hover:bg-red-600 text-white text-sm font-medium py-2 px-4 rounded"
           >
             Open Filters
           </button>
         </div>
 
-        {/* Total amount */}
-        <div className="bg-white p-2 rounded-lg shadow-md mb-2">
-          <p className="text-sm font-bold text-gray-700">
+        {/* Header & Filter Summary */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold text-gray-800">
             {isItemReport ? 'Purchase Item Report' : 'Purchase Report'}
+          </h1>
+          <p className="text-gray-600 mt-1">
+            Total Amount: Rs. {formatNumber(totalAmount)}
           </p>
-          <p className="text-xs text-gray-500">
-            Total Amount: Rs. {totalAmount.toFixed(2)}
-          </p>
+          <div className="mt-3 p-4 bg-white rounded shadow">
+            <p className="text-sm text-gray-700">
+              Date Range:{' '}
+              {fromDate ? new Date(fromDate).toLocaleDateString() : 'All'} to{' '}
+              {toDate ? new Date(toDate).toLocaleDateString() : 'All'}
+            </p>
+            <p className="text-sm text-gray-700">
+              Seller: {sellerName || 'All'} | Invoice: {invoiceNo || 'All'}{' '}
+              {isItemReport && `| Item: ${itemName || 'All'}`} | Amount:{' '}
+              {amountThreshold || 'All'}
+            </p>
+          </div>
         </div>
 
-        {/* Loading, Error, No Data */}
+        {/* Loading, Error, or No Data Message */}
         {loading && (
-          <p className="text-center text-gray-500 text-xs">Loading...</p>
+          <p className="text-center text-gray-500 text-sm">Loading...</p>
         )}
         {!loading && error && (
-          <p className="text-red-500 text-center text-xs">{error}</p>
+          <p className="text-center text-red-500 text-sm">{error}</p>
         )}
         {!loading && !error && filteredData.length === 0 && (
-          <p className="text-center text-gray-500 text-xs">
+          <p className="text-center text-gray-500 text-sm">
             No purchases found for the selected criteria.
           </p>
         )}
 
-        {/* Table & Cards (only render if data exists) */}
+        {/* Desktop Table */}
         {!loading && !error && filteredData.length > 0 && (
           <>
-            {/* Responsive scroll container for the table */}
-            <div className="hidden md:block overflow-auto bg-white rounded-lg shadow-md">
-              <table className="min-w-full text-xs text-gray-500">
+            <div className="hidden md:block overflow-x-auto">
+              <table className="min-w-max table-auto text-sm text-gray-600">
                 <thead className="bg-red-600 text-white">
                   <tr>
                     {isItemReport ? (
                       <>
-                        <th className="px-2 py-1 text-left">Invoice No</th>
-                        <th className="px-2 py-1">Invoice Date</th>
-                        <th className="px-2 py-1">Seller Name</th>
-                        <th className="px-2 py-1">Seller Address</th>
-                        <th className="px-2 py-1">Item Name</th>
-                        <th className="px-2 py-1">Quantity</th>
-                        <th className="px-2 py-1">Qty In Numbers</th>
-                        <th className="px-2 py-1">S Unit</th>
-                        <th className="px-2 py-1">PS Ratio</th>
-                        <th className="px-2 py-1">Length</th>
-                        <th className="px-2 py-1">Breadth</th>
-                        <th className="px-2 py-1">Act Length</th>
-                        <th className="px-2 py-1">Act Breadth</th>
-                        <th className="px-2 py-1">Size</th>
-                        <th className="px-2 py-1">P Unit</th>
-                        <th className="px-2 py-1">Cash Part Price</th>
-                        <th className="px-2 py-1">Bill Part Price</th>
-                        <th className="px-2 py-1">
-                          Cash Part Price In Numbers
-                        </th>
-                        <th className="px-2 py-1">
-                          Bill Part Price In Numbers
-                        </th>
-                        <th className="px-2 py-1">Allocated Other Expense</th>
-                        <th className="px-2 py-1">Total Price In Numbers</th>
-                        <th className="px-2 py-1">GST Percent</th>
+                        <th className="px-3 py-2 text-left">Invoice No</th>
+                        <th className="px-3 py-2">Date</th>
+                        <th className="px-3 py-2">Seller Name</th>
+                        <th className="px-3 py-2">Seller Addr</th>
+                        <th className="px-3 py-2">Item Name</th>
+                        <th className="px-3 py-2">Qty</th>
+                        <th className="px-3 py-2">Qty#</th>
+                        <th className="px-3 py-2">S Unit</th>
+                        <th className="px-3 py-2">PS Ratio</th>
+                        <th className="px-3 py-2">Len</th>
+                        <th className="px-3 py-2">Brdth</th>
+                        <th className="px-3 py-2">Act Len</th>
+                        <th className="px-3 py-2">Act Brdth</th>
+                        <th className="px-3 py-2">Size</th>
+                        <th className="px-3 py-2">P Unit</th>
+                        <th className="px-3 py-2">Cash Price</th>
+                        <th className="px-3 py-2">Bill Price</th>
+                        <th className="px-3 py-2">Cash#</th>
+                        <th className="px-3 py-2">Bill#</th>
+                        <th className="px-3 py-2">Other Exp</th>
+                        <th className="px-3 py-2">Total#</th>
+                        <th className="px-3 py-2">GST %</th>
                       </>
                     ) : (
                       <>
-                        <th className="px-2 py-1 text-left">Invoice No</th>
-                        <th className="px-2 py-1">Invoice Date</th>
-                        <th className="px-2 py-1">Seller Name</th>
-                        <th className="px-2 py-1">Seller Address</th>
-                        <th className="px-2 py-1">Total Purchase Amount</th>
-                        <th className="px-2 py-1">
-                          Grand Total Purchase Amount
-                        </th>
+                        <th className="px-3 py-2 text-left">Invoice No</th>
+                        <th className="px-3 py-2">Date</th>
+                        <th className="px-3 py-2">Seller Name</th>
+                        <th className="px-3 py-2">Seller Addr</th>
+                        <th className="px-3 py-2">Total Amt</th>
+                        <th className="px-3 py-2">Grand Total Amt</th>
                       </>
                     )}
                   </tr>
@@ -777,80 +811,74 @@ const PurchaseReport = () => {
                     >
                       {isItemReport ? (
                         <>
-                          <td className="px-2 py-1">{entry.invoiceNo}</td>
-                          <td className="px-2 py-1">
+                          <td className="px-3 py-2">{entry.invoiceNo}</td>
+                          <td className="px-3 py-2">
                             {new Date(entry.invoiceDate).toLocaleDateString()}
                           </td>
-                          <td className="px-2 py-1">{entry.sellerName}</td>
-                          <td className="px-2 py-1">{entry.sellerAddress}</td>
-                          <td className="px-2 py-1">{entry.itemName}</td>
-                          <td className="px-2 py-1">{entry.quantity}</td>
-                          <td className="px-2 py-1">
-                            {entry.quantityInNumbers}
+                          <td className="px-3 py-2">{entry.sellerName}</td>
+                          <td className="px-3 py-2">{entry.sellerAddress}</td>
+                          <td className="px-3 py-2">{entry.itemName}</td>
+                          <td className="px-3 py-2">{formatNumber(entry.quantity)}</td>
+                          <td className="px-3 py-2">{formatNumber(entry.quantityInNumbers)}</td>
+                          <td className="px-3 py-2">{entry.sUnit || '-'}</td>
+                          <td className="px-3 py-2">
+                            {entry.psRatio !== undefined ? formatNumber(entry.psRatio) : '-'}
                           </td>
-                          <td className="px-2 py-1">
-                            {entry.sUnit || '-'}
+                          <td className="px-3 py-2">
+                            {entry.length !== undefined ? formatNumber(entry.length) : '-'}
                           </td>
-                          <td className="px-2 py-1">
-                            {entry.psRatio !== undefined ? entry.psRatio : '-'}
+                          <td className="px-3 py-2">
+                            {entry.breadth !== undefined ? formatNumber(entry.breadth) : '-'}
                           </td>
-                          <td className="px-2 py-1">
-                            {entry.length !== undefined ? entry.length : '-'}
+                          <td className="px-3 py-2">
+                            {entry.actLength !== undefined ? formatNumber(entry.actLength) : '-'}
                           </td>
-                          <td className="px-2 py-1">
-                            {entry.breadth !== undefined ? entry.breadth : '-'}
+                          <td className="px-3 py-2">
+                            {entry.actBreadth !== undefined ? formatNumber(entry.actBreadth) : '-'}
                           </td>
-                          <td className="px-2 py-1">
-                            {entry.actLength !== undefined
-                              ? entry.actLength
+                          <td className="px-3 py-2">{entry.size || '-'}</td>
+                          <td className="px-3 py-2">{entry.pUnit || '-'}</td>
+                          <td className="px-3 py-2 text-right">
+                            Rs. {formatNumber(entry.cashPartPrice)}
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            Rs. {formatNumber(entry.billPartPrice)}
+                          </td>
+                          <td className="px-3 py-2">
+                            {entry.cashPartPriceInNumbers !== undefined
+                              ? formatNumber(entry.cashPartPriceInNumbers)
                               : '-'}
                           </td>
-                          <td className="px-2 py-1">
-                            {entry.actBreadth !== undefined
-                              ? entry.actBreadth
+                          <td className="px-3 py-2">
+                            {entry.billPartPriceInNumbers !== undefined
+                              ? formatNumber(entry.billPartPriceInNumbers)
                               : '-'}
                           </td>
-                          <td className="px-2 py-1">{entry.size || '-'}</td>
-                          <td className="px-2 py-1">{entry.pUnit || '-'}</td>
-                          <td className="px-2 py-1 text-right">
-                            Rs. {entry.cashPartPrice?.toFixed(2) || '0.00'}
+                          <td className="px-3 py-2 text-right">
+                            Rs. {entry.allocatedOtherExpense !== undefined ? formatNumber(entry.allocatedOtherExpense) : '0.00'}
                           </td>
-                          <td className="px-2 py-1 text-right">
-                            Rs. {entry.billPartPrice?.toFixed(2) || '0.00'}
-                          </td>
-                          <td className="px-2 py-1">
-                            {entry.cashPartPriceInNumbers ?? '-'}
-                          </td>
-                          <td className="px-2 py-1">
-                            {entry.billPartPriceInNumbers ?? '-'}
-                          </td>
-                          <td className="px-2 py-1 text-right">
-                            Rs. {entry.allocatedOtherExpense?.toFixed(2) || '0.00'}
-                          </td>
-                          <td className="px-2 py-1">
-                            {entry.totalPriceInNumbers ?? '-'}
-                          </td>
-                          <td className="px-2 py-1 text-center">
-                            {entry.gstPercent !== undefined
-                              ? `${entry.gstPercent}%`
+                          <td className="px-3 py-2">
+                            {entry.totalPriceInNumbers !== undefined
+                              ? formatNumber(entry.totalPriceInNumbers)
                               : '-'}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            {entry.gstPercent !== undefined ? `${formatNumber(entry.gstPercent)}%` : '-'}
                           </td>
                         </>
                       ) : (
                         <>
-                          <td className="px-2 py-1">{entry.invoiceNo}</td>
-                          <td className="px-2 py-1">
+                          <td className="px-3 py-2">{entry.invoiceNo}</td>
+                          <td className="px-3 py-2">
                             {new Date(entry.invoiceDate).toLocaleDateString()}
                           </td>
-                          <td className="px-2 py-1">{entry.sellerName}</td>
-                          <td className="px-2 py-1">
-                            {entry.sellerAddress || '-'}
+                          <td className="px-3 py-2">{entry.sellerName}</td>
+                          <td className="px-3 py-2">{entry.sellerAddress || '-'}</td>
+                          <td className="px-3 py-2 text-right">
+                            Rs. {entry.totals?.totalPurchaseAmount !== undefined ? formatNumber(entry.totals.totalPurchaseAmount) : '0.00'}
                           </td>
-                          <td className="px-2 py-1 text-right">
-                            Rs. {entry.totals?.totalPurchaseAmount?.toFixed(2) || '0.00'}
-                          </td>
-                          <td className="px-2 py-1 text-right">
-                            Rs. {entry.totals?.grandTotalPurchaseAmount?.toFixed(2) || '0.00'}
+                          <td className="px-3 py-2 text-right">
+                            Rs. {entry.totals?.grandTotalPurchaseAmount !== undefined ? formatNumber(entry.totals.grandTotalPurchaseAmount) : '0.00'}
                           </td>
                         </>
                       )}
@@ -860,150 +888,105 @@ const PurchaseReport = () => {
               </table>
             </div>
 
-            {/* Cards for mobile */}
-            <div className="md:hidden space-y-2">
-              {paginateData().map((entry, index) => (
+            {/* Mobile Cards */}
+            <div className="md:hidden space-y-4">
+              {paginateData().map((entry, idx) => (
                 <div
                   key={
                     isItemReport
-                      ? `${entry.purchaseId}-item-m-${index}`
-                      : `${entry.purchaseId}-purchase-m-${index}`
+                      ? `${entry.purchaseId}-item-m-${idx}`
+                      : `${entry.purchaseId}-purchase-m-${idx}`
                   }
-                  className="bg-white rounded-lg shadow-md p-2"
+                  className="bg-white rounded-lg shadow p-4"
                 >
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm font-bold text-red-600">
-                      Invoice No: {entry.invoiceNo}
-                    </p>
-                    <p className="text-xs text-gray-500">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-bold text-red-600">
+                      Invoice: {entry.invoiceNo}
+                    </span>
+                    <span className="text-xs text-gray-500">
                       {new Date(entry.invoiceDate).toLocaleDateString()}
-                    </p>
+                    </span>
                   </div>
-                  <p className="text-xs text-gray-600">
-                    Seller: {entry.sellerName}
-                  </p>
-                  <p className="text-xs text-gray-600">
-                    Seller Address: {entry.sellerAddress || '-'}
-                  </p>
-
+                  <p className="text-xs text-gray-700">Seller: {entry.sellerName}</p>
+                  <p className="text-xs text-gray-700">Address: {entry.sellerAddress || '-'}</p>
                   {isItemReport && (
                     <>
-                      <p className="text-xs text-gray-600 mt-1">
-                        Item: {entry.itemName}
+                      <p className="text-xs text-gray-700 mt-2">Item: {entry.itemName}</p>
+                      <p className="text-xs text-gray-700">Quantity: {formatNumber(entry.quantity)}</p>
+                      <p className="text-xs text-gray-700">Qty#: {formatNumber(entry.quantityInNumbers)}</p>
+                      <p className="text-xs text-gray-700">S Unit: {entry.sUnit || '-'}</p>
+                      <p className="text-xs text-gray-700">
+                        PS Ratio: {entry.psRatio !== undefined ? formatNumber(entry.psRatio) : '-'}
                       </p>
-                      <p className="text-xs text-gray-600">
-                        Quantity: {entry.quantity}
+                      <p className="text-xs text-gray-700">
+                        Len: {entry.length !== undefined ? formatNumber(entry.length) : '-'}
                       </p>
-                      <p className="text-xs text-gray-600">
-                        Quantity#: {entry.quantityInNumbers}
+                      <p className="text-xs text-gray-700">
+                        Brdth: {entry.breadth !== undefined ? formatNumber(entry.breadth) : '-'}
                       </p>
-                      <p className="text-xs text-gray-600">
-                        S Unit: {entry.sUnit || '-'}
+                      <p className="text-xs text-gray-700">
+                        Act Len: {entry.actLength !== undefined ? formatNumber(entry.actLength) : '-'}
                       </p>
-                      <p className="text-xs text-gray-600">
-                        PS Ratio:{' '}
-                        {entry.psRatio !== undefined ? entry.psRatio : '-'}
+                      <p className="text-xs text-gray-700">
+                        Act Brdth: {entry.actBreadth !== undefined ? formatNumber(entry.actBreadth) : '-'}
                       </p>
-                      <p className="text-xs text-gray-600">
-                        Length:{' '}
-                        {entry.length !== undefined ? entry.length : '-'}
+                      <p className="text-xs text-gray-700">Size: {entry.size || '-'}</p>
+                      <p className="text-xs text-gray-700">P Unit: {entry.pUnit || '-'}</p>
+                      <p className="text-xs text-gray-700 text-right">
+                        Cash: Rs. {formatNumber(entry.cashPartPrice)}
                       </p>
-                      <p className="text-xs text-gray-600">
-                        Breadth:{' '}
-                        {entry.breadth !== undefined ? entry.breadth : '-'}
+                      <p className="text-xs text-gray-700 text-right">
+                        Bill: Rs. {formatNumber(entry.billPartPrice)}
                       </p>
-                      <p className="text-xs text-gray-600">
-                        Act Length:{' '}
-                        {entry.actLength !== undefined
-                          ? entry.actLength
-                          : '-'}
+                      <p className="text-xs text-gray-700 text-right">
+                        Other Exp: Rs. {entry.allocatedOtherExpense !== undefined ? formatNumber(entry.allocatedOtherExpense) : '0.00'}
                       </p>
-                      <p className="text-xs text-gray-600">
-                        Act Breadth:{' '}
-                        {entry.actBreadth !== undefined
-                          ? entry.actBreadth
-                          : '-'}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        Size: {entry.size || '-'}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        P Unit: {entry.pUnit || '-'}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        Cash Part Price: Rs.{' '}
-                        {entry.cashPartPrice?.toFixed(2) || '0.00'}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        Bill Part Price: Rs.{' '}
-                        {entry.billPartPrice?.toFixed(2) || '0.00'}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        Cash Part#: {entry.cashPartPriceInNumbers ?? '-'}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        Bill Part#: {entry.billPartPriceInNumbers ?? '-'}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        Allocated Other Expense: Rs.{' '}
-                        {entry.allocatedOtherExpense?.toFixed(2) || '0.00'}
-                      </p>
+                      <div className="flex justify-between mt-2">
+                        <span className="text-xs font-bold text-gray-700">
+                          Total#: {entry.totalPriceInNumbers !== undefined ? formatNumber(entry.totalPriceInNumbers) : '-'}
+                        </span>
+                        <span className="text-xs font-bold text-gray-700">
+                          GST: {entry.gstPercent !== undefined ? `${formatNumber(entry.gstPercent)}%` : '-'}
+                        </span>
+                      </div>
                     </>
                   )}
-
-                  <div className="flex justify-between mt-2">
-                    {isItemReport ? (
-                      <>
-                        <p className="text-xs text-gray-600 font-bold">
-                          Total#: {entry.totalPriceInNumbers ?? '-'}
-                        </p>
-                        <p className="text-xs text-gray-600 font-bold">
-                          GST: {entry.gstPercent !== undefined
-                            ? `${entry.gstPercent}%`
-                            : '-'}
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-xs text-gray-600 font-bold">
-                          Total: Rs.{' '}
-                          {entry.totals?.totalPurchaseAmount?.toFixed(2) ||
-                            '0.00'}
-                        </p>
-                        <p className="text-xs text-gray-600 font-bold">
-                          Grand Total: Rs.{' '}
-                          {entry.totals?.grandTotalPurchaseAmount?.toFixed(2) ||
-                            '0.00'}
-                        </p>
-                      </>
-                    )}
-                  </div>
+                  {!isItemReport && (
+                    <div className="mt-2 flex justify-between">
+                      <span className="text-xs font-bold text-gray-700">
+                        Total: Rs. {entry.totals?.totalPurchaseAmount !== undefined ? formatNumber(entry.totals.totalPurchaseAmount) : '0.00'}
+                      </span>
+                      <span className="text-xs font-bold text-gray-700">
+                        Grand Total: Rs. {entry.totals?.grandTotalPurchaseAmount !== undefined ? formatNumber(entry.totals.grandTotalPurchaseAmount) : '0.00'}
+                      </span>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
 
             {/* Pagination */}
-            <div className="flex justify-between items-center mt-3">
+            <div className="flex justify-between items-center mt-6">
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className={`px-2 text-xs font-bold py-1 rounded-lg ${
+                className={`px-4 py-2 text-sm font-medium rounded ${
                   currentPage === 1
-                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                    ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
                     : 'bg-red-500 text-white hover:bg-red-600'
                 }`}
               >
                 Previous
               </button>
-              <span className="text-xs text-gray-500">
+              <span className="text-sm text-gray-600">
                 Page {currentPage} of {totalPages}
               </span>
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className={`px-2 text-xs font-bold py-1 rounded-lg ${
+                className={`px-4 py-2 text-sm font-medium rounded ${
                   currentPage === totalPages
-                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                    ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
                     : 'bg-red-500 text-white hover:bg-red-600'
                 }`}
               >
@@ -1012,7 +995,7 @@ const PurchaseReport = () => {
             </div>
           </>
         )}
-      </div>
+      </main>
     </div>
   );
 };

@@ -1,10 +1,25 @@
 // src/screens/EditTransportPaymentPage.js
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, forwardRef } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api"; // Adjust the import path as necessary
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import useAuth from "hooks/useAuth";
+
+// MUI Dialog Imports
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import Slide from "@mui/material/Slide";
+import IconButton from "@mui/material/IconButton";
+import Button from "@mui/material/Button";
+import CloseIcon from "@mui/icons-material/Close";
+
+// Transition Component for the Dialog
+const Transition = forwardRef(function Transition(props, ref) {
+  return <Slide direction="up" ref={ref} {...props} />;
+});
 
 const EditTransportPaymentPage = () => {
   const [transportName, setTransportName] = useState("");
@@ -26,25 +41,22 @@ const EditTransportPaymentPage = () => {
   const [addPaymentModal, setAddPaymentModal] = useState(false);
   const [activeSection, setActiveSection] = useState("home");
   const navigate = useNavigate();
-
   const { user: userInfo } = useAuth();
 
   const transportNameRef = useRef();
 
+  // Fetch payment accounts on mount
   useEffect(() => {
     const fetchAccounts = async () => {
       setIsLoading(true);
       try {
         const response = await api.get("/api/accounts/allaccounts");
         const getPaymentMethod = response.data.map((acc) => acc.accountId);
-
         if (getPaymentMethod.length > 0) {
-          const firstAccountId = getPaymentMethod[0];
-          setPaymentMethod(firstAccountId);
+          setPaymentMethod(getPaymentMethod[0]);
         } else {
           setPaymentMethod(null);
         }
-
         setAccounts(response.data);
       } catch (err) {
         setErrorMessage("Failed to fetch payment accounts.");
@@ -59,6 +71,7 @@ const EditTransportPaymentPage = () => {
     fetchAccounts();
   }, []);
 
+  // Fetch suggestions for transport name (with debounce)
   useEffect(() => {
     const fetchSuggestions = async () => {
       if (transportName) {
@@ -77,22 +90,26 @@ const EditTransportPaymentPage = () => {
 
     const debounceFetch = setTimeout(() => {
       fetchSuggestions();
-    }, 300); // Debounce to reduce API calls
-
+    }, 300);
     return () => clearTimeout(debounceFetch);
   }, [transportName]);
 
+  // Fetch transport details based on selected suggestion
   const handleFetchTransportDetails = async (id) => {
     setIsLoading(true);
     try {
-      const response = await api.get(`/api/transportpayments/get-transport/${id}`);
+      const response = await api.get(
+        `/api/transportpayments/get-transport/${id}`
+      );
       setTransportDetails(response.data);
       const remaining = response.data.paymentRemaining;
       setRemainingAmount(remaining >= 0 ? remaining : 0);
       setErrorMessage("");
     } catch (error) {
       console.error("Error fetching transport data:", error);
-      setErrorMessage("Error fetching transport data. Please check the company name.");
+      setErrorMessage(
+        "Error fetching transport data. Please check the company name."
+      );
       setShowErrorModal(true);
       setTimeout(() => setShowErrorModal(false), 3000);
       setTransportDetails(null);
@@ -101,6 +118,7 @@ const EditTransportPaymentPage = () => {
     }
   };
 
+  // Handle adding a payment
   const handleAddPayment = async () => {
     if (!transportDetails) return;
     if (!paymentAmount || !paymentMethod || !paymentDate) {
@@ -109,21 +127,18 @@ const EditTransportPaymentPage = () => {
       setTimeout(() => setShowErrorModal(false), 3000);
       return;
     }
-
     if (Number(paymentAmount) <= 0) {
       setErrorMessage("Payment amount must be greater than zero.");
       setShowErrorModal(true);
       setTimeout(() => setShowErrorModal(false), 3000);
       return;
     }
-
     if (Number(paymentAmount) > remainingAmount) {
       setErrorMessage("Payment amount cannot exceed the remaining amount.");
       setShowErrorModal(true);
       setTimeout(() => setShowErrorModal(false), 3000);
       return;
     }
-
     setIsLoading(true);
     try {
       await api.post(
@@ -148,7 +163,7 @@ const EditTransportPaymentPage = () => {
       setSuccessMessage("Payment added successfully!");
       setShowSuccessModal(true);
       setTimeout(() => setShowSuccessModal(false), 3000);
-      setAddPaymentModal(false); // Close the add payment modal
+      setAddPaymentModal(false);
     } catch (error) {
       console.error("Error adding payment:", error);
       setErrorMessage("Error adding payment. Please try again.");
@@ -181,8 +196,6 @@ const EditTransportPaymentPage = () => {
 
   return (
     <div className="p-6">
-      {/* Header */}
-
       {/* Navigation Tabs */}
       <div className="flex justify-center gap-8 mb-6">
         <button
@@ -259,20 +272,19 @@ const EditTransportPaymentPage = () => {
             </ul>
           )}
 
-          {/* Error and Success Modals */}
+          {/* Error and Success Alerts */}
           {showErrorModal && (
             <div className="fixed top-4 right-4 bg-red-500 text-white p-3 rounded-md shadow-md animate-slideIn">
               <p className="text-xs">{errorMessage}</p>
             </div>
           )}
-
           {showSuccessModal && (
             <div className="fixed top-4 right-4 bg-green-500 text-white p-3 rounded-md shadow-md animate-slideIn">
               <p className="text-xs">{successMessage}</p>
             </div>
           )}
 
-          {/* Transport Details */}
+          {/* Transport Details & Payment Summary */}
           {isLoading ? (
             <div>
               <Skeleton height={30} count={1} />
@@ -288,12 +300,10 @@ const EditTransportPaymentPage = () => {
                       <h5 className="mb-2 text-2xl font-bold tracking-tight text-gray-900">
                         {transportDetails.transportName}
                       </h5>
-
                       {/* Payment Status Badge */}
                       {(() => {
                         let paymentStatus = "";
                         let paymentStatusClass = "";
-
                         if (transportDetails.paymentRemaining === 0) {
                           paymentStatus = "Paid";
                           paymentStatusClass =
@@ -313,7 +323,6 @@ const EditTransportPaymentPage = () => {
                           paymentStatusClass =
                             "text-yellow-600 bg-yellow-200 hover:bg-yellow-300 hover:scale-105";
                         }
-
                         return (
                           <p
                             className={`mt-auto mr-2 mb-auto py-2 w-40 text-center ml-auto rounded-full text-xs font-bold z-20 shadow-md transition-all duration-300 ease-in-out transform ${paymentStatusClass}`}
@@ -324,7 +333,7 @@ const EditTransportPaymentPage = () => {
                       })()}
                     </div>
 
-                    {/* Paid Amount, Remaining Amount, Total Billed Amount */}
+                    {/* Billing Summary */}
                     <div className="flex justify-between mt-4">
                       <div className="flex flex-col">
                         <span className="text-xs font-semibold text-gray-600">
@@ -440,103 +449,124 @@ const EditTransportPaymentPage = () => {
             )
           )}
 
-          {/* Add Payment Modal */}
-          {addPaymentModal && (
-            <div className="fixed inset-0 flex items-end justify-center bg-black bg-opacity-50">
-              <div className="bg-white animate-slide-up w-full rounded-t-lg p-4 animate-slideUp">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-md font-bold text-gray-600">Add Payment</h3>
-                  <button
-                    className="text-gray-500 hover:text-gray-700"
-                    onClick={() => setAddPaymentModal(false)}
-                  >
-                    <i className="fa fa-times"></i>
-                  </button>
+          {/* Add Payment Modal using MUI Dialog */}
+          <Dialog
+            open={addPaymentModal}
+            TransitionComponent={Transition}
+            keepMounted
+            onClose={() => setAddPaymentModal(false)}
+            PaperProps={{
+              style: {
+                position: "fixed",
+                bottom: 0,
+                margin: 0,
+                width: "100%",
+                borderTopLeftRadius: 16,
+                borderTopRightRadius: 16,
+              },
+            }}
+            fullWidth
+            maxWidth="sm"
+          >
+            <DialogTitle>
+              Add Payment
+              <IconButton
+                aria-label="close"
+                onClick={() => setAddPaymentModal(false)}
+                sx={{
+                  position: "absolute",
+                  right: 8,
+                  top: 8,
+                }}
+              >
+                <CloseIcon />
+              </IconButton>
+            </DialogTitle>
+            <DialogContent dividers>
+              <div className="flex flex-col gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">
+                    Payment Amount
+                  </label>
+                  <input
+                    type="number"
+                    value={paymentAmount}
+                    onChange={(e) =>
+                      setPaymentAmount(
+                        e.target.value > remainingAmount
+                          ? remainingAmount
+                          : e.target.value
+                      )
+                    }
+                    max={remainingAmount}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-red-300 focus:ring-red-300 text-xs"
+                    placeholder={`Max: ₹${remainingAmount.toFixed(2)}`}
+                  />
                 </div>
-                <div className="flex flex-col gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1">
-                      Payment Amount
-                    </label>
-                    <input
-                      type="number"
-                      value={paymentAmount}
-                      onChange={(e) =>
-                        setPaymentAmount(
-                          e.target.value > remainingAmount
-                            ? remainingAmount
-                            : e.target.value
-                        )
-                      }
-                      max={remainingAmount}
-                      className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-red-300 focus:ring-red-300 text-xs"
-                      placeholder={`Max: ₹${remainingAmount.toFixed(2)}`}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1">
-                     Bill Id
-                    </label>
-                    <input
-                      type="text"
-                      value={billId}
-                      onChange={(e) =>
-                        setBillId(e.target.value)
-                      }
-                      className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-red-300 focus:ring-red-300 text-xs"
-                      placeholder={`Bill Id`}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs">Payment Method</label>
-                    <select
-                      value={paymentMethod}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
-                    >
-                      {accounts.map((acc) => (
-                        <option key={acc.accountId} value={acc.accountId}>
-                          {acc.accountName}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1">
-                      Payment Date
-                    </label>
-                    <input
-                      type="date"
-                      value={paymentDate}
-                      onChange={(e) => setPaymentDate(e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-red-300 focus:ring-red-300 text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1">
-                      Remark
-                    </label>
-                    <input
-                      type="text"
-                      value={remark}
-                      onChange={(e) => setRemark(e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-red-300 focus:ring-red-300 text-xs"
-                      placeholder="Enter remark (optional)"
-                    />
-                  </div>
-                  <button
-                    className="bg-red-500 text-white font-bold text-xs px-4 py-3 rounded-lg mt-4"
-                    onClick={handleAddPayment}
-                    disabled={isLoading}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">
+                    Bill Id
+                  </label>
+                  <input
+                    type="text"
+                    value={billId}
+                    onChange={(e) => setBillId(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-red-300 focus:ring-red-300 text-xs"
+                    placeholder="Bill Id"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">
+                    Payment Method
+                  </label>
+                  <select
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
                   >
-                    Submit Payment
-                  </button>
+                    {accounts.map((acc) => (
+                      <option key={acc.accountId} value={acc.accountId}>
+                        {acc.accountName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">
+                    Payment Date
+                  </label>
+                  <input
+                    type="date"
+                    value={paymentDate}
+                    onChange={(e) => setPaymentDate(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-red-300 focus:ring-red-300 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">
+                    Remark
+                  </label>
+                  <input
+                    type="text"
+                    value={remark}
+                    onChange={(e) => setRemark(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-red-300 focus:ring-red-300 text-xs"
+                    placeholder="Enter remark (optional)"
+                  />
                 </div>
               </div>
-            </div>
-          )}
+            </DialogContent>
+            <DialogActions>
+              <Button
+                onClick={handleAddPayment}
+                variant="outlined"
+                color="primary"
+                disabled={isLoading}
+              >
+                Submit Payment
+              </Button>
+            </DialogActions>
+          </Dialog>
         </div>
       </div>
     </div>

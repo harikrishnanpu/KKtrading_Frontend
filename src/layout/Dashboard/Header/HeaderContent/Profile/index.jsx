@@ -77,15 +77,20 @@ export default function ProfilePage() {
     }
   };
 
-  useEffect(async()=>{
-    if(user){
-      const { data } = await api.get(`/api/users/${user._id}`);
-      if(data.error){
-        console.error(data.error);
-      }else{
-        setAvatar(data.avatar);
+  useEffect(()=>{
+   async function  fetch(){
+
+     if(user){
+       const { data } = await api.get(`/api/users/${user._id}`);
+       if(data.error){
+         console.error(data.error);
+        }else{
+          setAvatar(data.avatar);
+        }
       }
     }
+
+    fetch();
   },[user]);
 
   const anchorRef = useRef(null);

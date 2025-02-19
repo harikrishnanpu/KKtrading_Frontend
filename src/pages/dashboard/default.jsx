@@ -11,7 +11,6 @@ import { keyframes } from '@mui/system';
 // project-imports
 import WelcomeBanner from 'sections/dashboard/default/WelcomeBanner';
 import PreviewDataCard from 'components/dashboard/previewDataCard';  // Ensure this path is correct
-import PreviewDataChart from 'components/dashboard/previewDataChart'; // Ensure this path is correct
 import LowStockPreview from 'components/dashboard/lowstockPreview';   // Ensure this path is correct
 import TotalIncome from 'sections/widget/chart/TotalIncome';          // Ensure this path is correct
 import MainCard from 'components/MainCard';
@@ -339,30 +338,7 @@ export default function DashboardDefault() {
       <Grid item xs={12} md={12}>
         <LowStockPreview />
       </Grid>
-
-      {/* Loop Over Our 6 Cards */}
-      {cardsConfig.map((card) => (
-        <Grid item xs={12} sm={6} lg={3} key={card.key}>
-          <PreviewDataCard
-            title={card.title}
-            count={card.count}
-            iconPrimary={card.iconPrimary}
-            percentage={card.percentage}
-          >
-            {/* Insert the monthly sparkline-style bar chart */}
-            <PreviewDataChart
-              color={card.color}
-              data={card.monthly}
-              height={50} // Sparkline-like height
-            />
-          </PreviewDataCard>
-        </Grid>
-      ))}
-
-      {/* Additional Rows */}
-      {/* <Grid item xs={12} md={6}>
-        <TotalIncome />
-      </Grid> */}
+      
     </Grid>
   );
 }

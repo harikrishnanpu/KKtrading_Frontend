@@ -1,10 +1,24 @@
 // src/screens/EditSellerPaymentPage.js
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, forwardRef } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api"; // Adjust the import path as necessary
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import useAuth from "hooks/useAuth";
+
+// MUI Imports for Dialog Modal
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import Slide from "@mui/material/Slide";
+import IconButton from "@mui/material/IconButton";
+import Button from "@mui/material/Button";
+import CloseIcon from "@mui/icons-material/Close";
+
+const Transition = forwardRef(function Transition(props, ref) {
+  return <Slide direction="up" ref={ref} {...props} />;
+});
 
 const EditSellerPaymentPage = () => {
   const [sellerName, setSellerName] = useState("");
@@ -25,40 +39,37 @@ const EditSellerPaymentPage = () => {
   const [addPaymentModal, setAddPaymentModal] = useState(false);
   const [activeSection, setActiveSection] = useState("home");
   const navigate = useNavigate();
-
   const { user: userInfo } = useAuth();
 
   const sellerNameRef = useRef();
 
+  // Fetch Payment Accounts on mount
   useEffect(() => {
     const fetchAccounts = async () => {
-      setIsLoading(true); // Set loading state
+      setIsLoading(true);
       try {
         const response = await api.get("/api/accounts/allaccounts");
         const getPaymentMethod = response.data.map((acc) => acc.accountId);
-
-        // Check if there are any accounts and set the first account as the default
         if (getPaymentMethod.length > 0) {
           const firstAccountId = getPaymentMethod[0];
-          setPaymentMethod(firstAccountId); // Set the first account as default
+          setPaymentMethod(firstAccountId);
         } else {
-          setPaymentMethod(null); // Handle case where there are no accounts
+          setPaymentMethod(null);
         }
-
-        setAccounts(response.data); // Set the accounts in state
+        setAccounts(response.data);
       } catch (err) {
-        setErrorMessage("Failed to fetch payment accounts."); // Set error message
+        setErrorMessage("Failed to fetch payment accounts.");
         setShowErrorModal(true);
         setTimeout(() => setShowErrorModal(false), 3000);
         console.error(err);
       } finally {
-        setIsLoading(false); // Stop loading
+        setIsLoading(false);
       }
     };
-
     fetchAccounts();
   }, []);
 
+  // Fetch Suggestions for Seller Name
   useEffect(() => {
     const fetchSuggestions = async () => {
       if (sellerName) {
@@ -77,11 +88,12 @@ const EditSellerPaymentPage = () => {
 
     const debounceFetch = setTimeout(() => {
       fetchSuggestions();
-    }, 300); // Debounce to reduce API calls
+    }, 300);
 
     return () => clearTimeout(debounceFetch);
   }, [sellerName]);
 
+  // Fetch Seller Details based on selected suggestion
   const handleFetchSellerDetails = async (id) => {
     setIsLoading(true);
     try {
@@ -101,6 +113,7 @@ const EditSellerPaymentPage = () => {
     }
   };
 
+  // Handle Add Payment action
   const handleAddPayment = async () => {
     if (!sellerDetails) return;
     if (!paymentAmount || !paymentMethod || !paymentDate) {
@@ -109,21 +122,18 @@ const EditSellerPaymentPage = () => {
       setTimeout(() => setShowErrorModal(false), 3000);
       return;
     }
-
     if (Number(paymentAmount) <= 0) {
       setErrorMessage("Payment amount must be greater than zero.");
       setShowErrorModal(true);
       setTimeout(() => setShowErrorModal(false), 3000);
       return;
     }
-
     if (Number(paymentAmount) > remainingAmount) {
       setErrorMessage("Payment amount cannot exceed the remaining amount.");
       setShowErrorModal(true);
       setTimeout(() => setShowErrorModal(false), 3000);
       return;
     }
-
     setIsLoading(true);
     try {
       await api.post(`/api/sellerpayments/add-payments/${sellerDetails._id}`, {
@@ -144,7 +154,7 @@ const EditSellerPaymentPage = () => {
       setSuccessMessage("Payment added successfully!");
       setShowSuccessModal(true);
       setTimeout(() => setShowSuccessModal(false), 3000);
-      setAddPaymentModal(false); // Close the add payment modal
+      setAddPaymentModal(false);
     } catch (error) {
       console.error("Error adding payment:", error);
       setErrorMessage("Error adding payment. Please try again.");
@@ -177,9 +187,6 @@ const EditSellerPaymentPage = () => {
 
   return (
     <div className="p-2">
-      {/* Header */}
-
-
       {/* Navigation Tabs */}
       <div className="flex justify-center gap-8">
         <button
@@ -212,76 +219,69 @@ const EditSellerPaymentPage = () => {
 
       <div className="flex flex-col justify-center items-center p-2">
         <div className="bg-white shadow-xl rounded-lg w-full max-w-lg p-4">
-          {/* Seller Name Input */}
+          {/* Seller Name Input & Suggestions */}
           {!sellerDetails && (
-            <div className="mb-4">
-              <div className="relative w-full">
-                <label className="font-bold text-xs text-gray-500">
-                  Supplier Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="Enter Seller Name"
-                  value={sellerName}
-                  onKeyDown={handleKeyDown}
-                  onChange={(e) => setSellerName(e.target.value)}
-                  ref={sellerNameRef}
-                  className="w-full p-2 pr-8 focus:outline-none focus:border-red-300 focus:ring-red-300 border-gray-300 rounded-md text-xs"
-                />
-                <i
-                  onClick={() => setSellerName(" ")}
-                  className="fa fa-angle-down absolute right-3 bottom-0 transform -translate-y-1/2 text-gray-400 cursor-pointer"
-                ></i>
+            <>
+              <div className="mb-4">
+                <div className="relative w-full">
+                  <label className="font-bold text-xs text-gray-500">
+                    Supplier Name
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter Seller Name"
+                    value={sellerName}
+                    onKeyDown={handleKeyDown}
+                    onChange={(e) => setSellerName(e.target.value)}
+                    ref={sellerNameRef}
+                    className="w-full p-2 pr-8 focus:outline-none focus:border-red-300 focus:ring-red-300 border-gray-300 rounded-md text-xs"
+                  />
+                  <i
+                    onClick={() => setSellerName(" ")}
+                    className="fa fa-angle-down absolute right-3 bottom-0 transform -translate-y-1/2 text-gray-400 cursor-pointer"
+                  ></i>
+                </div>
               </div>
-            </div>
+              {suggestions.length > 0 && (
+                <ul className="bg-white divide-y shadow-lg rounded-md overflow-hidden mb-4 border border-gray-300">
+                  {suggestions.map((suggestion, index) => (
+                    <li
+                      key={suggestion._id}
+                      className={`p-4 cursor-pointer hover:bg-gray-100 flex justify-between ${
+                        index === selectedSuggestionIndex ? "bg-gray-200" : ""
+                      }`}
+                      onClick={() => handleSuggestionClick(suggestion)}
+                    >
+                      <span className="font-bold text-xs text-gray-500">
+                        {suggestion.sellerName}
+                      </span>
+                      <i className="fa fa-arrow-right text-gray-300" />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
           )}
 
-          {/* Suggestions Dropdown */}
-          {!sellerDetails && suggestions.length > 0 && (
-            <ul className="bg-white divide-y shadow-lg rounded-md overflow-hidden mb-4 border border-gray-300">
-              {suggestions.map((suggestion, index) => (
-                <li
-                  key={suggestion._id}
-                  className={`p-4 cursor-pointer hover:bg-gray-100 flex justify-between ${
-                    index === selectedSuggestionIndex ? "bg-gray-200" : ""
-                  }`}
-                  onClick={() => handleSuggestionClick(suggestion)}
-                >
-                  <span className="font-bold text-xs text-gray-500">
-                    {suggestion.sellerName}
-                  </span>
-                  <i className="fa fa-arrow-right text-gray-300" />
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {/* Seller Details */}
+          {/* Seller Details & Payment Summary */}
           {isLoading ? (
             <div>
               <Skeleton height={30} count={1} />
-              <Skeleton
-                height={20}
-                count={3}
-                style={{ marginTop: "10px" }}
-              />
+              <Skeleton height={20} count={3} style={{ marginTop: "10px" }} />
             </div>
           ) : (
             sellerDetails && (
               <>
                 {activeSection === "home" && (
                   <div className="mt-4">
-                    {/* Summary at the Top */}
+                    {/* Seller Header and Payment Status Badge */}
                     <div className="border-b pb-4 flex justify-between items-center relative">
                       <h5 className="mb-2 text-2xl font-bold tracking-tight text-gray-900">
                         {sellerDetails.sellerName}
                       </h5>
-
-                      {/* Payment Status Badge */}
                       {(() => {
                         let paymentStatus = "";
                         let paymentStatusClass = "";
-
                         if (sellerDetails.paymentRemaining === 0) {
                           paymentStatus = "Paid";
                           paymentStatusClass =
@@ -301,7 +301,6 @@ const EditSellerPaymentPage = () => {
                           paymentStatusClass =
                             "text-yellow-600 bg-yellow-200 hover:bg-yellow-300 hover:scale-105";
                         }
-
                         return (
                           <p
                             className={`mt-auto mr-2 mb-auto py-2 w-40 text-center ml-auto rounded-full text-xs font-bold z-20 shadow-md transition-all duration-300 ease-in-out transform ${paymentStatusClass}`}
@@ -312,7 +311,7 @@ const EditSellerPaymentPage = () => {
                       })()}
                     </div>
 
-                    {/* Paid Amount, Remaining Amount, Total Billed Amount */}
+                    {/* Billing Summary */}
                     <div className="flex justify-between mt-4">
                       <div className="flex flex-col">
                         <span className="text-xs font-semibold text-gray-600">
@@ -356,9 +355,7 @@ const EditSellerPaymentPage = () => {
                         Billings
                       </h3>
                       {sellerDetails.billings.length === 0 ? (
-                        <p className="text-xs text-gray-500">
-                          No billings found.
-                        </p>
+                        <p className="text-xs text-gray-500">No billings found.</p>
                       ) : (
                         <div className="grid grid-cols-1 gap-4">
                           {sellerDetails.billings.map((billing, index) => (
@@ -376,9 +373,7 @@ const EditSellerPaymentPage = () => {
                               </div>
                               <div>
                                 <p className="text-xs text-gray-500">
-                                  {new Date(
-                                    billing.date
-                                  ).toLocaleDateString()}
+                                  {new Date(billing.date).toLocaleDateString()}
                                 </p>
                               </div>
                             </div>
@@ -395,9 +390,7 @@ const EditSellerPaymentPage = () => {
                       Payments
                     </h3>
                     {sellerDetails.payments.length === 0 ? (
-                      <p className="text-xs text-gray-500">
-                        No payments made yet.
-                      </p>
+                      <p className="text-xs text-gray-500">No payments made yet.</p>
                     ) : (
                       <div className="grid grid-cols-1 gap-4">
                         {sellerDetails.payments.map((payment, index) => (
@@ -430,102 +423,124 @@ const EditSellerPaymentPage = () => {
             )
           )}
 
-          {/* Error and Success Modals */}
+          {/* Error and Success Alerts */}
           {showErrorModal && (
             <div className="fixed top-4 right-4 bg-red-500 text-white p-3 rounded-md shadow-md animate-slideIn">
               <p className="text-xs">{errorMessage}</p>
             </div>
           )}
-
           {showSuccessModal && (
             <div className="fixed top-4 right-4 bg-green-500 text-white p-3 rounded-md shadow-md animate-slideIn">
               <p className="text-xs">{successMessage}</p>
             </div>
           )}
 
-          {/* Add Payment Modal */}
-          {addPaymentModal && (
-            <div className="fixed inset-0 flex items-end justify-center bg-black bg-opacity-50">
-              <div className="bg-white animate-slide-up w-full rounded-t-lg p-4 animate-slideUp">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-md font-bold text-gray-600">
-                    Add Payment
-                  </h3>
-                  <button
-                    className="text-gray-500 hover:text-gray-700"
-                    onClick={() => setAddPaymentModal(false)}
-                  >
-                    <i className="fa fa-times"></i>
-                  </button>
+          {/* Add Payment Modal using MUI Dialog */}
+          <Dialog
+            open={addPaymentModal}
+            TransitionComponent={Transition}
+            keepMounted
+            onClose={() => setAddPaymentModal(false)}
+            PaperProps={{
+              style: {
+                position: "fixed",
+                bottom: 0,
+                margin: 0,
+                width: "100%",
+                borderTopLeftRadius: 16,
+                borderTopRightRadius: 16,
+              },
+            }}
+            fullWidth
+            maxWidth="sm"
+          >
+            <DialogTitle>
+              Add Payment
+              <IconButton
+                aria-label="close"
+                onClick={() => setAddPaymentModal(false)}
+                sx={{
+                  position: "absolute",
+                  right: 8,
+                  top: 8,
+                }}
+              >
+                <CloseIcon />
+              </IconButton>
+            </DialogTitle>
+            <DialogContent dividers>
+              <div className="flex flex-col gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">
+                    Payment Amount
+                  </label>
+                  <input
+                    type="number"
+                    value={paymentAmount}
+                    onChange={(e) =>
+                      setPaymentAmount(
+                        e.target.value > remainingAmount
+                          ? remainingAmount
+                          : e.target.value
+                      )
+                    }
+                    max={remainingAmount}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-red-300 focus:ring-red-300 text-xs"
+                    placeholder={`Max: ₹${remainingAmount.toFixed(2)}`}
+                  />
                 </div>
-                <div className="flex flex-col gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1">
-                      Payment Amount
-                    </label>
-                    <input
-                      type="number"
-                      value={paymentAmount}
-                      onChange={(e) =>
-                        setPaymentAmount(
-                          e.target.value > remainingAmount
-                            ? remainingAmount
-                            : e.target.value
-                        )
-                      }
-                      max={remainingAmount}
-                      className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-red-300 focus:ring-red-300 text-xs"
-                      placeholder={`Max: ₹${remainingAmount.toFixed(2)}`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs">Payment Method</label>
-                    <select
-                      value={paymentMethod}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
-                    >
-                      {accounts.map((acc) => (
-                        <option key={acc.accountId} value={acc.accountId}>
-                          {acc.accountName}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1">
-                      Payment Date
-                    </label>
-                    <input
-                      type="date"
-                      value={paymentDate}
-                      onChange={(e) => setPaymentDate(e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-red-300 focus:ring-red-300 text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1">
-                      Remark
-                    </label>
-                    <input
-                      type="text"
-                      value={remark}
-                      onChange={(e) => setRemark(e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-red-300 focus:ring-red-300 text-xs"
-                      placeholder="Enter remark (optional)"
-                    />
-                  </div>
-                  <button
-                    className="bg-red-500 text-white font-bold text-xs px-4 py-3 rounded-lg mt-4"
-                    onClick={handleAddPayment}
-                    disabled={isLoading}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">
+                    Payment Method
+                  </label>
+                  <select
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
                   >
-                    Submit Payment
-                  </button>
+                    {accounts.map((acc) => (
+                      <option key={acc.accountId} value={acc.accountId}>
+                        {acc.accountName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">
+                    Payment Date
+                  </label>
+                  <input
+                    type="date"
+                    value={paymentDate}
+                    onChange={(e) => setPaymentDate(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-red-300 focus:ring-red-300 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">
+                    Remark
+                  </label>
+                  <input
+                    type="text"
+                    value={remark}
+                    onChange={(e) => setRemark(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-red-300 focus:ring-red-300 text-xs"
+                    placeholder="Enter remark (optional)"
+                  />
                 </div>
               </div>
-            </div>
-          )}
+            </DialogContent>
+            <DialogActions>
+              <Button
+                onClick={handleAddPayment}
+                variant="outlined"
+                color="primary"
+                disabled={isLoading}
+              >
+                Submit Payment
+              </Button>
+            </DialogActions>
+          </Dialog>
         </div>
       </div>
     </div>
