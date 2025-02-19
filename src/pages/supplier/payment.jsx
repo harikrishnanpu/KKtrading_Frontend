@@ -30,6 +30,7 @@ const EditSellerPaymentPage = () => {
   const [paymentMethod, setPaymentMethod] = useState("");
   const [paymentDate, setPaymentDate] = useState("");
   const [remark, setRemark] = useState("");
+  const [remarkType, setRemarkType] = useState("CASH"); // New state for remark type
   const [remainingAmount, setRemainingAmount] = useState(0);
   const [errorMessage, setErrorMessage] = useState(""); // For error modal
   const [successMessage, setSuccessMessage] = useState(""); // For success modal
@@ -136,10 +137,12 @@ const EditSellerPaymentPage = () => {
     }
     setIsLoading(true);
     try {
+      // Build final remark based on the selected type (CASH or BILL)
+      const finalRemark = `${remarkType}: ${remark}`;
       await api.post(`/api/sellerpayments/add-payments/${sellerDetails._id}`, {
         amount: Number(paymentAmount),
         method: paymentMethod,
-        remark: remark,
+        remark: finalRemark,
         date: paymentDate,
         userId: userInfo._id,
         sellerId: sellerDetails.sellerId,
@@ -147,9 +150,10 @@ const EditSellerPaymentPage = () => {
       });
       await handleFetchSellerDetails(sellerDetails._id);
       setPaymentAmount("");
-      setPaymentMethod(""); // Reset to default
+      setPaymentMethod(""); // Reset to default (or set to first account again if needed)
       setPaymentDate("");
       setRemark("");
+      setRemarkType("CASH");
       setErrorMessage("");
       setSuccessMessage("Payment added successfully!");
       setShowSuccessModal(true);
@@ -184,6 +188,12 @@ const EditSellerPaymentPage = () => {
       handleSuggestionClick(suggestions[selectedSuggestionIndex]);
     }
   };
+
+  // Calculate pending amounts (if sellerDetails is available)
+  const cashPartPending =
+    sellerDetails && sellerDetails.totalCashPart - sellerDetails.totalCashPartGiven;
+  const billPartPending =
+    sellerDetails && sellerDetails.totalBillPart - sellerDetails.totalBillPartGiven;
 
   return (
     <div className="p-2">
@@ -339,6 +349,49 @@ const EditSellerPaymentPage = () => {
                       </div>
                     </div>
 
+                    {/* Responsive Cards for Totals, Given & Pending */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
+                      {/* Billed amounts in grey */}
+                      <div className="bg-white shadow-md rounded-lg p-4">
+                        <div className="text-xs text-gray-500">Bill Part Billed</div>
+                        <div className="text-lg font-bold text-gray-700">
+                          ₹{sellerDetails.totalBillPart.toFixed(2)}
+                        </div>
+                      </div>
+                      <div className="bg-white shadow-md rounded-lg p-4">
+                        <div className="text-xs text-gray-500">Cash Part Billed</div>
+                        <div className="text-lg font-bold text-gray-700">
+                          ₹{sellerDetails.totalCashPart.toFixed(2)}
+                        </div>
+                      </div>
+                      {/* Given amounts in green */}
+                      <div className="bg-white shadow-md rounded-lg p-4">
+                        <div className="text-xs text-gray-500">Bill Part Given</div>
+                        <div className="text-lg font-bold text-green-600">
+                          ₹{sellerDetails.totalBillPartGiven.toFixed(2)}
+                        </div>
+                      </div>
+                      <div className="bg-white shadow-md rounded-lg p-4">
+                        <div className="text-xs text-gray-500">Cash Part Given</div>
+                        <div className="text-lg font-bold text-green-600">
+                          ₹{sellerDetails.totalCashPartGiven.toFixed(2)}
+                        </div>
+                      </div>
+                      {/* Pending amounts in yellow */}
+                      <div className="bg-white shadow-md rounded-lg p-4">
+                        <div className="text-xs text-gray-500">Bill Part Pending</div>
+                        <div className="text-lg font-bold text-yellow-600">
+                          ₹{(sellerDetails.totalBillPart - sellerDetails.totalBillPartGiven).toFixed(2)}
+                        </div>
+                      </div>
+                      <div className="bg-white shadow-md rounded-lg p-4">
+                        <div className="text-xs text-gray-500">Cash Part Pending</div>
+                        <div className="text-lg font-bold text-yellow-600">
+                          ₹{(sellerDetails.totalCashPart - sellerDetails.totalCashPartGiven).toFixed(2)}
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Add Payment Button */}
                     <div className="mt-6">
                       <button
@@ -393,28 +446,35 @@ const EditSellerPaymentPage = () => {
                       <p className="text-xs text-gray-500">No payments made yet.</p>
                     ) : (
                       <div className="grid grid-cols-1 gap-4">
-                        {sellerDetails.payments.map((payment, index) => (
-                          <div
-                            key={index}
-                            className="bg-white shadow-md rounded-lg p-4 flex justify-between items-center"
-                          >
-                            <div>
-                              <p className="text-sm text-gray-700 font-semibold">
-                                {payment.method}: ₹{payment.amount.toFixed(2)}
-                              </p>
-                              {payment.remark && (
-                                <p className="text-xs text-gray-500">
-                                  Remark: {payment.remark}
+                        {sellerDetails.payments.map((payment, index) => {
+                          // Lookup account name by comparing payment.method (account id) with accounts list
+                          const account = accounts.find(
+                            (acc) => acc.accountId === payment.method
+                          );
+                          const accountName = account ? account.accountName : payment.method;
+                          return (
+                            <div
+                              key={index}
+                              className="bg-white shadow-md rounded-lg p-4 flex justify-between items-center"
+                            >
+                              <div>
+                                <p className="text-sm text-gray-700 font-semibold">
+                                  {accountName}: ₹{payment.amount.toFixed(2)}
                                 </p>
-                              )}
+                                {payment.remark && (
+                                  <p className="text-xs text-gray-500">
+                                    Remark: {payment.remark}
+                                  </p>
+                                )}
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500">
+                                  {new Date(payment.date).toLocaleDateString()}
+                                </p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="text-xs text-gray-500">
-                                {new Date(payment.date).toLocaleDateString()}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -516,9 +576,23 @@ const EditSellerPaymentPage = () => {
                     className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-red-300 focus:ring-red-300 text-xs"
                   />
                 </div>
+                {/* New Select input for remark type */}
                 <div>
                   <label className="block text-xs font-bold text-gray-500 mb-1">
-                    Remark
+                    Remark Type
+                  </label>
+                  <select
+                    value={remarkType}
+                    onChange={(e) => setRemarkType(e.target.value)}
+                    className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
+                  >
+                    <option value="CASH">CASHPART</option>
+                    <option value="BILL">BILLPART</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">
+                    Custom Remark
                   </label>
                   <input
                     type="text"

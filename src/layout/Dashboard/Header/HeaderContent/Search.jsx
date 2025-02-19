@@ -108,17 +108,22 @@ export default function SearchBox() {
     if (e.key === 'Enter') {
       e.preventDefault();
       handleSearch(name);
+      setName('');
     }
   };
 
   // Clicking a suggestion
   const handleSuggestionClick = (suggestion) => {
     handleSearch(suggestion.name);
+    setName('');
+
   };
 
   // Clicking a recent search
   const handleRecentSearchClick = (recent) => {
-    handleSearch(recent.name);
+    handleSearch(recent._id);
+    setName('');
+
   };
 
   return (

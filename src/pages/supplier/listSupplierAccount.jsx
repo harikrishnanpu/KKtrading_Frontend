@@ -846,7 +846,7 @@ const SupplierAccountList = () => {
                       className="hover:bg-gray-100 divide-y divide-x"
                     >
                       <td
-                        onClick={() => navigate(`/seller/edit/${account._id}`)}
+                        onClick={() => navigate(`/supplier/edit/${account._id}`)}
                         className="px-4 py-2 text-xs font-bold text-red-600 cursor-pointer"
                       >
                         {account.sellerId}
@@ -886,7 +886,7 @@ const SupplierAccountList = () => {
                             <i className="fa fa-trash mr-1"></i> Delete
                           </button>
                           <button
-                            onClick={() => navigate(`/seller/edit/${account._id}`)}
+                            onClick={() => navigate(`/supplier/edit/${account._id}`)}
                             className="bg-red-500 text-white px-2 py-1 text-sm font-semibold rounded hover:bg-red-600 flex items-center"
                           >
                             <i className="fa fa-edit mr-1"></i> Edit
@@ -952,7 +952,7 @@ const SupplierAccountList = () => {
                       <i className="fa fa-trash mr-1"></i>
                     </button>
                     <button
-                      onClick={() => navigate(`/seller/edit/${account._id}`)}
+                      onClick={() => navigate(`/supplier/edit/${account._id}`)}
                       className="bg-red-500 text-white px-2 py-1 text-sm font-semibold rounded hover:bg-red-600 flex items-center"
                     >
                       <i className="fa fa-edit mr-1"></i>
