@@ -163,6 +163,8 @@ const handleNeedPurchase = (billing) => {
   const calculateProfit = (billing) => {
     let totalCost = 0;
     let totalRevenue = 0;
+    let totalOtherExpenses = 0;
+    let totalFuelExpenese = parseFloat(billing.totalFuelCharge) || 0;
 
     billing.products.forEach((p) => {
       const product = productMap[p.item_id];
@@ -173,10 +175,41 @@ const handleNeedPurchase = (billing) => {
       totalRevenue += revenue;
     });
 
-    const totalProfit = totalRevenue - totalCost;
-    const profitPercentage = totalCost > 0 ? ( totalRevenue - totalCost ) / totalRevenue * 100 : 0;
+// Calculate total other expenses from billing.otherExpenses and billing.deliveries[*].otherExpenses
+const calculateTotalOtherExpenses = (billing) => {
+  let totalOtherExpenses = 0;
 
-    return { totalCost, totalRevenue, totalProfit, profitPercentage };
+  // Sum billing-level other expenses
+  if (billing.otherExpenses && billing.otherExpenses.length > 0) {
+    billing.otherExpenses.forEach((expense) => {
+      totalOtherExpenses += parseFloat(expense.amount || 0);
+    });
+  }
+
+  // Sum each delivery's other expenses
+  if (billing.deliveries && billing.deliveries.length > 0) {
+    billing.deliveries.forEach((delivery) => {
+      if (delivery.otherExpenses && delivery.otherExpenses.length > 0) {
+        delivery.otherExpenses.forEach((expense) => {
+          totalOtherExpenses += parseFloat(expense.amount || 0);
+        });
+      }
+    });
+  }
+
+  return totalOtherExpenses;
+};
+
+// Example usage:
+// Assuming 'billing' is an object fetched from your database using the BillingSchema
+const totalOtherExpense = calculateTotalOtherExpenses(billing);
+
+
+
+    const totalProfit = totalRevenue - totalOtherExpense - totalFuelExpenese - totalCost;
+    const profitPercentage = totalCost > 0 ? ( totalRevenue - totalOtherExpense - totalFuelExpenese - totalCost ) / totalRevenue * 100 : 0;
+
+    return { totalCost, totalRevenue, totalProfit, profitPercentage, totalOtherExpense, totalFuelExpenese };
   };
 
   // ---------------------------------------------------------------------------
@@ -692,7 +725,7 @@ const handleNeedPurchase = (billing) => {
             >
               <p className="text-xs font-bold text-purple-600">Total Profit</p>
               <p className="text-xs text-gray-500">
-                Margin: {stats.totalCost > 0 ? ((stats.totalRevenue - stats.totalCost) / stats.totalRevenue * 100).toFixed(2) : '0.00'}%
+                Margin: {stats.totalCost > 0 ? ((stats.totalRevenue - stats.totalFuelExpenese - stats.totalOtherExpense - stats.totalCost) / stats.totalRevenue * 100).toFixed(2) : '0.00'}%
               </p>
               <p className="text-sm font-bold text-gray-700">
                 ₹{stats.totalProfit.toLocaleString()}
@@ -1227,7 +1260,7 @@ const handleNeedPurchase = (billing) => {
                     Summary Cards: Revenue, Cost, Profit, and Margin (Admin only)
                 --------------------------------------------------------------------- */}
                 {userInfo.isSuper && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
                     <div className="stats bg-green-50 shadow p-4 rounded-lg">
                       <div className="stat">
                         <div className="stat-title">Total Revenue</div>
@@ -1246,13 +1279,29 @@ const handleNeedPurchase = (billing) => {
                     </div>
                     <div className="stats bg-purple-50 shadow p-4 rounded-lg">
                       <div className="stat">
+                        <div className="stat-title">Total Other Exp.</div>
+                        <div className="stat-value text-purple-600">
+                          ₹{calculateProfit(selectedBilling).totalOtherExpense.toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="stats bg-green-50 shadow p-4 rounded-lg">
+                      <div className="stat">
+                        <div className="stat-title">Total Fuel Exp.</div>
+                        <div className="stat-value text-green-600">
+                          ₹{calculateProfit(selectedBilling).totalFuelExpenese.toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="stats bg-purple-50 shadow p-4 rounded-lg">
+                      <div className="stat">
                         <div className="stat-title">Net Profit</div>
                         <div className="stat-value text-purple-600">
                           ₹{calculateProfit(selectedBilling).totalProfit.toLocaleString()}
                         </div>
                         <div className="stat-desc">
                           {calculateProfit(selectedBilling).totalCost > 0
-                            ?  (( calculateProfit(selectedBilling).totalRevenue - calculateProfit(selectedBilling).totalCost ) / calculateProfit(selectedBilling).totalRevenue * 100).toFixed(2)
+                            ?  (( calculateProfit(selectedBilling).totalRevenue - calculateProfit(selectedBilling).totalFuelExpenese - calculateProfit(selectedBilling).totalOtherExpense - calculateProfit(selectedBilling).totalCost ) / calculateProfit(selectedBilling).totalRevenue * 100).toFixed(2)
                             : '0.00'}
                           % Margin
                         </div>

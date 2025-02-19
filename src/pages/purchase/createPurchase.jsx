@@ -188,7 +188,7 @@ export default function PurchasePage() {
     const fetchTransportCompanies = async () => {
       try {
         const { data } = await api.get("/api/purchases/get-all/transportCompany");
-        const newData = [...data, "Haha", "HIHI"];
+        const newData = [...data];
         setTransportCompanies(newData);
       } catch (error) {
         console.error("Error fetching transport companies:", error);
