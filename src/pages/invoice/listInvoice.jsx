@@ -166,6 +166,7 @@ const handleNeedPurchase = (billing) => {
     let totalOtherExpenses = 0;
     let totalFuelExpenese = parseFloat(billing.totalFuelCharge) || 0;
 
+
     billing.products.forEach((p) => {
       const product = productMap[p.item_id];
       const ItemSellingPrice = billing.total
@@ -193,6 +194,9 @@ const calculateTotalOtherExpenses = (billing) => {
         delivery.otherExpenses.forEach((expense) => {
           totalOtherExpenses += parseFloat(expense.amount || 0);
         });
+      }
+      if(delivery.bata && delivery.bata !== undefined) {
+        totalOtherExpenses += parseFloat(delivery.bata);
       }
     });
   }
@@ -917,6 +921,7 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
                   <th className="px-2 py-2">Products</th>
                   <th className="px-2 py-2">Payment</th>
                   <th className="px-2 py-2">Delivery</th>
+                  <th className="px-2 py-2">Remark</th>
                   {userInfo.isSuper && <th className="px-2 py-2">P/L (%)</th>}
                   <th className="px-2 py-2">Actions</th>
                 </tr>
@@ -973,6 +978,9 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
                       </td>
                       <td className="px-2 text-xs py-2">
                         {billing.deliveryStatus}
+                      </td>
+                      <td className="px-2 text-xs py-2">
+                        {billing.remark || '--'}
                       </td>
                       {userInfo.isSuper && (
                         <td className="px-2 text-xs py-2">

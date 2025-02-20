@@ -4,6 +4,7 @@ import React, {
   useEffect,
   useMemo,
   useRef,
+  forwardRef
 } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
@@ -11,6 +12,25 @@ import useAuth from 'hooks/useAuth';
 import { useGetMenuMaster } from 'api/menu';
 import { BrowserView, MobileView } from 'react-device-detect';
 
+// --- MUI Components ---
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Slide,
+  IconButton,
+  Typography
+} from '@mui/material';
+import { Close as CloseIcon } from '@mui/icons-material';
+
+// -------------- Error & Success Modals (Tailwind) --------------
 const ErrorModal = ({ message, onClose }) => (
   <div className="fixed inset-0 flex items-center justify-center z-50">
     <div className="bg-white rounded-md p-4 shadow-lg relative w-11/12 max-w-sm">
@@ -39,11 +59,16 @@ const SuccessModal = ({ message, onClose }) => (
   </div>
 );
 
+// -------------- Slide Transition for MUI Dialog --------------
+const SlideUpTransition = forwardRef(function SlideUpTransition(props, ref) {
+  return <Slide direction="up" ref={ref} {...props} />;
+});
+
 const DailyTransactions = () => {
   const navigate = useNavigate();
   const { user: userInfo } = useAuth();
 
-  // Pull in menuMaster (for drawer states if needed)
+  // Pull in menuMaster (for layout/drawer states if needed)
   const { menuMaster } = useGetMenuMaster();
 
   // States for transactions from various sources
@@ -80,37 +105,13 @@ const DailyTransactions = () => {
   const [totalOut, setTotalOut] = useState(0);
   const [totalTransfer, setTotalTransfer] = useState(0);
 
-  // Add Transaction Modal
+  // Dialog / Add Transaction
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState('in');
 
-  // Sidebar open/close
+  // Sidebar open/close (mobile only)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const sidebarRef = useRef(null);
-
-  useEffect(() => {
-    // Close sidebar on mobile screens by default
-    if (window.innerWidth < 1024) {
-      setIsSidebarOpen(false);
-    }
-  }, []);
-
-  // Close sidebar when clicking outside of it
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (
-        sidebarRef.current &&
-        !sidebarRef.current.contains(event.target) &&
-        isSidebarOpen
-      ) {
-        setIsSidebarOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isSidebarOpen]);
 
   // Data for new transaction
   const [transactionData, setTransactionData] = useState({
@@ -137,6 +138,30 @@ const DailyTransactions = () => {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterMethod, setFilterMethod] = useState('');
   const [sortOption, setSortOption] = useState('date_desc');
+
+  useEffect(() => {
+    // Close sidebar on mobile screens by default
+    if (window.innerWidth < 1024) {
+      setIsSidebarOpen(false);
+    }
+  }, []);
+
+  // Close sidebar when clicking outside of it
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (
+        sidebarRef.current &&
+        !sidebarRef.current.contains(event.target) &&
+        isSidebarOpen
+      ) {
+        setIsSidebarOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isSidebarOpen]);
 
   // -------------------------------
   // Fetch Categories
@@ -222,6 +247,7 @@ const DailyTransactions = () => {
     setLoading(true);
     setError('');
     try {
+      // Make concurrent API calls
       const [
         catRes,
         dailyTransRes,
@@ -238,25 +264,42 @@ const DailyTransactions = () => {
         api.get('/api/transportpayments/daily/payments', { params: { fromDate, toDate } }),
       ]);
 
-      // Billing data
-      const {
-        billingsRes: billingData,
-        payments: paymentData,
-        otherExpenses: expenseData,
-      } = billingRes.data;
+      // 1) Categories
+      setCategories(catRes.data);
 
-      // Customer payments
-      const customerPaymentsData = customerPayRes.data;
-
-      // Mark sources for each transaction type
+      // 2) Daily transactions
       const dailyTransWithSource = dailyTransRes.data.map((t) => ({
         ...t,
         source: 'daily',
       }));
-
       setTransactions(dailyTransWithSource);
+
+      // 3) Billings (with payments & otherExpenses)
+      const {
+        billings: billingData,
+        payments: paymentData,
+        otherExpenses: expenseData,
+      } = billingRes.data;
       setBillings(billingData);
+
+      // Format & store the otherExpenses
+      const formattedOtherExpenses = expenseData.map((exp, index) => {
+        const hasInvoice = exp.invoiceNo ? true : false;
+        return {
+          ...exp,
+          source: 'expense',
+          _id: exp._id || `expense-${index}`,
+          category: hasInvoice ? 'Bill Other Expense' : 'Other Expense',
+          remark: exp.remark || 'Additional expense',
+        };
+      });
+      setOtherExpenses(formattedOtherExpenses);
+
+      // 4) Billing Payments
       setBillingPayments(paymentData);
+
+      // 5) Customer Payments
+      const customerPaymentsData = customerPayRes.data;
       setCustomerPayments(
         customerPaymentsData.flatMap((customer) =>
           (customer.payments || []).map((p, index) => ({
@@ -264,45 +307,53 @@ const DailyTransactions = () => {
             source: 'customerPayment',
             paymentFrom: customer.customerName,
             _id: p._id || `customer-payment-${customer.customerId}-${index}`,
+            category: p.category || 'Customer Payment',
+            method: p.method || 'cash',
+            date: p.date,
           }))
         )
       );
-      setOtherExpenses(
-        expenseData.map((exp, index) => ({
-          ...exp,
-          source: 'expense',
-          _id: exp._id || `expense-${index}`,
-        }))
-      );
+
+      // 6) Purchase Payments (all suppliers, aggregated)
+      const purchasePaymentsData = purchaseRes.data; // array of suppliers
       setPurchasePayments(
-        purchaseRes.data.flatMap((seller) =>
-          (seller.payments || []).map((p, index) => ({
+        purchasePaymentsData.flatMap((supplier) =>
+          (supplier.payments || []).map((p, index) => ({
             ...p,
             source: 'purchasePayment',
-            sellerName: seller.sellerName,
-            _id: p._id || `purchase-${seller.sellerId}-${index}`,
+            sellerName: supplier.sellerName,
+            _id: p._id || `purchase-${supplier._id}-${index}`,
+            category: p.category || 'Purchase Payment',
+            method: p.method || 'cash',
+            date: p.date,
           }))
         )
       );
+
+      // 7) Transport Payments
+      const transportPaymentsData = transportRes.data;
       setTransportPayments(
-        transportRes.data.flatMap((transport) =>
+        transportPaymentsData.flatMap((transport) =>
           (transport.payments || []).map((p, index) => ({
             ...p,
             source: 'transportPayment',
             transportName: transport.transportName,
             _id: p._id || `transport-${transport.transportId}-${index}`,
+            category: p.category || 'Transport Payment',
+            method: p.method || 'cash',
+            date: p.date,
           }))
         )
       );
-      setCategories(catRes.data);
 
+      // Recalc totals
       calculateTotals(
         dailyTransWithSource,
         paymentData,
         expenseData,
         customerPaymentsData.flatMap((customer) => customer.payments || []),
-        purchaseRes.data.flatMap((seller) => seller.payments || []),
-        transportRes.data.flatMap((transport) => transport.payments || [])
+        purchasePaymentsData.flatMap((supplier) => supplier.payments || []),
+        transportPaymentsData.flatMap((t) => t.payments || [])
       );
     } catch (err) {
       setError('Failed to fetch transactions.');
@@ -333,7 +384,6 @@ const DailyTransactions = () => {
       if (trans.type === 'in') totalInAmount += amount;
       else if (trans.type === 'out') totalOutAmount += amount;
       else if (trans.type === 'transfer') totalTransferAmount += amount;
-      // transfer doesn't affect net total in/out
     });
 
     // Billing Payments (in)
@@ -367,7 +417,7 @@ const DailyTransactions = () => {
   };
 
   // -------------------------------
-  // On mount, fetch transactions & accounts
+  // On mount + whenever fromDate/toDate changes
   // -------------------------------
   useEffect(() => {
     fetchTransactions();
@@ -389,7 +439,7 @@ const DailyTransactions = () => {
   const handleTabChange = (tab) => setActiveTab(tab);
 
   // -------------------------------
-  // Open/Close Add Transaction Modal
+  // Open/Close Add Transaction Modal (MUI)
   // -------------------------------
   const openModal = (type) => {
     setModalType(type);
@@ -485,7 +535,7 @@ const DailyTransactions = () => {
         userId: userInfo._id,
       };
 
-      // Different endpoints if it's a transfer or specific categories
+      // Different endpoints if it's a transfer or special categories
       if (modalType === 'transfer') {
         await api.post('/api/daily/trans/transfer', payload);
       } else if (transactionData.category === 'Purchase Payment') {
@@ -499,11 +549,11 @@ const DailyTransactions = () => {
         await api.post('/api/daily/transactions', payload);
       }
 
-      // Show success modal
+      // Show success
       setSuccessMessage('Transaction added successfully!');
       setIsSuccessOpen(true);
 
-      // Close the Add Transaction modal
+      // Close the dialog
       closeModal();
 
       // Refresh
@@ -588,6 +638,7 @@ const DailyTransactions = () => {
         remark: payment.remark || `Payment Received: ${payment.invoiceNo}`,
         type: 'in',
         source: 'billingPayment',
+        invoiceNo: payment.invoiceNo, // keep invoiceNo if needed
       }));
     }
 
@@ -596,8 +647,6 @@ const DailyTransactions = () => {
       customerPaymentsFormatted = customerPayments.map((payment) => ({
         ...payment,
         type: 'in',
-        category: payment.category || 'Customer Payment',
-        method: payment.method || 'cash',
       }));
     }
 
@@ -606,14 +655,11 @@ const DailyTransactions = () => {
       expenses = otherExpenses.map((expense) => ({
         ...expense,
         type: 'out',
-        paymentTo: 'Other Expense',
-        category: 'Other Expense',
-        method: expense.method || 'cash',
-        remark: expense.remark || 'Additional expense',
+        paymentTo: expense.category === 'Bill Other Expense' ? 'Bill Other Expense' : 'Other Expense',
       }));
     }
 
-    // Purchase payments (always out)
+    // Purchase Payments (always out)
     if (activeTab === 'all' || activeTab === 'out') {
       pPayments = purchasePayments.map((payment) => ({
         ...payment,
@@ -625,7 +671,7 @@ const DailyTransactions = () => {
       }));
     }
 
-    // Transport payments (always out)
+    // Transport Payments (always out)
     if (activeTab === 'all' || activeTab === 'out') {
       tPayments = transportPayments.map((payment) => ({
         ...payment,
@@ -637,7 +683,7 @@ const DailyTransactions = () => {
       }));
     }
 
-    // 3) Combine all
+    // 3) Combine
     let combined = [
       ...mainFiltered,
       ...billingPaymentsFormatted,
@@ -647,7 +693,7 @@ const DailyTransactions = () => {
       ...tPayments,
     ];
 
-    // 4) Remove duplicates based on _id
+    // 4) Remove duplicates based on _id (in case of weird overlaps)
     const uniqueMap = new Map();
     combined.forEach((item) => {
       if (!uniqueMap.has(item._id)) {
@@ -675,7 +721,8 @@ const DailyTransactions = () => {
           (t.paymentFrom && t.paymentFrom.toLowerCase().includes(q)) ||
           (t.paymentTo && t.paymentTo.toLowerCase().includes(q)) ||
           (t.remark && t.remark.toLowerCase().includes(q)) ||
-          (t.category && t.category.toLowerCase().includes(q))
+          (t.category && t.category.toLowerCase().includes(q)) ||
+          (t.invoiceNo && t.invoiceNo.toLowerCase().includes(q))
       );
     }
 
@@ -804,7 +851,7 @@ const DailyTransactions = () => {
                 <label className="block text-xs font-bold mb-1">Search</label>
                 <input
                   type="text"
-                  placeholder="Search remarks/source..."
+                  placeholder="Search remarks/source/invoice..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="border border-gray-300 rounded-md p-1 text-xs focus:ring-red-500 focus:border-red-500 w-full"
@@ -921,7 +968,12 @@ const DailyTransactions = () => {
                           className="flex justify-between items-center p-2 bg-white shadow-sm rounded-lg"
                         >
                           <div>
-                            <p className="text-xs font-bold text-gray-700">{trans.category}</p>
+                            {/* Category + invoiceNo (if any) */}
+                            <p className="text-xs font-bold text-gray-700">
+                              {trans.category}
+                              {trans.invoiceNo ? ` (#${trans.invoiceNo})` : ''}
+                            </p>
+                            {/* Payment From / To / Transfer label */}
                             <p className="text-xs text-gray-500">
                               {trans.type === 'in'
                                 ? `From: ${trans.paymentFrom}`
@@ -931,6 +983,7 @@ const DailyTransactions = () => {
                                 ? `Transfer: ${trans.paymentFrom} ➜ ${trans.paymentTo}`
                                 : ''}
                             </p>
+                            {/* Remark */}
                             <p className="text-xs text-gray-500 italic">{trans.remark}</p>
                           </div>
                           <div className="text-right">
@@ -949,6 +1002,7 @@ const DailyTransactions = () => {
                                 ₹{parseFloat(trans.amount).toFixed(2)}
                               </p>
                             )}
+                            {/* Date display */}
                             <p className="text-xs text-gray-500">
                               {dateObj.toLocaleString(undefined, {
                                 year: 'numeric',
@@ -958,6 +1012,7 @@ const DailyTransactions = () => {
                                 minute: '2-digit',
                               })}
                             </p>
+                            {/* Delete button (only daily) */}
                             {isDaily && (
                               <button
                                 onClick={() => handleDeleteTransaction(trans._id)}
@@ -977,13 +1032,11 @@ const DailyTransactions = () => {
             )}
           </div>
 
-          {/* Bottom Fixed Actions Bar (unified for all screens) */}
+          {/* Bottom Fixed Actions Bar */}
           <div
-          style={{
-            zIndex: 1000
-          }}
-  className="fixed bottom-0 left-0 right-0 w-full bg-white px-4 pt-4 pb-4 border-t shadow-inner flex justify-around"
-  >
+            style={{ zIndex: 1000 }}
+            className="fixed bottom-0 left-0 right-0 w-full bg-white px-4 pt-4 pb-4 border-t shadow-inner flex justify-around"
+          >
             <button
               onClick={() => openModal('in')}
               className="flex font-bold items-center justify-center bg-green-500 text-white w-12 h-12 rounded-full shadow-lg hover:bg-green-600 transition"
@@ -1020,306 +1073,251 @@ const DailyTransactions = () => {
         </div>
       </div>
 
-      {/* Add Transaction Modal */}
-    
-{isModalOpen && (
-  <div className="fixed inset-0 bg-black bg-opacity-5 flex justify-center lg:items-center items-end z-50">
-    <div
-      className={`bg-white w-full lg:max-w-lg p-4 rounded-t-lg lg:rounded-lg sm:rounded-t-lg shadow-lg relative transition-all duration-300
-        ${window.innerWidth < 1024 ? 'h-3/4' : ''}
-      `}
-      style={{
-        width:
-          menuMaster.isDashboardDrawerOpened
-            ? 'calc(100% - 280px)'
-            : menuMaster.isComponentDrawerOpened
-            ? 'calc(100% - 80px)'
-            : '100%',
-      }}
-    >
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="text-sm font-bold">
-                {modalType === 'in'
-                  ? 'Add Payment In'
-                  : modalType === 'out'
-                  ? 'Add Payment Out'
-                  : 'Transfer Between Accounts'}
-              </h2>
-              <button
-                onClick={closeModal}
-                className="text-gray-500 hover:text-gray-700 text-xl"
+      {/* ------------------ MUI Dialog for Add Transaction ------------------ */}
+      <Dialog
+        open={isModalOpen}
+        onClose={closeModal}
+        TransitionComponent={SlideUpTransition}
+        fullWidth
+        maxWidth="sm"
+        // Style overrides: pinned to bottom, horizontally centered
+        sx={{
+          '& .MuiDialog-container': {
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'flex-end',
+          },
+          '& .MuiDialog-paper': {
+            margin: 0,
+            borderRadius: '8px 8px 0 0',
+            width: '100%',
+          },
+        }}
+      >
+        <DialogTitle className="flex items-center justify-between">
+          <Typography variant="subtitle1" className="font-bold">
+            {modalType === 'in'
+              ? 'Add Payment In'
+              : modalType === 'out'
+              ? 'Add Payment Out'
+              : 'Transfer Between Accounts'}
+          </Typography>
+          <IconButton onClick={closeModal} size="small">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent dividers>
+          {error && <p className="text-xs text-red-500 mb-2">{error}</p>}
+
+          {/* Date & Time */}
+          <TextField
+            label="Date & Time"
+            type="datetime-local"
+            fullWidth
+            margin="dense"
+            size="small"
+            value={transactionData.date}
+            onChange={(e) => setTransactionData({ ...transactionData, date: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+            required
+          />
+
+          {/* Payment From (for IN or TRANSFER) */}
+          {(modalType === 'in' || modalType === 'transfer') && (
+            <>
+              {modalType === 'in' ? (
+                <TextField
+                  label="Payment From"
+                  fullWidth
+                  margin="dense"
+                  size="small"
+                  value={transactionData.paymentFrom}
+                  onChange={(e) =>
+                    setTransactionData({ ...transactionData, paymentFrom: e.target.value })
+                  }
+                  required
+                />
+              ) : (
+                <FormControl fullWidth margin="dense" size="small">
+                  <InputLabel>Payment From</InputLabel>
+                  <Select
+                    label="Payment From"
+                    value={transactionData.paymentFrom}
+                    onChange={(e) =>
+                      setTransactionData({ ...transactionData, paymentFrom: e.target.value })
+                    }
+                    required
+                  >
+                    <MenuItem value="">Select Account</MenuItem>
+                    {accounts.map((account, index) => (
+                      <MenuItem key={index} value={account.accountId}>
+                        {account.accountName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+            </>
+          )}
+
+          {/* Payment To (for OUT or TRANSFER) */}
+          {(modalType === 'out' || modalType === 'transfer') && (
+            <>
+              {modalType === 'out' ? (
+                <TextField
+                  label="Payment To"
+                  fullWidth
+                  margin="dense"
+                  size="small"
+                  value={transactionData.paymentTo}
+                  onChange={(e) =>
+                    setTransactionData({ ...transactionData, paymentTo: e.target.value })
+                  }
+                  required
+                />
+              ) : (
+                <FormControl fullWidth margin="dense" size="small">
+                  <InputLabel>Payment To</InputLabel>
+                  <Select
+                    label="Payment To"
+                    value={transactionData.paymentTo}
+                    onChange={(e) =>
+                      setTransactionData({ ...transactionData, paymentTo: e.target.value })
+                    }
+                    required
+                  >
+                    <MenuItem value="">Select Account</MenuItem>
+                    {accounts.map((account, index) => (
+                      <MenuItem key={index} value={account.accountId}>
+                        {account.accountName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+            </>
+          )}
+
+          {/* Category */}
+          {!showAddCategory ? (
+            <FormControl fullWidth margin="dense" size="small">
+              <InputLabel>Category</InputLabel>
+              <Select
+                label="Category"
+                value={transactionData.category}
+                onChange={(e) => {
+                  if (e.target.value === 'add_new_category') {
+                    setShowAddCategory(true);
+                  } else {
+                    setTransactionData({ ...transactionData, category: e.target.value });
+                  }
+                }}
+                required
               >
-                ×
-              </button>
+                <MenuItem value="">Select Category</MenuItem>
+                {categories.map((cat, index) => (
+                  <MenuItem key={index} value={cat.name}>
+                    {cat.name}
+                  </MenuItem>
+                ))}
+                <MenuItem value="add_new_category">+ Add New Category</MenuItem>
+              </Select>
+            </FormControl>
+          ) : (
+            <div className="my-2">
+              <TextField
+                label="New Category"
+                fullWidth
+                margin="dense"
+                size="small"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+              />
+              <Button
+                variant="contained"
+                color="success"
+                size="small"
+                onClick={handleAddCategory}
+              >
+                Save Category
+              </Button>
+              <Button
+                variant="text"
+                size="small"
+                onClick={handleAddNewCategoryToggle}
+                style={{ marginLeft: 8 }}
+              >
+                Cancel
+              </Button>
             </div>
-            <form onSubmit={handleTransactionSubmit}>
-              {error && <p className="text-xs text-red-500 mb-2">{error}</p>}
-              <div className="mb-2">
-                <label className="block text-xs font-bold mb-1">Date & Time</label>
-                <input
-                  type="datetime-local"
-                  value={transactionData.date}
-                  onChange={(e) =>
-                    setTransactionData({ ...transactionData, date: e.target.value })
-                  }
-                  className="w-full border border-gray-300 rounded-md p-1 text-xs focus:ring-red-500 focus:border-red-500"
-                  required
-                />
-              </div>
+          )}
 
-              {/* Payment From (for IN or TRANSFER) */}
-              {(modalType === 'in' || modalType === 'transfer') && (
-                <div className="mb-2">
-                  <label className="block text-xs font-bold mb-1">Payment From</label>
-                  {modalType === 'in' ? (
-                    <input
-                      type="text"
-                      value={transactionData.paymentFrom}
-                      onChange={(e) =>
-                        setTransactionData({
-                          ...transactionData,
-                          paymentFrom: e.target.value,
-                        })
-                      }
-                      className="w-full border border-gray-300 rounded-md p-1 text-xs focus:ring-red-500 focus:border-red-500"
-                      required
-                    />
-                  ) : (
-                    <select
-                      value={transactionData.paymentFrom}
-                      onChange={(e) =>
-                        setTransactionData({
-                          ...transactionData,
-                          paymentFrom: e.target.value,
-                        })
-                      }
-                      className="w-full border border-gray-300 rounded-md p-1 text-xs focus:ring-red-500 focus:border-red-500"
-                      required
-                    >
-                      <option value="">Select Account</option>
-                      {accounts.map((account, index) => (
-                        <option key={index} value={account.accountId}>
-                          {account.accountName}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-              )}
+          {/* Amount */}
+          <TextField
+            label="Amount"
+            type="number"
+            fullWidth
+            margin="dense"
+            size="small"
+            value={transactionData.amount}
+            onChange={(e) => setTransactionData({ ...transactionData, amount: e.target.value })}
+            required
+            inputProps={{ min: '0.01', step: '0.01' }}
+          />
 
-              {/* Payment To (for OUT or TRANSFER) */}
-              {(modalType === 'out' || modalType === 'transfer') && (
-                <div className="mb-2">
-                  <label className="block text-xs font-bold mb-1">Payment To</label>
-                  {modalType === 'out' ? (
-                    <input
-                      type="text"
-                      value={transactionData.paymentTo}
-                      onChange={(e) =>
-                        setTransactionData({
-                          ...transactionData,
-                          paymentTo: e.target.value,
-                        })
-                      }
-                      className="w-full border border-gray-300 rounded-md p-1 text-xs focus:ring-red-500 focus:border-red-500"
-                      required
-                    />
-                  ) : (
-                    <select
-                      value={transactionData.paymentTo}
-                      onChange={(e) =>
-                        setTransactionData({
-                          ...transactionData,
-                          paymentTo: e.target.value,
-                        })
-                      }
-                      className="w-full border border-gray-300 rounded-md p-1 text-xs focus:ring-red-500 focus:border-red-500"
-                      required
-                    >
-                      <option value="">Select Account</option>
-                      {accounts.map((account, index) => (
-                        <option key={index} value={account.accountId}>
-                          {account.accountName}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-              )}
+          {/* Payment Method */}
+          <FormControl fullWidth margin="dense" size="small">
+            <InputLabel>Payment Method</InputLabel>
+            <Select
+              label="Payment Method"
+              value={transactionData.method}
+              onChange={(e) =>
+                setTransactionData({ ...transactionData, method: e.target.value })
+              }
+              required
+            >
+              <MenuItem value="">Select Method</MenuItem>
+              {accounts.map((account, index) => (
+                <MenuItem key={index} value={account.accountId}>
+                  {account.accountName}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-              {/* Category */}
-              <div className="mb-2">
-                <label className="block text-xs font-bold mb-1">Category</label>
-                {!showAddCategory ? (
-                  <select
-                    value={transactionData.category}
-                    onChange={(e) => {
-                      if (e.target.value === 'add_new_category') {
-                        setShowAddCategory(true);
-                      } else {
-                        setTransactionData({ ...transactionData, category: e.target.value });
-                      }
-                    }}
-                    className="w-full border border-gray-300 rounded-md p-1 text-xs focus:ring-red-500 focus:border-red-500"
-                    required
-                  >
-                    <option value="">Select Category</option>
-                    {categories.map((cat, index) => (
-                      <option key={index} value={cat.name}>
-                        {cat.name}
-                      </option>
-                    ))}
-                    <option value="add_new_category">Add New Category</option>
-                  </select>
-                ) : (
-                  <div>
-                    <input
-                      type="text"
-                      value={newCategoryName}
-                      onChange={(e) => setNewCategoryName(e.target.value)}
-                      placeholder="Enter new category"
-                      className="w-full border border-gray-300 rounded-md p-1 text-xs focus:ring-red-500 focus:border-red-500 mb-2"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddCategory}
-                      className="bg-green-500 text-white px-3 py-1 rounded-md text-xs hover:bg-green-600 transition-colors duration-200"
-                    >
-                      Save Category
-                    </button>
-                  </div>
-                )}
-              </div>
+          {/* Remark */}
+          <TextField
+            label="Remark"
+            multiline
+            rows={2}
+            fullWidth
+            margin="dense"
+            size="small"
+            value={transactionData.remark}
+            onChange={(e) => setTransactionData({ ...transactionData, remark: e.target.value })}
+            placeholder="Optional remarks"
+          />
 
-              {/* Conditional selects for Purchase/Transport Payment */}
-              {modalType === 'out' && transactionData.category === 'Purchase Payment' && (
-                <div className="mb-2">
-                  <label className="block text-xs font-bold mb-1">Purchase</label>
-                  <select
-                    value={transactionData.purchaseId || ''}
-                    onChange={(e) =>
-                      setTransactionData({ ...transactionData, purchaseId: e.target.value })
-                    }
-                    className="w-full border border-gray-300 rounded-md p-1 text-xs focus:ring-red-500 focus:border-red-500"
-                    required
-                  >
-                    <option value="">Select Purchase</option>
-                    {purchasePayments.map((purchase, index) => (
-                      <option key={index} value={purchase._id}>
-                        {purchase.invoiceNo} - {purchase.sellerName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+        </DialogContent>
 
-              {modalType === 'out' && transactionData.category === 'Transport Payment' && (
-                <div className="mb-2">
-                  <label className="block text-xs font-bold mb-1">Transport</label>
-                  <select
-                    value={transactionData.transportId || ''}
-                    onChange={(e) =>
-                      setTransactionData({ ...transactionData, transportId: e.target.value })
-                    }
-                    className="w-full border border-gray-300 rounded-md p-1 text-xs focus:ring-red-500 focus:border-red-500"
-                    required
-                  >
-                    <option value="">Select Transport</option>
-                    {transportPayments.map((transport, index) => (
-                      <option key={index} value={transport._id}>
-                        {transport.transportName} -{' '}
-                        {new Date(transport.transportDate).toLocaleDateString()}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Amount */}
-              <div className="mb-2">
-                <label className="block text-xs font-bold mb-1">Amount</label>
-                <input
-                  type="number"
-                  value={transactionData.amount}
-                  onChange={(e) =>
-                    setTransactionData({ ...transactionData, amount: e.target.value })
-                  }
-                  className="w-full border border-gray-300 rounded-md p-1 text-xs focus:ring-red-500 focus:border-red-500"
-                  required
-                  min="0.01"
-                  step="0.01"
-                  placeholder="Enter amount in Rs."
-                />
-              </div>
-
-              {/* Payment Method */}
-              <div className="mb-2">
-                <label className="block text-xs font-bold mb-1">Payment Method</label>
-                <select
-                  value={transactionData.method}
-                  onChange={(e) =>
-                    setTransactionData({ ...transactionData, method: e.target.value })
-                  }
-                  className="w-full border border-gray-300 rounded-md p-1 text-xs focus:ring-red-500 focus:border-red-500"
-                  required
-                >
-                  <option value="">Select Method</option>
-                  {accounts.map((account, index) => (
-                    <option key={index} value={account.accountId}>
-                      {account.accountName}
-                    </option>
-                  ))}
-                  {/* In case "cash" is not in the DB */}
-                </select>
-              </div>
-
-              {/* Remark */}
-              <div className="mb-2">
-                <label className="block text-xs font-bold mb-1">Remark</label>
-                <textarea
-                  value={transactionData.remark}
-                  onChange={(e) =>
-                    setTransactionData({ ...transactionData, remark: e.target.value })
-                  }
-                  className="w-full border border-gray-300 rounded-md p-1 text-xs focus:ring-red-500 focus:border-red-500"
-                  rows="2"
-                  placeholder="Optional remarks"
-                ></textarea>
-              </div>
-
-              <div className="flex justify-end mt-4">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="bg-gray-200 text-gray-700 px-3 py-1 rounded-md mr-2 text-xs hover:bg-gray-300 transition-colors duration-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="bg-red-500 text-white px-3 py-1 rounded-md text-xs hover:bg-red-600 transition-colors duration-200"
-                >
-                  Add Transaction
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+        <DialogActions>
+          <Button variant="outlined" onClick={closeModal} size="small">
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="secondary"
+            size="small"
+            onClick={handleTransactionSubmit}
+          >
+            Add Transaction
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Tailwind Animations */}
       <style jsx>{`
-        @keyframes slide-up {
-          from {
-            transform: translateY(100%);
-          }
-          to {
-            transform: translateY(0%);
-          }
-        }
-        .animate-slide-up {
-          animation: slide-up 0.3s ease-out;
-        }
         @keyframes slide-down {
           from {
             transform: translateY(-100%);
