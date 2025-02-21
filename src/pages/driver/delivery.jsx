@@ -1539,6 +1539,7 @@ const DriverBillingPage = () => {
                   onChange={(e) => setSearchInvoiceNo(e.target.value)}
                   className="w-full md:w-44 p-2 border border-gray-300 rounded-md focus:outline-none focus:border-red-300 focus:ring-red-300 text-xs"
                 />
+                <div className="flex mt-2 space-x-4">
                 <div className="flex items-center space-x-2">
                   <label className="text-gray-500 font-bold text-xs">From:</label>
                   <input
@@ -1565,6 +1566,7 @@ const DriverBillingPage = () => {
                 >
                   <FaSync />
                 </IconButton>
+                </div>
               </div>
 
               {/* Deliveries List */}

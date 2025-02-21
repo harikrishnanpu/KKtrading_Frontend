@@ -78,6 +78,7 @@ const Allproducts = Loadable(lazy(() => import('pages/products/allProducts')));
 const ProductScreen = Loadable(lazy(() => import('pages/products/product')));
 const EditProduct = Loadable(lazy(() => import('pages/products/editProducts')));
 const PreviewProduct = Loadable(lazy(() => import('pages/products/productPreview')));
+const UpcommingDeliveries = Loadable(lazy(() => import('pages/products/lowStockandDelivery')));
 
 
 
@@ -449,6 +450,10 @@ const MainRoutes = {
         {
           path: 'all',
           element: <Allproducts />
+        },
+        {
+          path: 'upcomming/lowstock',
+          element: <UpcommingDeliveries />
         },
         {
           path: ':id/preview',

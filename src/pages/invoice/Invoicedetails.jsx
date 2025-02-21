@@ -20,35 +20,39 @@ import {
   Typography,
   FormControl,
   TableContainer,
-  Button
+  Button,
+  Card,
+  CardContent,
+  Collapse,
+  List,
+  ListItem,
+  ListItemText
 } from '@mui/material';
 
 // third-party
 import { useReactToPrint } from 'react-to-print';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 
-// project imports (adjust paths to match your project)
+// project imports
 import MainCard from 'components/MainCard';
 import Breadcrumbs from 'components/@extended/Breadcrumbs';
 import LoadingButton from 'components/@extended/LoadingButton';
-import LogoSection from 'components/logo'; // Example: if you have a custom Logo component
-import ExportPDFView from 'sections/apps/invoice/export-pdf'; // or adapt to your own PDF component
+import LogoSection from 'components/logo'; // Adjust to your project
+import ExportPDFView from './components/exportPdf'; // <-- We'll create/modify this component below
 
 // config, icons, etc.
 import { APP_DEFAULT_PATH, ThemeMode } from 'config';
 import { DocumentDownload, Edit, Printer, Share } from 'iconsax-react';
 import api from 'pages/api';
 
-// Example: if you're using your own api helper, import it:
-// import api from '../api'; // Or wherever you define your API instance
-
-// =============== PDF Icon Button =============== //
+// ==============================|| PDF ICON BUTTON ||============================== //
 function PDFIconButton({ billing }) {
   const theme = useTheme();
   return (
     <PDFDownloadLink
-      document={<ExportPDFView billing={billing} />} // <-- pass the billing object to your PDF component
+      document={<ExportPDFView billing={billing} />} 
       fileName={`${billing?.invoiceNo}-${billing?.customerName}.pdf`}
+      style={{ textDecoration: 'none' }}
     >
       <IconButton>
         <DocumentDownload
@@ -67,16 +71,17 @@ PDFIconButton.propTypes = {
   billing: PropTypes.object
 };
 
-// ============ MAIN BILLING DETAILS COMPONENT ============ //
+// ==============================|| MAIN DETAILS COMPONENT ||============================== //
 export default function Details() {
   const theme = useTheme();
   const { id } = useParams();
   const navigate = useNavigate();
+  const componentRef = useRef(null);
 
   const [billing, setBilling] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  const componentRef = useRef(null);
+  const [openDeliveryInfo, setOpenDeliveryInfo] = useState(false);
+  const [openPaymentInfo, setOpenPaymentInfo] = useState(false);
 
   const iconColor =
     theme.palette.mode === ThemeMode.DARK
@@ -95,7 +100,6 @@ export default function Details() {
         setLoading(false);
       }
     };
-
     if (id) {
       fetchBilling();
     }
@@ -106,20 +110,29 @@ export default function Details() {
     content: () => componentRef.current
   });
 
-  // ------------------ Derived Values ------------------ //
-  // Example: You can parse or format dates here
+  // ------------------ Derived or Formatted Values ------------------ //
   const formattedInvoiceDate = billing?.invoiceDate
     ? new Date(billing.invoiceDate).toLocaleDateString('en-GB')
     : '';
-
   const formattedExpectedDeliveryDate = billing?.expectedDeliveryDate
     ? new Date(billing.expectedDeliveryDate).toLocaleDateString('en-GB')
     : '';
 
-  // If you want to show a products table, you might want to compute total price, etc.
-  // However, your model tracks "grandTotal", "billingAmount", "discount", etc. directly.
+  // Example: Payment status Chip color:
+  const getPaymentStatusChip = (status) => {
+    switch (status) {
+      case 'Paid':
+        return <Chip label="Paid" variant="light" color="success" size="small" />;
+      case 'Partial':
+        return <Chip label="Partial" variant="light" color="warning" size="small" />;
+      case 'Unpaid':
+        return <Chip label="Unpaid" variant="light" color="error" size="small" />;
+      default:
+        return <Chip label={status} variant="light" size="small" />;
+    }
+  };
 
-  // -------------- Example Breadcrumbs -------------- //
+  // -------------- Breadcrumbs -------------- //
   const breadcrumbLinks = [
     { title: 'Home', to: APP_DEFAULT_PATH },
     { title: 'Billing', to: '/invoice/dashboard' },
@@ -137,14 +150,14 @@ export default function Details() {
           <Box sx={{ p: 2.5, pb: 0 }}>
             <MainCard content={false} border={false} sx={{ p: 1.25, bgcolor: 'secondary.lighter' }}>
               <Stack direction="row" justifyContent="flex-end" spacing={1}>
-                {/* Edit Button (if needed) */}
-                <IconButton onClick={() => navigate(`/apps/invoice/edit/${id}`)}>
+                {/* Edit Button */}
+                <IconButton onClick={() => navigate(`/invoice/edit/${id}`)}>
                   <Edit color={iconColor} />
                 </IconButton>
 
                 {/* Download PDF */}
                 {loading ? (
-                  <LoadingButton loading>X</LoadingButton>
+                  <LoadingButton loading />
                 ) : (
                   <PDFIconButton billing={billing} />
                 )}
@@ -162,43 +175,33 @@ export default function Details() {
             </MainCard>
           </Box>
 
-          {/* Main Billing Content */}
-          <Box sx={{ p: 2.5 }} id="print" ref={componentRef}>
+          {/* Main Billing Content (Ref for printing) */}
+          <Box sx={{ p: 2.5 }} ref={componentRef} id="print">
             <Grid container spacing={2.5}>
               {/* Header / Branding */}
               <Grid item xs={12}>
                 <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between">
                   <Stack spacing={0.5}>
-                    <Stack direction="row" spacing={2}>
+                    <Stack direction="row" spacing={2} alignItems="center">
                       <LogoSection />
-                      {/* Show paid or partial, etc. If needed, you can conditionally show a Chip: */}
-                      {billing?.paymentStatus === 'Paid' && (
-                        <Chip label="Paid" variant="light" color="success" size="small" />
-                      )}
-                      {billing?.paymentStatus === 'Partial' && (
-                        <Chip label="Partial" variant="light" color="warning" size="small" />
-                      )}
-                      {billing?.paymentStatus === 'Unpaid' && (
-                        <Chip label="Unpaid" variant="light" color="error" size="small" />
-                      )}
+                      {billing && getPaymentStatusChip(billing.paymentStatus)}
                     </Stack>
-
                     {/* Invoice Number */}
-                    <Typography color="secondary">
+                    <Typography color="secondary" variant="h6">
                       {loading ? <Skeleton width={80} /> : `#${billing?.invoiceNo}`}
                     </Typography>
                   </Stack>
 
                   {/* Dates */}
-                  <Box>
-                    <Stack direction="row" spacing={1} justifyContent="flex-end">
-                      <Typography variant="subtitle1">Date</Typography>
+                  <Box textAlign={{ xs: 'left', sm: 'right' }} mt={{ xs: 2, sm: 0 }}>
+                    <Stack direction="row" spacing={1} justifyContent={{ xs: 'flex-start', sm: 'flex-end' }}>
+                      <Typography variant="subtitle1">Date:</Typography>
                       <Typography color="secondary">
                         {loading ? <Skeleton width={60} /> : formattedInvoiceDate}
                       </Typography>
                     </Stack>
-                    <Stack direction="row" spacing={1} justifyContent="flex-end">
-                      <Typography variant="subtitle1">Expected Delivery</Typography>
+                    <Stack direction="row" spacing={1} justifyContent={{ xs: 'flex-start', sm: 'flex-end' }}>
+                      <Typography variant="subtitle1">Expected Delivery:</Typography>
                       <Typography color="secondary">
                         {loading ? <Skeleton width={60} /> : formattedExpectedDeliveryDate}
                       </Typography>
@@ -217,7 +220,10 @@ export default function Details() {
                     ) : (
                       <FormControl sx={{ width: '100%' }}>
                         <Typography color="secondary">{billing?.showroom}</Typography>
-                        {/* If you have additional "from" details or addresses, add them here */}
+                        <Typography variant="caption" color="text.secondary">
+                          Salesman: {billing?.salesmanName}{' '}
+                          {billing?.salesmanPhoneNumber ? `(${billing?.salesmanPhoneNumber})` : ''}
+                        </Typography>
                       </FormControl>
                     )}
                   </Stack>
@@ -232,7 +238,9 @@ export default function Details() {
                       <Skeleton />
                     ) : (
                       <FormControl sx={{ width: '100%' }}>
-                        <Typography color="secondary">{billing?.customerName}</Typography>
+                        <Typography color="secondary" fontWeight="bold">
+                          {billing?.customerName}
+                        </Typography>
                         <Typography color="secondary">{billing?.customerAddress}</Typography>
                         {billing?.customerContactNumber && (
                           <Typography color="secondary">{billing.customerContactNumber}</Typography>
@@ -245,116 +253,269 @@ export default function Details() {
 
               {/* Products Table */}
               <Grid item xs={12}>
-                <TableContainer>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>#</TableCell>
-                        <TableCell>Item Name</TableCell>
-                        <TableCell>Quantity</TableCell>
-                        <TableCell>Unit Price</TableCell>
-                        <TableCell>GST Rate</TableCell>
-                        <TableCell align="right">Amount</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {loading ? (
-                        [1, 2, 3].map((row) => (
-                          <TableRow key={row}>
-                            <TableCell>
-                              <Skeleton />
-                            </TableCell>
-                            <TableCell>
-                              <Skeleton />
-                            </TableCell>
-                            <TableCell>
-                              <Skeleton />
-                            </TableCell>
-                            <TableCell>
-                              <Skeleton />
-                            </TableCell>
-                            <TableCell>
-                              <Skeleton />
-                            </TableCell>
-                            <TableCell>
-                              <Skeleton />
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        (billing?.products || []).map((product, index) => {
-                          const amount =
-                            (product.sellingPrice || 0) * (product.quantity || 0);
-
-                          return (
-                            <TableRow key={product._id || index}>
-                              <TableCell>{index + 1}</TableCell>
-                              <TableCell>{product.name}</TableCell>
-                              <TableCell>{product.quantity}</TableCell>
-                              <TableCell>{product.sellingPrice}</TableCell>
-                              <TableCell>{product.gstRate}%</TableCell>
-                              <TableCell align="right">{amount.toFixed(2)}</TableCell>
+                <MainCard title="Product Details">
+                  <TableContainer>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>#</TableCell>
+                          <TableCell>Item Name</TableCell>
+                          <TableCell>Quantity</TableCell>
+                          <TableCell>Unit Price</TableCell>
+                          <TableCell>GST Rate</TableCell>
+                          <TableCell align="right">Amount</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {loading ? (
+                          [1, 2, 3].map((row) => (
+                            <TableRow key={row}>
+                              {[...Array(6).keys()].map((col) => (
+                                <TableCell key={col}>
+                                  <Skeleton />
+                                </TableCell>
+                              ))}
                             </TableRow>
-                          );
-                        })
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                          ))
+                        ) : (
+                          (billing?.products || []).map((product, index) => {
+                            const amount =
+                              (product.sellingPrice || 0) * (product.quantity || 0);
+                            return (
+                              <TableRow key={product._id || index}>
+                                <TableCell>{index + 1}</TableCell>
+                                <TableCell>
+                                  {product.name}
+                                  <Typography variant="caption" display="block">
+                                    {product.psRatio ? `PS Ratio: ${product.psRatio}` : ''}
+                                  </Typography>
+                                  {product.itemRemark && (
+                                    <Typography variant="caption" display="block" color="text.secondary">
+                                      Remark: {product.itemRemark}
+                                    </Typography>
+                                  )}
+                                </TableCell>
+                                <TableCell>{product.quantity}</TableCell>
+                                <TableCell>{product.sellingPrice}</TableCell>
+                                <TableCell>{product.gstRate}%</TableCell>
+                                <TableCell align="right">{amount.toFixed(2)}</TableCell>
+                              </TableRow>
+                            );
+                          })
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </MainCard>
               </Grid>
 
               {/* Totals & Summary */}
               <Grid item xs={12}>
                 <Divider sx={{ borderWidth: 1 }} />
               </Grid>
-
-              <Grid item xs={12} sm={6} md={8}></Grid>
+              <Grid item xs={12} sm={6} md={8} />
               <Grid item xs={12} sm={6} md={4}>
-                <Stack spacing={2}>
-                  <Stack direction="row" justifyContent="space-between">
-                    <Typography color={theme.palette.secondary.main}>Billing Amount:</Typography>
-                    <Typography>
-                      {loading ? <Skeleton width={80} /> : billing?.billingAmount?.toFixed(2)}
-                    </Typography>
+                <MainCard>
+                  <Stack spacing={1}>
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography color={theme.palette.secondary.main}>Billing Amount:</Typography>
+                      <Typography>
+                        {loading ? <Skeleton width={80} /> : billing?.billingAmount?.toFixed(2)}
+                      </Typography>
+                    </Stack>
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography color={theme.palette.secondary.main}>Discount:</Typography>
+                      <Typography sx={{ color: theme.palette.success.main }}>
+                        {loading ? <Skeleton width={50} /> : billing?.discount?.toFixed(2)}
+                      </Typography>
+                    </Stack>
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography color={theme.palette.secondary.main}>Grand Total:</Typography>
+                      <Typography>
+                        {loading ? <Skeleton width={60} /> : billing?.grandTotal?.toFixed(2)}
+                      </Typography>
+                    </Stack>
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography variant="subtitle1">Received:</Typography>
+                      <Typography variant="subtitle1">
+                        {loading ? <Skeleton width={100} /> : billing?.billingAmountReceived?.toFixed(2)}
+                      </Typography>
+                    </Stack>
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography color={theme.palette.secondary.main}>Payment Status:</Typography>
+                      <Typography>{billing?.paymentStatus}</Typography>
+                    </Stack>
                   </Stack>
-                  <Stack direction="row" justifyContent="space-between">
-                    <Typography color={theme.palette.secondary.main}>Discount:</Typography>
-                    <Typography variant="h6" color={theme.palette.success.main}>
-                      {loading ? <Skeleton width={50} /> : billing?.discount?.toFixed(2)}
-                    </Typography>
-                  </Stack>
-                  <Stack direction="row" justifyContent="space-between">
-                    <Typography color={theme.palette.secondary.main}>Grand Total:</Typography>
-                    <Typography>
-                      {loading ? <Skeleton width={60} /> : billing?.grandTotal?.toFixed(2)}
-                    </Typography>
-                  </Stack>
-                  <Stack direction="row" justifyContent="space-between">
-                    <Typography variant="subtitle1">Received:</Typography>
-                    <Typography variant="subtitle1">
-                      {loading ? (
-                        <Skeleton width={100} />
-                      ) : (
-                        billing?.billingAmountReceived?.toFixed(2)
-                      )}
-                    </Typography>
-                  </Stack>
-                  {/* Payment Status */}
-                  <Stack direction="row" justifyContent="space-between">
-                    <Typography color={theme.palette.secondary.main}>Payment Status:</Typography>
-                    <Typography>{billing?.paymentStatus}</Typography>
-                  </Stack>
-                </Stack>
+                </MainCard>
               </Grid>
 
-              {/* Additional Fields / Remarks */}
+              {/* Additional Fields */}
               <Grid item xs={12}>
                 <Stack direction="row" spacing={1}>
-                  <Typography color="secondary">Remarks: </Typography>
+                  <Typography color="secondary" variant="subtitle2">
+                    Remarks:
+                  </Typography>
                   <Typography>
                     {loading ? <Skeleton width="50%" /> : billing?.remark || 'No remarks.'}
                   </Typography>
                 </Stack>
+              </Grid>
+
+              {/* Delivery Section */}
+              <Grid item xs={12}>
+                <MainCard
+                  title="Delivery Information"
+                  secondary={
+                    <Button
+                      variant="text"
+                      onClick={() => setOpenDeliveryInfo((prev) => !prev)}
+                      size="small"
+                    >
+                      {openDeliveryInfo ? 'Hide' : 'Show'}
+                    </Button>
+                  }
+                >
+                  <Collapse in={openDeliveryInfo}>
+                    {loading ? (
+                      <Skeleton height={50} />
+                    ) : (
+                      (billing?.deliveries || []).length === 0 ? (
+                        <Typography variant="body2" color="text.secondary">
+                          No Delivery Records
+                        </Typography>
+                      ) : (
+                        (billing.deliveries || []).map((delivery, idx) => (
+                          <Card key={delivery.deliveryId || idx} sx={{ mb: 1 }}>
+                            <CardContent>
+                              <Typography variant="subtitle1" fontWeight="bold">
+                                Delivery #{idx + 1}: {delivery.deliveryStatus || 'Pending'}
+                              </Typography>
+                              <Stack spacing={0.5} sx={{ mt: 1 }}>
+                                <Typography variant="body2">Driver Name: {delivery.driverName || 'N/A'}</Typography>
+                                <Typography variant="body2">Vehicle: {delivery.vehicleNumber || 'N/A'}</Typography>
+                                <Typography variant="body2">KM Travelled: {delivery.kmTravelled || 0}</Typography>
+                                <Typography variant="body2">Fuel Charge: {delivery.fuelCharge || 0}</Typography>
+                                <Typography variant="body2">Method: {delivery.method || 'N/A'}</Typography>
+                              </Stack>
+
+                              {/* Delivered Products */}
+                              <Box mt={1}>
+                                <Typography variant="body2" fontWeight="bold">
+                                  Products Delivered:
+                                </Typography>
+                                {(delivery.productsDelivered || []).length === 0 ? (
+                                  <Typography variant="caption">None</Typography>
+                                ) : (
+                                  <List dense>
+                                    {delivery.productsDelivered.map((prod, pIdx) => (
+                                      <ListItem key={pIdx} disablePadding>
+                                        <ListItemText
+                                          primary={`${prod.item_id} - Delivered Qty: ${prod.deliveredQuantity}`}
+                                          secondary={prod.psRatio ? `PS Ratio: ${prod.psRatio}` : ''}
+                                        />
+                                      </ListItem>
+                                    ))}
+                                  </List>
+                                )}
+                              </Box>
+
+                              {/* Other Expenses for this delivery */}
+                              {delivery.otherExpenses && delivery.otherExpenses.length > 0 && (
+                                <Box mt={1}>
+                                  <Typography variant="body2" fontWeight="bold">
+                                    Other Expenses:
+                                  </Typography>
+                                  <List dense>
+                                    {delivery.otherExpenses.map((exp, eIdx) => (
+                                      <ListItem key={exp._id || eIdx} disablePadding>
+                                        <ListItemText
+                                          primary={`Amount: ${exp.amount || 0}`}
+                                          secondary={exp.remark ? `Remark: ${exp.remark}` : ''}
+                                        />
+                                      </ListItem>
+                                    ))}
+                                  </List>
+                                </Box>
+                              )}
+                            </CardContent>
+                          </Card>
+                        ))
+                      )
+                    )}
+                  </Collapse>
+                </MainCard>
+              </Grid>
+
+              {/* Payments Section */}
+              <Grid item xs={12}>
+                <MainCard
+                  title="Payment Details"
+                  secondary={
+                    <Button
+                      variant="text"
+                      onClick={() => setOpenPaymentInfo((prev) => !prev)}
+                      size="small"
+                    >
+                      {openPaymentInfo ? 'Hide' : 'Show'}
+                    </Button>
+                  }
+                >
+                  <Collapse in={openPaymentInfo}>
+                    {loading ? (
+                      <Skeleton height={50} />
+                    ) : (
+                      (billing?.payments || []).length === 0 ? (
+                        <Typography variant="body2" color="text.secondary">
+                          No Payment Records
+                        </Typography>
+                      ) : (
+                        <TableContainer>
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow>
+                                <TableCell>Date</TableCell>
+                                <TableCell>Amount</TableCell>
+                                <TableCell>Method</TableCell>
+                                <TableCell>Reference ID</TableCell>
+                                <TableCell>Remark</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {billing?.payments.map((payment, idx) => (
+                                <TableRow key={idx}>
+                                  <TableCell>
+                                    {new Date(payment.date).toLocaleDateString('en-GB')}
+                                  </TableCell>
+                                  <TableCell>{payment.amount}</TableCell>
+                                  <TableCell>{payment.method}</TableCell>
+                                  <TableCell>{payment.referenceId}</TableCell>
+                                  <TableCell>{payment.remark || '--'}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      )
+                    )}
+                  </Collapse>
+                </MainCard>
+              </Grid>
+
+              {/* Additional Info (Approvals, Marketing, etc.) */}
+              <Grid item xs={12}>
+                <MainCard title="Additional Info">
+                  {loading ? (
+                    <Skeleton height={50} />
+                  ) : (
+                    <Stack spacing={1}>
+                      <Typography variant="body2">Approved: {billing?.isApproved ? 'Yes' : 'No'}</Typography>
+                      <Typography variant="body2">Approved By: {billing?.approvedBy || 'N/A'}</Typography>
+                      <Typography variant="body2">Marketed By: {billing?.marketedBy || 'N/A'}</Typography>
+                      <Typography variant="body2">Needed to Purchase: {billing?.neededToPurchase ? 'Yes' : 'No'}</Typography>
+                      <Typography variant="body2">Delivery Status: {billing?.deliveryStatus}</Typography>
+                    </Stack>
+                  )}
+                </MainCard>
               </Grid>
             </Grid>
           </Box>
@@ -364,18 +525,18 @@ export default function Details() {
             direction="row"
             justifyContent="flex-end"
             spacing={2}
-            sx={{ p: 2.5, a: { textDecoration: 'none', color: 'inherit' } }}
+            sx={{ p: 2.5 }}
           >
             <PDFDownloadLink
               document={<ExportPDFView billing={billing} />}
               fileName={`${billing?.invoiceNo}-${billing?.customerName}.pdf`}
+              style={{ textDecoration: 'none' }}
             >
               <LoadingButton
                 loading={loading}
                 color="primary"
                 variant="outlined"
                 loadingPosition="center"
-                sx={{ color: 'secondary.lighter' }}
               >
                 Download PDF
               </LoadingButton>

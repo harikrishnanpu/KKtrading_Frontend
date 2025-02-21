@@ -223,7 +223,7 @@ const TransportPaymentEdit = () => {
         // Optionally, redirect to the transport payments list after a delay
         setTimeout(() => {
           setSuccessMessage('');
-          navigate('/transport-payments'); // Adjust the path as needed
+          navigate('/transport/account'); // Adjust the path as needed
         }, 2000);
       } else {
         setError('Failed to update transport payment record. Please try again.');
@@ -325,13 +325,6 @@ const TransportPaymentEdit = () => {
   return (
     <div className="container mx-auto p-6">
       {/* Header */}
-      <div className="flex items-center justify-between bg-gradient-to-l from-gray-200 via-gray-100 to-gray-50 shadow-md p-5 rounded-lg mb-4 relative">
-        <div onClick={() => navigate('/transport-payments')} className="text-center cursor-pointer">
-          <h2 className="text-md font-bold text-red-600">KK TRADING</h2>
-          <p className="text-gray-400 text-xs font-bold">Edit Transport Payment</p>
-        </div>
-        <i className="fa fa-edit text-gray-500" />
-      </div>
 
       {/* Error Message */}
       {error && (

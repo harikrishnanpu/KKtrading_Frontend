@@ -11,25 +11,14 @@ const LowStockPreview = ({ driverPage, adminPage }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    const storedProducts = localStorage.getItem('lowStockProducts');
-    const storedBillings = localStorage.getItem('expectedBillings');
-
-    if (storedProducts && storedBillings) {
-      setProducts(JSON.parse(storedProducts));
-      setBillings(JSON.parse(storedBillings));
-      setLoading(false);
-    }
 
     const fetchExpectedDeliveryBillings = async () => {
       try {
-        const lowstock = await api.get('/api/products/items/low-stock-limited');
+        const lowstock = await api.get('/api/products/items/need-to-purchase');
         const exdelivery = await api.get('/api/billing/deliveries/expected-delivery');
 
         setProducts(lowstock.data);
         setBillings(exdelivery.data);
-
-        localStorage.setItem('lowStockProducts', JSON.stringify(lowstock.data));
-        localStorage.setItem('expectedBillings', JSON.stringify(exdelivery.data));
 
         setLoading(false);
       } catch (err) {
@@ -69,7 +58,7 @@ const LowStockPreview = ({ driverPage, adminPage }) => {
           {!driverPage && (
             <div className="border border-gray-200 rounded-lg p-4">
               <h3 className="text-sm font-semibold mb-4 text-gray-700 flex items-center">
-                <i className="fa fa-cube mr-2 text-blue-800"></i> Low Stock Products
+                <i className="fa fa-cube mr-2 text-blue-800"></i> Need To Purchase Products
               </h3>
               {[1, 2, 3].map((item) => (
                 <div key={item} className="flex items-center animate-pulse p-3 border-b border-gray-200">
@@ -112,26 +101,26 @@ const LowStockPreview = ({ driverPage, adminPage }) => {
 
   return (
     <div className="p-6 shadow-sm border border-gray-300 rounded-lg bg-white mb-10 mx-auto">
-      {!driverPage && <p className="text-sm font-bold mb-4 text-gray-600 text-center">Low Stock & Deliveries</p>}
+      {!driverPage && <p className="text-sm font-bold mb-4 text-gray-600 text-center">Need To Purchase & Deliveries</p>}
 
       <div className={`grid ${driverPage || adminPage ? 'md:grid-cols-1' : 'md:grid-cols-2'} gap-6`}>
         {!driverPage && (
           <div className="border border-gray-200 rounded-lg p-4">
             <h3 className="text-sm font-semibold mb-4 text-gray-700 flex items-center">
-              <i className="fa fa-cube mr-2 text-blue-800"></i> Low Stock Products
+              <i className="fa fa-cube mr-2 text-blue-800"></i> Need To Purchase Products
             </h3>
             {filteredProducts.length === 0 ? (
               <p className="text-sm text-gray-400 text-center">No Products Found</p>
             ) : (
               filteredProducts.map((product) => (
                 <div
-                  onClick={() => navigate(`/products/${product.item_id}`)}
+                  onClick={() => navigate(`/invoice/need-to-purchase`)}
                   key={product.item_id}
                   className="flex cursor-pointer hover:bg-gray-100 rounded-md justify-between items-center p-3 border-b border-gray-200"
                 >
                   <div className="space-y-1">
                     <p className="text-xs font-bold text-gray-600">{product.name.slice(0, 20)}...</p>
-                    <p className="text-xs text-red-500">In Stock: {product.countInStock}</p>
+                    <p className="text-xs text-red-500">Needed: {product.quantityNeeded} Nos</p>
                     <p className="text-xs text-gray-500">Item ID: {product.item_id}</p>
                   </div>
                   {product.countInStock < 5 && (
@@ -142,7 +131,7 @@ const LowStockPreview = ({ driverPage, adminPage }) => {
                 </div>
               ))
             )}
-            <Link to="/low-stock" className="block text-xs mt-4 text-center text-blue-500 font-bold hover:underline">
+            <Link to="/invoice/need-to-purchase" className="block text-xs mt-4 text-center text-blue-500 font-bold hover:underline">
               View More
             </Link>
           </div>
@@ -185,7 +174,7 @@ const LowStockPreview = ({ driverPage, adminPage }) => {
                 </div>
               ))
             )}
-            <Link to="/low-stock" className="block mt-4 text-xs text-center text-blue-500 font-bold hover:underline">
+            <Link to="/products/upcomming/lowstock" className="block mt-4 text-xs text-center text-blue-500 font-bold hover:underline">
               View Upcoming Deliveries
             </Link>
           </div>

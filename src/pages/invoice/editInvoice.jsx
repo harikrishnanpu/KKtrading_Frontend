@@ -89,10 +89,10 @@ export default function EditBillScreen() {
   const [outofStockProduct, setOutofstockProduct] = useState(null);
   const [displaysellingPrice, setDisplaysellingPrice] = useState('');
   const [fetchItemPrice, setFetchItemPrice] = useState('');
-    const [itemRemark, setItemRemark] = useState('');
-      const [showSuggestionsSidebar, setShowSuggestionsSidebar] = useState(false);
-        const [neededToPurchase, setNeededToPurchase] = useState(false);
-        const [isApproved, setIsApproved] = useState(false);
+  const [itemRemark, setItemRemark] = useState('');
+  const [showSuggestionsSidebar, setShowSuggestionsSidebar] = useState(false);
+  const [neededToPurchase, setNeededToPurchase] = useState(false);
+  const [isApproved, setIsApproved] = useState(false);
     
   
 
@@ -360,6 +360,8 @@ const [printOptions, setPrintOptions] = useState({
         setshowRoom(data.showroom);
         setRoundOff(data.roundOff);
         setRemark(data.remark);
+        setIsApproved(data.isApproved);
+        setNeededToPurchase(data.neededToPurchase);
 
         console.log(data.products);
         // Convert product numeric fields
@@ -784,6 +786,7 @@ const billingData = {
   transportation,
   handlingCharge, // shorthand for handlingCharge: handlingCharge
   isApproved,     // shorthand for isApproved: isApproved
+  neededToPurchase,
   remark,
   discount,
   products: products.map((p) => {

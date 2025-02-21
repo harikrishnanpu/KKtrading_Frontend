@@ -23,7 +23,7 @@ import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
 import MainCard from 'components/MainCard';
 import BillingCard from './components/mobileviewCard';
-import NeededToPurchaseDialog from './neededtoPurchase';
+import NeededToPurchaseDialog from './components/neededtoPurchase';
 
 // =============================================================================
 // Transition Component for Dialog (Slide Up Animation)
@@ -317,11 +317,14 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
         const billingAmount = parseFloat(b.billingAmount) || 0;
         const received = parseFloat(b.billingAmountReceived) || 0;
         const pending = billingAmount - received;
-
+  
         acc.totalInvoices += 1;
-        acc.totalRevenue += billingAmount;
+        acc.totalRevenue += profit.totalRevenue;
         acc.totalProfit += profit.totalProfit;
         acc.totalCost += profit.totalCost;
+        // Accumulate total other expenses and fuel charges
+        acc.totalOtherExpense += profit.totalOtherExpense;
+        acc.totalFuelCharge += profit.totalFuelExpenese;
         if (b.paymentStatus !== 'Paid') {
           acc.totalPending += pending;
         }
@@ -332,10 +335,13 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
         totalRevenue: 0,
         totalProfit: 0,
         totalCost: 0,
+        totalOtherExpense: 0,
+        totalFuelCharge: 0,
         totalPending: 0,
       }
     );
   }, [filteredBillings]);
+  
 
   // ---------------------------------------------------------------------------
   // Event Handlers for Admin Actions and Modal Controls
@@ -728,8 +734,8 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
               whileHover={{ scale: 1.02 }}
             >
               <p className="text-xs font-bold text-purple-600">Total Profit</p>
-              <p className="text-xs text-gray-500">
-                Margin: {stats.totalCost > 0 ? ((stats.totalRevenue - stats.totalFuelExpenese - stats.totalOtherExpense - stats.totalCost) / stats.totalRevenue * 100).toFixed(2) : '0.00'}%
+              <p className={`text-xs text-gray-500 ${((stats.totalRevenue - stats.totalFuelCharge - stats.totalOtherExpense - stats.totalCost) / stats.totalRevenue * 100).toFixed(2) > 0 ? 'text-green-500' : 'text-red-500'}`}>
+              Margin: {stats.totalRevenue > 0 ? `${((stats.totalRevenue - stats.totalFuelCharge - stats.totalOtherExpense - stats.totalCost) / stats.totalRevenue * 100).toFixed(2)}%`  : ( '0.00%' )}
               </p>
               <p className="text-sm font-bold text-gray-700">
                 ₹{stats.totalProfit.toLocaleString()}
@@ -1032,7 +1038,7 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
                             </button>
                           )}
 
-{userInfo.isAdmin && (
+{userInfo.isAdmin && billing.neededToPurchase && (
     <button
       onClick={() => handleNeedPurchase(billing)}
       className="bg-blue-500 hover:bg-blue-600 text-white px-2 font-bold py-1 rounded flex items-center"

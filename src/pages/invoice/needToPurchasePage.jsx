@@ -62,6 +62,7 @@ const NeedToPurchaseList = () => {
         invoiceNo: billing.invoiceNo,
         invoiceDate: billing.invoiceDate,
         billingId: billing._id,
+        customer: billing.customerName
       }));
     });
   }, [billings]);
@@ -88,6 +89,8 @@ const NeedToPurchaseList = () => {
           <thead className="bg-red-600 text-white">
             <tr>
               <th className="px-4 py-2">Invoice No</th>
+              <th className="px-4 py-2">Customer</th>
+              <th className="px-4 py-2">ItemId</th>
               <th className="px-4 py-2">Product Image</th>
               <th className="px-4 py-2">Product Name</th>
               <th className="px-4 py-2">Ordered Qty</th>
@@ -107,6 +110,9 @@ const NeedToPurchaseList = () => {
                   >
                     {item.invoiceNo}
                   </td>
+                  <td className="px-4 py-2">{item.customer}</td>
+                  <td className="px-4 py-2">{item.item_id}</td>
+
                   <td className="px-4 py-2">
   {product.image.length > 10 ? (
     <img
