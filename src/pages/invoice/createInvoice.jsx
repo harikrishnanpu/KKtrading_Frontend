@@ -867,7 +867,7 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
       transportation,
       handlingCharge: handlingcharge, // shorthand for handlingCharge: handlingCharge
       isApproved,     // shorthand for isApproved: isApproved
-      neededToPurchase,
+      isneededToPurchase : neededToPurchase,
       remark,
       discount,
       products: products.map((p) => {

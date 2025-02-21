@@ -786,7 +786,7 @@ const billingData = {
   transportation,
   handlingCharge, // shorthand for handlingCharge: handlingCharge
   isApproved,     // shorthand for isApproved: isApproved
-  neededToPurchase,
+ isneededToPurchase: neededToPurchase,
   remark,
   discount,
   products: products.map((p) => {
