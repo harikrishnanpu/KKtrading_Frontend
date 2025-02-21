@@ -22,6 +22,7 @@ import {
   Button
 } from '@mui/material';
 import ItemSuggestionsSidebar from 'components/products/itemSuggestionSidebar';
+import { isMobile } from 'react-device-detect';
 
 
 
@@ -367,7 +368,7 @@ const [printOptions, setPrintOptions] = useState({
         const lastCustomerNumber =
           parseInt(data.lastCustomerId.slice(3), 10) || 0; // Extract the number part after "CUS"
         const nextCustomer =
-          'CUS' + (lastCustomerNumber + 1).toString().padStart(3, '0'); // Ensures at least three digits
+          'CUS' + (lastCustomerNumber + 1).toString().padStart(3, '0') + Date.now().toString().slice(5,10); // Ensures at least three digits
 
         console.log({ nextInvoiceNo, nextCustomer });
 
@@ -1320,6 +1321,7 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
                 onKeyDown={(e) => changeRef(e, customerNameRef)}
                 className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
                 placeholder="Enter Invoice No"
+                readOnly={!userInfo.isAdmin}
               />
             </div>
             <div className="mb-4">
@@ -1366,7 +1368,7 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
                             'CUS00' +
                             parseInt(
                               parseInt(data.lastCustomerId.slice(3), 10) + 1
-                            );
+                            ) + Date.now().toString().slice(0,10);
                           setCustomerId(nextCustomer);
                         };
                         generatecustomerid();
@@ -2806,7 +2808,7 @@ const netTotal = rateWithoutGST + gstAmount;
 </Dialog>
 
 
-{showSuggestionsSidebar && suggestions.length > 0 && (
+{showSuggestionsSidebar && suggestions.length > 0 && !isMobile && (
   <ItemSuggestionsSidebar
     open={showSuggestionsSidebar}
     suggestions={suggestions}

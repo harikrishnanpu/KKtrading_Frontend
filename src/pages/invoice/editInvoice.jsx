@@ -20,6 +20,7 @@ import {
   Button
 } from '@mui/material';
 import ItemSuggestionsSidebar from 'components/products/itemSuggestionSidebar';
+import { isMobile } from 'react-device-detect';
 
 
 const Transition = forwardRef(function Transition(props, ref) {
@@ -361,7 +362,7 @@ const [printOptions, setPrintOptions] = useState({
         setRoundOff(data.roundOff);
         setRemark(data.remark);
         setIsApproved(data.isApproved);
-        setNeededToPurchase(data.neededToPurchase);
+        setNeededToPurchase(data.isneededToPurchase);
 
         console.log(data.products);
         // Convert product numeric fields
@@ -837,7 +838,7 @@ const netTotal = rateWithoutGST + gstAmount;
 
       setTimeout(() => {
           setShowSuccessModal(false);
-          navigate('/dashboard/default/');
+          navigate('/invoice/list/');
       }, 2000);
     } catch (error) {
       console.error('Error submitting billing data:', error?.message);
@@ -1255,7 +1256,7 @@ const netTotal = rateWithoutGST + gstAmount;
                             10
                           );
                           const nextCustomer =
-                            'CUS' + (lastCustomerNumber + 1).toString().padStart(3, '0');
+                            'CUS' + (lastCustomerNumber + 1).toString().padStart(3, '0') + Date.now().toString().slice(5,10);
                           setCustomerId(nextCustomer);
                         };
                         generatecustomerid();
@@ -2727,7 +2728,7 @@ const netTotal = rateWithoutGST + gstAmount;
 
 
 
-{showSuggestionsSidebar && suggestions.length > 0 && (
+{showSuggestionsSidebar && suggestions.length > 0 && !isMobile && (
   <ItemSuggestionsSidebar
     open={showSuggestionsSidebar}
     suggestions={suggestions}

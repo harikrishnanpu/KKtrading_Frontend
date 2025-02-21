@@ -197,7 +197,7 @@ export default function CustomerAccountForm() {
         // Optionally, navigate to another page after a delay
         setTimeout(() => {
           setShowSuccessMessage('');
-          navigate('/dashboard/default/');
+          navigate('/customer/account/');
 
         }, 2000);
       } else {
@@ -487,14 +487,14 @@ export default function CustomerAccountForm() {
 
       {/* Success Message */}
       {showSuccessMessage && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded shadow-md">
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded shadow-md">
           {showSuccessMessage}
         </div>
       )}
 
       {/* Error Message */}
       {showErrorMessage && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded shadow-md">
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded shadow-md">
           {showErrorMessage}
         </div>
       )}

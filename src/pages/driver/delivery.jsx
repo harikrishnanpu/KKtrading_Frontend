@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import LowStockPreview from "components/driver/lowstock";
 import api from "../api";
 import DeliverySuccess from "components/driver/deliverysuccess";
 import DeliveredProducts from "components/driver/deliveredProducts";
@@ -94,12 +93,16 @@ const DriverBillingPage = () => {
   //    assignedBills, deliveryStarted, driverName changes
   // --------------------------------------------------
   useEffect(() => {
-    if(assignedBills.length > 0) {
-    localStorage.setItem("assignedBills", JSON.stringify(assignedBills));
-    localStorage.setItem("deliveryStarted", deliveryStarted.toString());
-    localStorage.setItem("driverName", driverName);
+    if (assignedBills.length > 0) {
+      localStorage.setItem("assignedBills", JSON.stringify(assignedBills));
+      localStorage.setItem("deliveryStarted", deliveryStarted.toString());
+      localStorage.setItem("driverName", driverName);
+    } else {
+      localStorage.removeItem("assignedBills");
+      localStorage.removeItem("deliveryStarted");
     }
   }, [assignedBills, deliveryStarted, driverName]);
+  
 
   // --------------------------------------------------
   // 4. Fetch invoice suggestions based on invoiceNo input
@@ -131,7 +134,7 @@ const DriverBillingPage = () => {
   const fetchMyDeliveries = async () => {
     if (!driverName || !userInfo?._id) return;
     try {
-      setIsLoading(true);
+
       const params = new URLSearchParams();
       params.append("driverName", driverName);
       if (searchInvoiceNo) {

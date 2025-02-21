@@ -118,25 +118,33 @@ const handleNeedPurchase = (billing) => {
   // Data Fetching: Billings and Products
   // ---------------------------------------------------------------------------
   useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+  
     const fetchData = async () => {
-      setLoading(true);
       try {
-        // Fetch both billing and product data concurrently
         const [billingRes, productRes] = await Promise.all([
           api.get('/api/billing'),
           api.get('/api/products/product/all'),
         ]);
-        setBillings(billingRes.data);
-        setProducts(productRes.data);
+        if (isMounted) {
+          setBillings(billingRes.data);
+          setProducts(productRes.data);
+        }
       } catch (err) {
-        setError('Failed to fetch data');
-        console.error(err);
+        if (isMounted) setError('Failed to fetch data');
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
+  
     fetchData();
+  
+    return () => {
+      isMounted = false;
+    };
   }, []);
+  
 
   // ---------------------------------------------------------------------------
   // Build a mapping for product details (keyed by item_id)
@@ -941,7 +949,13 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="hover:bg-gray-100 divide-y divide-x"
+                      className={`hover:bg-gray-100 divide-y divide-x ${
+                        billing.isneededToPurchase &&
+                        billing.neededToPurchase.length > 0 &&
+                        billing.neededToPurchase.every(item => item.purchased && item.verified)  ? 'bg-green-100' : 
+                        billing.isneededToPurchase && 
+                        billing.neededToPurchase.length > 0 &&
+                        billing.neededToPurchase.some(item => !item.purchased || !item.verified) ? 'bg-red-100' : ''}`}
                     >
                       <td className="px-4 py-2 text-center">
                         <StatusIndicator billing={billing} />
@@ -1038,12 +1052,12 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
                             </button>
                           )}
 
-{userInfo.isAdmin && billing.neededToPurchase && (
+{userInfo.isAdmin && billing.isneededToPurchase && (
     <button
       onClick={() => handleNeedPurchase(billing)}
       className="bg-blue-500 hover:bg-blue-600 text-white px-2 font-bold py-1 rounded flex items-center"
     >
-      Need Purchase
+    Purchase
     </button>
   )}
                         </div>

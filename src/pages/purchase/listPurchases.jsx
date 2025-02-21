@@ -1185,48 +1185,6 @@ const PurchaseList = () => {
                   </span>
                 </p>
                 <p className="text-xs mb-1">
-                  Amount Without GST (Transport):{' '}
-                  <span className="text-gray-600">
-                    ₹{(parseFloat(selectedPurchase.totals.amountWithoutGSTTransport) || 0).toFixed(2)}
-                  </span>
-                </p>
-                <p className="text-xs mb-1">
-                  GST Amount (Transport):{' '}
-                  <span className="text-gray-600">
-                    ₹{(parseFloat(selectedPurchase.totals.gstAmountTransport) || 0).toFixed(2)}
-                  </span>
-                </p>
-                <p className="text-xs mb-1">
-                  CGST (Transport):{' '}
-                  <span className="text-gray-600">
-                    ₹{(parseFloat(selectedPurchase.totals.cgstTransport) || 0).toFixed(2)}
-                  </span>
-                </p>
-                <p className="text-xs mb-1">
-                  SGST (Transport):{' '}
-                  <span className="text-gray-600">
-                    ₹{(parseFloat(selectedPurchase.totals.sgstTransport) || 0).toFixed(2)}
-                  </span>
-                </p>
-                <p className="text-xs mb-1">
-                  Unloading Charge:{' '}
-                  <span className="text-gray-600">
-                    ₹{(parseFloat(selectedPurchase.totals.unloadingCharge) || 0).toFixed(2)}
-                  </span>
-                </p>
-                <p className="text-xs mb-1">
-                  Insurance:{' '}
-                  <span className="text-gray-600">
-                    ₹{(parseFloat(selectedPurchase.totals.insurance) || 0).toFixed(2)}
-                  </span>
-                </p>
-                <p className="text-xs mb-1">
-                  Damage Price:{' '}
-                  <span className="text-gray-600">
-                    ₹{(parseFloat(selectedPurchase.totals.damagePrice) || 0).toFixed(2)}
-                  </span>
-                </p>
-                <p className="text-xs mb-1">
                   Total Other Expenses:{' '}
                   <span className="text-gray-600">
                     ₹{(parseFloat(selectedPurchase.totals.totalOtherExpenses) || 0).toFixed(2)}
