@@ -1,0 +1,14 @@
+/* Remove default focus outline for all elements */
+*:focus {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  
+
+  /* Remove focus outline from MUI buttons */
+.MuiButton-root:focus {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+  

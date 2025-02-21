@@ -84,14 +84,17 @@ export default function Toolbar({ date, view, onClickNext, onClickPrev, onClickT
             const Icon = viewOption.icon;
             return (
               <Tooltip title={viewOption.label} key={viewOption.value}>
-                <Button
-                  size={matchDownSM ? 'small' : 'large'}
-                  disableElevation
-                  variant={viewOption.value === view ? 'contained' : 'outlined'}
-                  onClick={() => onChangeView(viewOption.value)}
-                >
-                  <Icon variant={viewOption.value === view ? 'Bold' : 'Linear'} />
-                </Button>
+<Button
+  size={matchDownSM ? 'small' : 'large'}
+  disableElevation
+  className={`px-4 py-2 rounded ${
+    viewOption.value === view ? 'bg-red-600 text-white' : 'bg-transparent border border-gray-300 text-gray-700 hover:bg-gray-100'
+  }`}
+  onClick={() => onChangeView(viewOption.value)}
+>
+  <Icon variant={viewOption.value === view ? 'Bold' : 'Linear'} />
+</Button>
+
               </Tooltip>
             );
           })}

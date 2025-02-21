@@ -132,6 +132,8 @@ const AccountTabSettings = Loadable(lazy(() => import('sections/apps/profiles/ac
 
 const AllLogs = Loadable(lazy(() => import('pages/admin/allLogs')));
 
+const LeaveApplication = Loadable(lazy(() => import('pages/user/leaveApplication')));
+
 
 // ==============================|| MAIN ROUTES ||============================== //
 
@@ -514,6 +516,10 @@ const MainRoutes = {
         {
           path: 'allusers',
           element: <AllUsers />
+        },
+        {
+          path: 'leave',
+          element: <LeaveApplication />
         },
         {
           path: 'alllogs',
