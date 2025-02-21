@@ -279,7 +279,7 @@ export default function ProfileTabsPage() {
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <Stack spacing={2.5} alignItems="center" mt={2}>
-                  <Avatar alt={name || 'User Avatar'} size="xl" src={avatar || defaultImages} />
+                  <Avatar alt={name || 'User Avatar'} size="xl" src={avatar} />
                   <Stack spacing={0.5} alignItems="center">
                     <Typography variant="h5">{name}</Typography>
                     <Typography color="secondary">{role || 'No Role'}</Typography>
@@ -454,7 +454,7 @@ export default function ProfileTabsPage() {
         <TabPanel value={value} index={4}>
           <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
             <Typography variant="h5">Your Leaves</Typography>
-            <Button variant="contained" color="error" onClick={openAddDialog}>
+            <Button variant="outlined" color="error" onClick={openAddDialog}>
               Add Leave
             </Button>
           </Stack>
@@ -589,7 +589,7 @@ export default function ProfileTabsPage() {
           />
           <TextField
             label="Start Date"
-            type="date"
+            type="datetime-local"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
             variant="outlined"
@@ -600,7 +600,7 @@ export default function ProfileTabsPage() {
           />
           <TextField
             label="End Date"
-            type="date"
+            type="datetime-local"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
             variant="outlined"
@@ -614,7 +614,7 @@ export default function ProfileTabsPage() {
           <Button onClick={closeDialog} color="inherit">
             Cancel
           </Button>
-          <Button variant="contained" color="error" onClick={handleSubmitLeave}>
+          <Button variant="outlined" color="error" onClick={handleSubmitLeave}>
             {dialogMode === 'add' ? 'Submit' : 'Save Changes'}
           </Button>
         </DialogActions>
