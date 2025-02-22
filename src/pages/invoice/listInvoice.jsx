@@ -1057,7 +1057,7 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
       onClick={() => handleNeedPurchase(billing)}
       className="bg-blue-500 hover:bg-blue-600 text-white px-2 font-bold py-1 rounded flex items-center"
     >
-    Purchase
+      purchase
     </button>
   )}
                         </div>

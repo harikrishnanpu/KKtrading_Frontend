@@ -99,6 +99,7 @@ export default function BillingScreen() {
   const [displaysellingPrice, setDisplaysellingPrice] = useState('');
   const [neededToPurchase, setNeededToPurchase] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
+  const [fetchInvoiceNo, setFetchInvoiceNo] = useState(false);
 
 
 

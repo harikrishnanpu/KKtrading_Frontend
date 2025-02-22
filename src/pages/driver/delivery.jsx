@@ -17,6 +17,12 @@ import {
 } from "@mui/material";
 import LoadingModal from "components/LoadingModal";
 import { FaSync } from "react-icons/fa";
+import Slide from '@mui/material/Slide';
+
+const Transition = React.forwardRef(function Transition(props, ref) {
+  return <Slide direction="up" ref={ref} {...props} />;
+});
+
 
 const DriverBillingPage = () => {
   const [invoiceNo, setInvoiceNo] = useState("");
@@ -93,15 +99,11 @@ const DriverBillingPage = () => {
   //    assignedBills, deliveryStarted, driverName changes
   // --------------------------------------------------
   useEffect(() => {
-    if (assignedBills.length > 0) {
       localStorage.setItem("assignedBills", JSON.stringify(assignedBills));
       localStorage.setItem("deliveryStarted", deliveryStarted.toString());
       localStorage.setItem("driverName", driverName);
-    } else {
-      localStorage.removeItem("assignedBills");
-      localStorage.removeItem("deliveryStarted");
-    }
   }, [assignedBills, deliveryStarted, driverName]);
+  
   
 
   // --------------------------------------------------
@@ -188,7 +190,7 @@ const DriverBillingPage = () => {
         // Initialize deliveredProducts with default values based on ordered quantity
         const deliveredProducts = billingData.products.map((product) => {
           const previousDeliveredQuantity = product.deliveredQuantity || 0;
-          const pendingQuantity = product.quantity - previousDeliveredQuantity;
+          const pendingQuantity = (product.quantity - previousDeliveredQuantity).toFixed(2);
           return {
             item_id: product.item_id,
             deliveredQuantity: pendingQuantity,
@@ -342,31 +344,36 @@ const DriverBillingPage = () => {
   // --------------------------------------------------
   // 10. Delivered Quantity Change Handler
   // --------------------------------------------------
-  const handleDeliveredQuantityChange = (billIndex, productId, totalDelivered) => {
-    const parsedQuantity = parseInt(totalDelivered, 10) || 0;
-    setAssignedBills((prevBills) => {
-      const updatedBills = [...prevBills];
-      const bill = updatedBills[billIndex];
-      const productIndex = bill.deliveredProducts.findIndex((p) => p.item_id === productId);
-      if (productIndex >= 0) {
-        const deliveredProduct = bill.deliveredProducts[productIndex];
-        const newDeliveredQuantity = Math.min(parsedQuantity, deliveredProduct.quantity);
-        deliveredProduct.deliveredQuantity = newDeliveredQuantity;
+// 10. Delivered Quantity Change Handler
+const handleDeliveredQuantityChange = (billIndex, productId, totalDelivered) => {
+  // Use parseFloat to preserve decimal values
+  const deliveredValue = parseFloat(totalDelivered) || 0;
+  setAssignedBills((prevBills) => {
+    const updatedBills = [...prevBills];
+    const bill = updatedBills[billIndex];
+    const productIndex = bill.deliveredProducts.findIndex((p) => p.item_id === productId);
+    if (productIndex >= 0) {
+      const deliveredProduct = bill.deliveredProducts[productIndex];
+      // Ensure delivered value does not exceed the ordered quantity
+      const newDeliveredQuantity = Math.min(deliveredValue, deliveredProduct.quantity);
+      deliveredProduct.deliveredQuantity = newDeliveredQuantity;
 
-        if (newDeliveredQuantity === deliveredProduct.quantity) {
-          deliveredProduct.isDelivered = true;
-          deliveredProduct.isPartiallyDelivered = false;
-        } else if (newDeliveredQuantity > 0) {
-          deliveredProduct.isDelivered = false;
-          deliveredProduct.isPartiallyDelivered = true;
-        } else {
-          deliveredProduct.isDelivered = false;
-          deliveredProduct.isPartiallyDelivered = false;
-        }
+      // Use a small tolerance in comparison if needed for floating point precision
+      if (Math.abs(newDeliveredQuantity - deliveredProduct.quantity) < 0.001) {
+        deliveredProduct.isDelivered = true;
+        deliveredProduct.isPartiallyDelivered = false;
+      } else if (newDeliveredQuantity > 0) {
+        deliveredProduct.isDelivered = false;
+        deliveredProduct.isPartiallyDelivered = true;
+      } else {
+        deliveredProduct.isDelivered = false;
+        deliveredProduct.isPartiallyDelivered = false;
       }
-      return updatedBills;
-    });
-  };
+    }
+    return updatedBills;
+  });
+};
+
 
   // --------------------------------------------------
   // 11. Handle Payment Submit
@@ -874,7 +881,18 @@ const DriverBillingPage = () => {
               ---------------------------------------------- */}
           {((deliveryStarted && assignedBills.length > 0) || activeSection === "inProgress") && (
             <div>
-              <p className="font-bold text-sm mb-6 text-gray-600">{assignedBills.length > 0 ? 'Currently Assigned Invoices' : 'Refresh Page'}</p>
+              <p className="font-bold text-center text-sm mb-6 text-gray-600">{assignedBills.length > 0 ? 'Currently Assigned Invoices' : `Refresh Page`} 
+{!assignedBills.length > 0 &&
+              <IconButton
+                  color="primary"
+                  size="small"
+                  onClick={()=> window.location.reload()}
+                  title="Refresh"
+                >
+                  <FaSync />
+                </IconButton> }
+
+              </p>
               {assignedBills.map((bill, billIndex) => (
                 <div
                   key={bill.invoiceNo}
@@ -1074,23 +1092,36 @@ const DriverBillingPage = () => {
 
                           {/* Submit Delivery Modal */}
                           <Dialog
-                            open={bill.showModal}
-                            onClose={() =>
-                              setAssignedBills((prevBills) => {
-                                const updatedBills = [...prevBills];
-                                updatedBills[billIndex].showModal = false;
-                                return updatedBills;
-                              })
-                            }
-                            fullWidth
-                            maxWidth="sm"
-                            fullScreen={fullScreen}
-                          >
+  open={bill.showModal}
+  onClose={() =>
+    setAssignedBills((prevBills) => {
+      const updatedBills = [...prevBills];
+      updatedBills[billIndex].showModal = false;
+      return updatedBills;
+    })
+  }
+  fullWidth
+  maxWidth="sm"
+  TransitionComponent={Transition}
+  PaperProps={{
+    sx: {
+      bottom: -40,
+      left: 0,
+      right: 0,
+      borderRadius: "16px 16px 16px 16px", // Rounded top corners
+      // maxHeight: "30vh", // Keep it compact
+      padding: 2,
+      maxHeight: "90vh"
+    },
+  }}
+>
+
                             {bill.modalStep === 1 && (
                               <>
-                                <DialogTitle className="text-sm font-bold text-gray-600">
+                                <DialogTitle className="text-sm mt-2 mb-1 font-bold text-gray-600">
                                   Delivery Summary
                                 </DialogTitle>
+                                  <hr/>
                                 <DialogContent>
                                   <div className="text-xs text-gray-600 space-y-2 mt-2">
                                     <p>
@@ -1155,16 +1186,18 @@ const DriverBillingPage = () => {
                                     </ul>
                                   </div>
                                 </DialogContent>
+                                <div className="flex ml-auto my-2 mx-2">
                                 <DialogActions>
                                   <Button
                                     variant="outlined"
                                     color="primary"
                                     size="small"
                                     onClick={() => handleNext(billIndex)}
-                                  >
+                                    >
                                     Next
                                   </Button>
                                 </DialogActions>
+                                    </div>
                               </>
                             )}
 
@@ -1495,7 +1528,7 @@ const DriverBillingPage = () => {
           {/* ----------------------------------------------
               Success Modal for Payment
               ---------------------------------------------- */}
-          <Dialog open={showSuccessModal} onClose={() => setShowSuccessModal(false)}>
+          <Dialog  open={showSuccessModal} onClose={() => setShowSuccessModal(false)}>
             <DialogTitle className="text-md font-bold text-gray-500">
               Operation Successful
             </DialogTitle>
@@ -1506,7 +1539,7 @@ const DriverBillingPage = () => {
             </DialogContent>
             <DialogActions>
               <Button
-                variant="contained"
+                variant="outlined"
                 color="primary"
                 size="small"
                 onClick={() => setShowSuccessModal(false)}
@@ -1532,7 +1565,17 @@ const DriverBillingPage = () => {
               ---------------------------------------------- */}
           {activeSection === "my" && !deliveryStarted && (
             <div className="my-deliveries-section mt-6 text-xs">
+              <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold text-gray-600 mb-4">My Deliveries</h2>
+              <IconButton
+                  color="primary"
+                  size="small"
+                  onClick={fetchMyDeliveries}
+                  title="Refresh"
+                >
+                  <FaSync />
+                </IconButton>
+                </div>
               {/* Filters */}
               <div className="flex flex-col md:flex-row gap-2 items-center mb-4">
                 <input
@@ -1544,7 +1587,6 @@ const DriverBillingPage = () => {
                 />
                 <div className="flex mt-2 space-x-4">
                 <div className="flex items-center space-x-2">
-                  <label className="text-gray-500 font-bold text-xs">From:</label>
                   <input
                     type="date"
                     value={fromDate}
@@ -1561,14 +1603,6 @@ const DriverBillingPage = () => {
                     className="p-2 border border-gray-300 rounded-md text-xs"
                   />
                 </div>
-                <IconButton
-                  color="primary"
-                  size="small"
-                  onClick={fetchMyDeliveries}
-                  title="Refresh"
-                >
-                  <FaSync />
-                </IconButton>
                 </div>
               </div>
 
@@ -1619,19 +1653,33 @@ const DriverBillingPage = () => {
           {/* ----------------------------------------------
               Edit Delivery Modal
               ---------------------------------------------- */}
-          <Dialog
-            open={showDeliveryModal && !!selectedDelivery}
-            onClose={() => {
-              setShowDeliveryModal(false);
-              setSelectedDelivery(null);
-            }}
-            fullWidth
-            maxWidth="sm"
-            fullScreen={fullScreen}
-          >
-            <DialogTitle className="text-sm font-bold text-gray-600">
+<Dialog
+  open={showDeliveryModal && !!selectedDelivery}
+  onClose={() => {
+    setShowDeliveryModal(false);
+    setSelectedDelivery(null);
+  }}
+  fullWidth
+  maxWidth="sm"
+  TransitionComponent={Transition}
+  PaperProps={{
+    sx: {
+      bottom: -40,
+      left: 0,
+      right: 0,
+      borderRadius: "16px 16px 0 0", // Rounded top corners
+      // maxHeight: "30vh", // Keep it compact
+      width: "90%", // Responsive width
+      padding: 2,
+      maxHeight: "90vh"
+    },
+  }}
+>
+
+            <DialogTitle className="text-sm mb-1 mt-1 font-bold text-gray-600">
               Edit Delivery Details - Invoice No: {selectedDelivery?.invoiceNo}
             </DialogTitle>
+            <hr/>
             <DialogContent dividers>
               {selectedDelivery && (
                 <div className="text-xs text-gray-600 space-y-4">

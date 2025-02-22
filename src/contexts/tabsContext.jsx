@@ -50,6 +50,13 @@ export const TabsProvider = ({ children }) => {
 
   // 1) OPEN or ACTIVATE a tab
   const openTab = (path, label) => {
+
+    if (['list', 'all', 'account','need-to-purchase','delivery', 'payment','registry', 'update','report'].some(substr => path.includes(substr)) || path === '/products/upcomming/lowstock' ) {
+      navigate(path);
+      return;
+    }
+
+
     const basePath = stripTimestamp(path);
 
     // Check if a tab with the same base path (ignoring _ts) already exists
