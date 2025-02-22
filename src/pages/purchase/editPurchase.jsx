@@ -22,7 +22,8 @@ export default function EditPurchaseScreen() {
   const [sellerSuggestions, setSellerSuggestions] = useState([]);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
     const [hsnCode, setHsnCode] = useState("");
-        const {menuMaster} = useGetMenuMaster();
+    const [otherExpenses, setOtherExpenses] = useState([]); // Each: { amount: "", remark: "" }
+
     
   
 
@@ -193,6 +194,8 @@ export default function EditPurchaseScreen() {
         setBillingDate(data.billingDate ? data.billingDate.substring(0, 10) : "");
         setInvoiceDate(data.invoiceDate ? data.invoiceDate.substring(0, 10) : "");
         setLastItemId(response?.data);
+        setOtherExpenses(data.otherExpenses || []);
+
 
         // Map items, including item-level GST
         const mappedItems = data.items.map((item) => {
@@ -674,12 +677,17 @@ export default function EditPurchaseScreen() {
     const unloadingChargeValue = parseFloat(unloadingCharge || 0);
     const insuranceValue = parseFloat(insurance || 0);
     const damagePriceValue = parseFloat(damagePrice || 0);
-
+    const additionalExpensesSum = otherExpenses.reduce(
+      (acc, curr) => acc + (parseFloat(curr.amount) || 0),
+      0
+    );
+    
     const totalOtherExpenses =
       totalTransportationCharges +
       unloadingChargeValue +
       insuranceValue +
-      damagePriceValue;
+      damagePriceValue +
+      additionalExpensesSum;
 
     // For splitting other expenses across items if needed
     const totalItems = items.reduce(
@@ -754,6 +762,7 @@ export default function EditPurchaseScreen() {
       purchaseId,
       billingDate,
       invoiceDate,
+      otherExpenses,
       items: items.map((item) => ({
         itemId: item.itemId || itemId,
         name: item.name,
@@ -1964,6 +1973,59 @@ export default function EditPurchaseScreen() {
                     />
                   </div>
                 </div>
+
+
+                <div className="mt-4 mb-5">
+  <h2 className="text-sm font-bold text-gray-900">Additional Other Expenses</h2>
+  {otherExpenses.map((expense, index) => (
+    <div key={index} className="flex items-center space-x-2 mt-2">
+      <input
+        type="number"
+        placeholder="Other Expense Amount"
+        value={expense.amount}
+        onChange={(e) => {
+          const newExpenses = [...otherExpenses];
+          newExpenses[index].amount = e.target.value;
+          setOtherExpenses(newExpenses);
+        }}
+        className="w-full border border-gray-300 px-3 py-2 rounded-md text-xs"
+        min="0"
+        step="0.01"
+      />
+      <input
+        type="text"
+        placeholder="Remark"
+        value={expense.remark}
+        onChange={(e) => {
+          const newExpenses = [...otherExpenses];
+          newExpenses[index].remark = e.target.value;
+          setOtherExpenses(newExpenses);
+        }}
+        className="w-full border border-gray-300 px-3 py-2 rounded-md text-xs"
+      />
+      <button
+        type="button"
+        onClick={() => {
+          const newExpenses = otherExpenses.filter((_, i) => i !== index);
+          setOtherExpenses(newExpenses);
+        }}
+        className="text-red-600 text-xs"
+      >
+        Delete
+      </button>
+    </div>
+  ))}
+  <button
+    type="button"
+    onClick={() =>
+      setOtherExpenses([...otherExpenses, { amount: "", remark: "" }])
+    }
+    className="mt-2 py-1 px-2 bg-green-500 text-white text-xs rounded"
+  >
+    Add Another Other Expense
+  </button>
+</div>
+
 
                 <h2 className="text-sm font-bold text-gray-900">
                   Transportation Details
