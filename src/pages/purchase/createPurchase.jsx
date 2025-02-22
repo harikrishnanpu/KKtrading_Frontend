@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "pages/api";
 import BillingSuccess from "components/invoice/billingsuccess";
-import { useGetMenuMaster } from "api/menu";
 import useAuth from "hooks/useAuth";
 import ErrorModal from "components/ErrorModal";
 import ItemSuggestionsSidebar from "components/products/itemSuggestionSidebar";
@@ -21,7 +20,6 @@ export default function PurchasePage() {
   const [success, setSuccess] = useState(false);
   const [returnInvoice, setReturnInvoice] = useState("");
   const [otherExpenses, setOtherExpenses] = useState([]); // each element: { amount: "", remark: "" }
-  const {menuMaster} = useGetMenuMaster();
   
 
   const { user: userInfo } = useAuth();
@@ -663,6 +661,7 @@ export default function PurchasePage() {
       purchaseId,
       billingDate,
       invoiceDate,
+      otherExpenses,
       items: items.map((item) => ({
         itemId: item.itemId || itemId,
         name: item.name,
@@ -725,8 +724,7 @@ export default function PurchasePage() {
           transportCompanyName: localCompany,
           transportationCharges: localAmount,
           remark: localRemark,
-        },
-        otherExpenses
+        }
       },
     };
 

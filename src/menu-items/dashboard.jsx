@@ -42,14 +42,6 @@ const dashboard = {
           target: false,
           breadcrumbs: false
         },
-        // {
-        //   id: 'Analytics',
-        //   title: <FormattedMessage id="Analytics" />,
-        //   type: 'item',
-        //   url: '/dashboard/analytics/',
-        //   target: false,
-        //   breadcrumbs: false
-        // }
       ]
     },
     {
@@ -108,37 +100,6 @@ const dashboard = {
       link: '/chat',
       target: false,
       breadcrumbs: false
-    },
-
-    {
-      id: 'notifications',
-      title: <FormattedMessage id="Notifications" />,
-      type: 'item',
-      url: '/notifications/all',
-      icon: icons.notify,
-      link: '/notifications/all',
-      target: false,
-      breadcrumbs: false
-    },
-    {
-      id: 'allUsers',
-      title: <FormattedMessage id="All Users" />,
-      type: 'item',
-      url: '/admin/allusers',
-      icon: icons.users,
-      link: '/admin/allusers',
-      target: false,
-      breadcrumbs: true
-    },
-    {
-      id: 'allLogs',
-      title: <FormattedMessage id="All Logs" />,
-      type: 'item',
-      url: '/admin/alllogs',
-      icon: icons.users,
-      link: '/admin/alllogs',
-      target: false,
-      breadcrumbs: true
     },
   ]
 };
