@@ -300,46 +300,46 @@ const [printOptions, setPrintOptions] = useState({
     };
 
     // Save the data to local storage as a JSON string
-    localStorage.setItem('savedBill', JSON.stringify(billingData));
-    localStorage.setItem('savedProducts', JSON.stringify(products));
+    // localStorage.setItem('savedBill', JSON.stringify(billingData));
+    // localStorage.setItem('savedProducts', JSON.stringify(products));
     alert('Billing data saved');
     setSaveModal(false);
     setShowSummaryModal(false);
   };
 
-  useEffect(() => {
-    const fetchLocalSavedBill = async () => {
-      // Retrieve saved data from local storage
-      const savedData = localStorage.getItem('savedBill');
-      if (savedData) {
-        // Parse the JSON string back into an object
-        const parsedData = JSON.parse(savedData);
+  // useEffect(() => {
+  //   const fetchLocalSavedBill = async () => {
+  //     // Retrieve saved data from local storage
+  //     const savedData = localStorage.getItem('savedBill');
+  //     if (savedData) {
+  //       // Parse the JSON string back into an object
+  //       const parsedData = JSON.parse(savedData);
 
-        // Set your state with the fetched data
-        setInvoiceNo(parsedData.invoiceNo);
-        setInvoiceDate(parsedData.invoiceDate);
-        setSalesmanName(parsedData.salesmanName);
-        setExpectedDeliveryDate(parsedData.expectedDeliveryDate);
-        setDeliveryStatus(parsedData.deliveryStatus);
-        setPaymentStatus(parsedData.paymentStatus);
-        setReceivedAmount(parsedData.paymentAmount);
-        setPaymentMethod(parsedData.paymentMethod);
-        setReceivedDate(parsedData.paymentReceivedDate);
-        setCustomerName(parsedData.customerName);
-        setCustomerAddress(parsedData.customerAddress);
-        setCustomerContactNumber(parsedData.customerContactNumber);
-        setMarketedBy(parsedData.marketedBy);
-        setDiscount(parsedData.discount);
-        setTransportation(parsedData.transportation);
-        setHandlingCharge(parsedData.handlingcharge);
-        setSalesmanPhoneNumber(parsedData.salesmanPhoneNumber);
-        setUnloading(parsedData.unloading);
-        setshowRoom(parsedData.showroom);
-      }
-    };
+  //       // Set your state with the fetched data
+  //       setInvoiceNo(parsedData.invoiceNo);
+  //       setInvoiceDate(parsedData.invoiceDate);
+  //       setSalesmanName(parsedData.salesmanName);
+  //       setExpectedDeliveryDate(parsedData.expectedDeliveryDate);
+  //       setDeliveryStatus(parsedData.deliveryStatus);
+  //       setPaymentStatus(parsedData.paymentStatus);
+  //       setReceivedAmount(parsedData.paymentAmount);
+  //       setPaymentMethod(parsedData.paymentMethod);
+  //       setReceivedDate(parsedData.paymentReceivedDate);
+  //       setCustomerName(parsedData.customerName);
+  //       setCustomerAddress(parsedData.customerAddress);
+  //       setCustomerContactNumber(parsedData.customerContactNumber);
+  //       setMarketedBy(parsedData.marketedBy);
+  //       setDiscount(parsedData.discount);
+  //       setTransportation(parsedData.transportation);
+  //       setHandlingCharge(parsedData.handlingcharge);
+  //       setSalesmanPhoneNumber(parsedData.salesmanPhoneNumber);
+  //       setUnloading(parsedData.unloading);
+  //       setshowRoom(parsedData.showroom);
+  //     }
+  //   };
 
-    fetchLocalSavedBill();
-  }, []);
+  //   fetchLocalSavedBill();
+  // }, []);
 
   useEffect(() => {
     const loadSavedProducts = () => {

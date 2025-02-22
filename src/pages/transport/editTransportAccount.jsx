@@ -79,7 +79,7 @@ const TransportPaymentEdit = () => {
   };
 
   const addBilling = () => {
-    setBillings([...billings, { billId: '', invoiceNo: '', amount: '', date: '' }]);
+    setBillings([...billings, { billId: '', invoiceNo: '', amount: '', date: '', remark: '' }]);
   };
 
   const removeBilling = (index) => {
@@ -202,6 +202,7 @@ const TransportPaymentEdit = () => {
         invoiceNo: billing.invoiceNo.trim(),
         amount: parseFloat(billing.amount),
         date: billing.date ? new Date(billing.date) : new Date(),
+        remark: billing.remark,
       })),
       payments: payments.map((payment) => ({
         amount: parseFloat(payment.amount || 0),
@@ -469,6 +470,15 @@ const TransportPaymentEdit = () => {
                       className="w-full border border-gray-300 px-2 py-1 rounded-md text-xs"
                     />
                   </div>
+                  <div>
+                  <label className="block text-xs text-gray-700 mb-1">Remark</label>
+                  <input
+                    type="text"
+                    value={billing.remark}
+                    onChange={(e) => handleBillingChange(index, 'remark', e.target.value)}
+                    className="w-full border border-gray-300 px-2 py-1 rounded-md text-xs"
+                  />
+                </div>
                 </div>
               </div>
             ))}
@@ -608,7 +618,7 @@ const TransportPaymentEdit = () => {
           <div className="text-right">
             <button
               type="submit"
-              disabled={formSubmitting}
+              disabled={formSubmitting && !userInfo.isSuper ? true : false}
               className={`bg-red-500 text-white text-sm font-bold py-2 px-4 rounded-lg hover:bg-red-600 ${
                 formSubmitting ? 'opacity-50 cursor-not-allowed' : ''
               }`}

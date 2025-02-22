@@ -830,7 +830,7 @@ const TransportPaymentList = () => {
                       className="hover:bg-gray-100 divide-y divide-x"
                     >
                       <td
-                        onClick={() => navigate(`/transport-payments/edit/${payment._id}`)}
+                        onClick={() => navigate(`/transport/edit/${payment._id}`)}
                         className="px-4 py-2 text-xs font-bold text-red-600 cursor-pointer"
                       >
                         {payment.transportName}
@@ -864,14 +864,14 @@ const TransportPaymentList = () => {
                           >
                             <i className="fa fa-file-pdf-o mr-1"></i> Download
                           </button>
-                          <button
+                         {userInfo.isSuper && <button
                             onClick={() => handleRemove(payment._id)}
                             className="bg-red-500 text-white px-2 py-1 text-xs font-semibold rounded hover:bg-red-600 flex items-center"
                           >
                             <i className="fa fa-trash mr-1"></i> Delete
-                          </button>
+                          </button> }
                           <button
-                            onClick={() => navigate(`/transport-payments/edit/${payment._id}`)}
+                            onClick={() => navigate(`/transport/edit/${payment._id}`)}
                             className="bg-red-500 text-white px-2 py-1 text-xs font-semibold rounded hover:bg-red-600 flex items-center"
                           >
                             <i className="fa fa-edit mr-1"></i> Edit
@@ -912,7 +912,7 @@ const TransportPaymentList = () => {
                         <i className="fa fa-trash mr-1"></i>
                       </button>
                       <button
-                        onClick={() => navigate(`/transport-payments/edit/${payment._id}`)}
+                        onClick={() => navigate(`/transport/edit/${payment._id}`)}
                         className="bg-red-500 text-white px-2 py-1 text-xs font-semibold rounded hover:bg-red-600 flex items-center"
                       >
                         <i className="fa fa-edit mr-1"></i>
@@ -1117,17 +1117,27 @@ const TransportPaymentList = () => {
                       <i className={`fa fa-sort-${billingSortConfig.direction === 'asc' ? 'asc' : 'desc'} ml-1`}></i>
                     )}
                   </th>
+                  <th
+                    className="px-4 py-2 cursor-pointer"
+                    onClick={() => handleBillingSort('date')}
+                  >
+                    Remark
+                    {billingSortConfig.key === 'remark' && (
+                      <i className={`fa fa-sort-${billingSortConfig.direction === 'asc' ? 'asc' : 'desc'} ml-1`}></i>
+                    )}
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {filteredBillings.length > 0 ? (
                   filteredBillings.map((billing, index) => (
-                    <tr key={index} className="bg-white border-b hover:bg-gray-100">
+                    <tr key={index} className="bg-white text-center border-b hover:bg-gray-100">
                       <td className="px-4 py-2 text-xs">{index + 1}</td>
                       <td className="px-4 py-2 text-xs">{billing.billId}</td>
                       <td className="px-4 py-2 text-xs">{billing.invoiceNo}</td>
                       <td className="px-4 py-2 text-xs">₹{billing.amount.toFixed(2)}</td>
                       <td className="px-4 py-2 text-xs">{new Date(billing.date).toLocaleDateString()}</td>
+                      <td className="px-4 py-2 text-xs">{billing.remark}</td>
                     </tr>
                   ))
                 ) : (

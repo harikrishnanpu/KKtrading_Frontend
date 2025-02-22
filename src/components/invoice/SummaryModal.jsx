@@ -329,19 +329,6 @@ export default function SummaryModal({
       <DialogActions sx={{ padding: 2 }}>
         <Grid container justifyContent="flex-end" spacing={2}>
           <Grid item>
-            <Button
-              variant="outlined"
-              color="error"
-              size="small"
-              onClick={() => {
-                if (handleLocalSave) handleLocalSave();
-                else alert('Update the bill by clicking the submit button');
-              }}
-            >
-              Save
-            </Button>
-          </Grid>
-          <Grid item>
           <SubmitButton
   onSubmit={onSubmit}
   isSubmitting={isSubmitting}

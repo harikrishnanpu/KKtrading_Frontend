@@ -592,12 +592,12 @@ const CustomerAccountList = () => {
                               >
                                 <i className="fa fa-file-pdf-o mr-1"></i> Download
                               </button>
-                              <button
+                             {userInfo.isSuper && <button
                                 onClick={() => handleRemove(account._id)}
                                 className="bg-red-500 text-white px-2 font-bold py-1 rounded hover:bg-red-600 flex items-center text-xs"
                               >
                                 <i className="fa fa-trash mr-1"></i> Delete
-                              </button>
+                              </button> }
                               <button
                                 onClick={() => navigate(`/customer/edit/${account._id}`)}
                                 className="bg-red-500 text-white px-2 font-bold py-1 rounded hover:bg-red-600 flex items-center text-xs"
@@ -736,7 +736,7 @@ const CustomerAccountList = () => {
         }}
       >
         <DialogTitle sx={{ m: 0, p: 2, fontWeight: 'bold' }}>
-          Transactions for Account ID: {selectedAccount?.accountId}
+          Customer: {selectedAccount?.customerName}
           <IconButton
             aria-label="close"
             onClick={closeModal}
@@ -754,10 +754,7 @@ const CustomerAccountList = () => {
           <div className="mt-2">
             {/* Account Details */}
             <div className="flex flex-col sm:flex-row justify-between items-center mb-4">
-              <div>
-                <p className="text-sm font-semibold">
-                  Customer Name: <span className="text-gray-900 font-bold">{selectedAccount?.customerName}</span>
-                </p>
+              <div className='flex justify-between items-center space-x-2'>
                 <p className="text-sm font-semibold">
                   Total Bill Amount: <span className="text-gray-900 font-bold">₹{selectedAccount?.totalBillAmount.toFixed(2)}</span>
                 </p>
@@ -782,17 +779,19 @@ const CustomerAccountList = () => {
                     <th className="px-4 py-2">Invoice No.</th>
                     <th className="px-4 py-2">Bill Amount (₹)</th>
                     <th className="px-4 py-2">Invoice Date</th>
+                    <th className="px-4 py-2">Remark</th>
                     <th className="px-4 py-2">Delivery Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {selectedAccount?.bills && selectedAccount.bills.length > 0 ? (
                     selectedAccount.bills.map((bill, index) => (
-                      <tr key={index} className="bg-white border-b hover:bg-gray-50">
+                      <tr key={index} className="bg-white text-center border-b hover:bg-gray-50">
                         <td className="px-4 py-2 text-xs">{index + 1}</td>
                         <td className="px-4 py-2 text-xs">{bill.invoiceNo}</td>
                         <td className="px-4 py-2 text-xs">₹{bill.billAmount.toFixed(2)}</td>
                         <td className="px-4 py-2 text-xs">{new Date(bill.invoiceDate).toLocaleDateString()}</td>
+                        <td className="px-4 py-2 text-xs">{bill.remark}</td>
                         <td className="px-4 py-2 text-xs">
                           <span
                             className={`px-2 py-1 rounded text-xs ${
@@ -832,7 +831,7 @@ const CustomerAccountList = () => {
                 <tbody>
                   {selectedAccount?.payments && selectedAccount.payments.length > 0 ? (
                     selectedAccount.payments.map((payment, index) => (
-                      <tr key={index} className="bg-white border-b hover:bg-gray-50">
+                      <tr key={index} className="bg-white text-center border-b hover:bg-gray-50">
                         <td className={`px-4 py-2 text-xs ${payment.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                           ₹{payment.amount.toFixed(2)}
                         </td>

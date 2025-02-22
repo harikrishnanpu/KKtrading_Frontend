@@ -54,7 +54,7 @@ export default function TransportPaymentForm() {
 
   // Handler to add a new billing
   const addBilling = () => {
-    setBillings([...billings, { billId: '', invoiceNo: '', amount: '', date: '' }]);
+    setBillings([...billings, { billId: '', invoiceNo: '', amount: '', date: '', remark: '' }]);
   };
 
   // Handler to remove a billing
@@ -184,6 +184,7 @@ export default function TransportPaymentForm() {
         invoiceNo: billing.invoiceNo.trim(),
         amount: parseFloat(billing.amount),
         date: billing.date ? new Date(billing.date) : new Date(),
+        remark: billing.remark,
       })),
       payments: payments.map((payment) => ({
         amount: parseFloat(payment.amount || 0),
@@ -210,7 +211,7 @@ export default function TransportPaymentForm() {
         // Optionally, navigate to another page after a delay
         setTimeout(() => {
           setShowSuccessMessage('');
-          navigate('/transport-payments'); // Adjust the path as needed
+          navigate('/transport/account'); // Adjust the path as needed
         }, 2000);
       } else {
         setShowErrorMessage('Failed to create transport payment record. Please try again.');
@@ -392,6 +393,15 @@ export default function TransportPaymentForm() {
                     type="date"
                     value={billing.date ? billing.date.slice(0, 10) : ''}
                     onChange={(e) => handleBillingChange(index, 'date', e.target.value)}
+                    className="w-full border border-gray-300 px-2 py-1 rounded-md text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-700 mb-1">Remark</label>
+                  <input
+                    type="text"
+                    value={billing.remark}
+                    onChange={(e) => handleBillingChange(index, 'remark', e.target.value)}
                     className="w-full border border-gray-300 px-2 py-1 rounded-md text-xs"
                   />
                 </div>

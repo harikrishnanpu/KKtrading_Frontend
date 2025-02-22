@@ -78,7 +78,7 @@ const SupplierAccountEdit = () => {
   };
 
   const addBill = () => {
-    setBills([...bills, { invoiceNo: '', billAmount: '', invoiceDate: '' }]);
+    setBills([...bills, { invoiceNo: '', billAmount: '', invoiceDate: '', remark: '' }]);
   };
 
   const removeBill = (index) => {
@@ -206,6 +206,7 @@ const SupplierAccountEdit = () => {
         invoiceNo: bill.invoiceNo.trim(),
         billAmount: parseFloat(bill.billAmount),
         invoiceDate: bill.invoiceDate ? new Date(bill.invoiceDate) : new Date(),
+        remark: bill.remark,
       })),
       payments: payments.map((payment) => ({
         amount: parseFloat(payment.amount || 0),
@@ -455,6 +456,17 @@ const SupplierAccountEdit = () => {
                       className="w-full border border-gray-300 px-2 py-1 rounded-md text-xs"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-1">Remark</label>
+                    <input
+                      type="text"
+                      value={bill.remark}
+                      onChange={(e) => handleBillChange(index, 'remark', e.target.value)}
+                      className="w-full border border-gray-300 px-2 py-1 rounded-md text-xs"
+                    />
+                  </div>
+
                 </div>
               </div>
             ))}
@@ -559,7 +571,7 @@ const SupplierAccountEdit = () => {
           <div className="text-right">
             <button
               type="submit"
-              disabled={formSubmitting}
+              disabled={formSubmitting && !userInfo.isSuper ? true : false}
               className={`bg-red-500 text-white text-sm font-bold py-2 px-4 rounded-lg hover:bg-red-600 ${
                 formSubmitting ? 'opacity-50 cursor-not-allowed' : ''
               }`}

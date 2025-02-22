@@ -25,7 +25,7 @@ const Transition = React.forwardRef(function Transition(props, ref) {
 
 const PaymentAccountsList = () => {
   const navigate = useNavigate();
-  const { user: userInfo } = useAuth();
+  const { user } = useAuth();
 
   // Main states
   const [accounts, setAccounts] = useState([]);
@@ -49,12 +49,16 @@ const PaymentAccountsList = () => {
   const [selectedAccountIds, setSelectedAccountIds] = useState([]);
   const [accountSearch, setAccountSearch] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [allUsers, setAllUsers] = useState([]);
 
   // Fetch all payment accounts
   const fetchAccounts = async () => {
     setLoading(true);
     try {
       const response = await api.get('/api/accounts/allaccounts');
+      const allUsers = await api.get('/api/users/allusers/all');
+      
+      setAllUsers(allUsers?.data);
       const formattedAccounts = response.data.map((account) => ({
         ...account,
         paymentsIn: account.paymentsIn || [],
@@ -397,15 +401,15 @@ const PaymentAccountsList = () => {
                   </td>
                   <td className="px-4 py-2 text-xs">{payment.method}</td>
                   <td className="px-4 py-2 text-xs">{payment.remark || '-'}</td>
-                  <td className="px-4 py-2 text-xs">{payment.submittedBy}</td>
+                  <td className="px-4 py-2 text-xs">{allUsers.find((usr) => usr._id === payment.submittedBy).name}</td>
                   <td className="px-4 py-2 text-xs">{new Date(payment.date).toLocaleString()}</td>
                   <td className="px-4 py-2 text-xs">
-                    <button
+                   {user.isSuper && <button
                       onClick={() => handlePaymentDelete(payment._id, type)}
                       className="bg-red-500 text-white px-2 font-bold py-1 rounded hover:bg-red-600 text-xs"
                     >
                       Delete
-                    </button>
+                    </button> }
                   </td>
                 </tr>
               ))}
@@ -418,12 +422,12 @@ const PaymentAccountsList = () => {
             <div key={payment._id || index} className="bg-white p-4 rounded shadow">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-bold text-gray-600">#{index + 1}</span>
-                <button
+                {user.isSuper && <button
                   onClick={() => handlePaymentDelete(payment._id, type)}
                   className="bg-red-500 text-white px-2 font-bold py-1 rounded hover:bg-red-600 text-xs"
                 >
                   Delete
-                </button>
+                </button> }
               </div>
               <p className={`text-xs font-semibold ${type === 'in' ? 'text-green-600' : 'text-red-600'}`}>
                 Amount: ₹{payment.amount.toFixed(2)}
@@ -664,12 +668,12 @@ const PaymentAccountsList = () => {
                               >
                                 <i className="fa fa-file-pdf-o mr-1"></i> Download
                               </button>
-                              <button
+                             {user.isSuper && <button
                                 onClick={() => handleRemove(account._id)}
                                 className="bg-red-500 text-white px-2 font-bold py-1 rounded hover:bg-red-600 flex items-center text-xs"
                               >
                                 <i className="fa fa-trash mr-1"></i> Delete
-                              </button>
+                              </button> }
                             </div>
                           </td>
                         </tr>

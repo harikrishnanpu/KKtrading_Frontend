@@ -47,7 +47,13 @@ export default function CustomerAccountForm() {
     };
 
     fetchAccounts();
-  },[])
+  },[]);
+
+
+  const generatecustomerid = async ()=>{
+      const nextCustomer = "CUS" + Date.now().toString().slice(5,15); // Ensures at least three digits
+        setcustomerId(nextCustomer)
+  }
 
   // Handler to update bills
   const handleBillChange = (index, field, value) => {
@@ -58,7 +64,7 @@ export default function CustomerAccountForm() {
 
   // Handler to add a new bill
   const addBill = () => {
-    setBills([...bills, { invoiceNo: '', billAmount: '', invoiceDate: ''}]);
+    setBills([...bills, { invoiceNo: '', billAmount: '', invoiceDate: '', remark: '', deliveryStatus: '' }]);
   };
 
   // Handler to remove a bill
@@ -169,6 +175,8 @@ export default function CustomerAccountForm() {
         invoiceNo: bill.invoiceNo.trim(),
         billAmount: parseFloat(bill.billAmount),
         invoiceDate: bill.invoiceDate ? new Date(bill.invoiceDate) : new Date(),
+        remark: bill.remark || '',
+        deliveryStatus: bill.deliveryStatus || 'Delivered',
       })),
       payments: payments.map((payment) => ({
         amount: parseFloat(payment.amount || 0),
@@ -245,13 +253,6 @@ export default function CustomerAccountForm() {
             value={customerName}
             onChange={(e) => setCustomerName(e.target.value)}
             onKeyDown={(e) => { 
-              const generatecustomerid = async ()=>{
-                const { data } = await api.get('/api/billing/lastOrder/id');
-                      // Generate the next customer ID
-        const lastCustomerNumber = parseInt(data.lastCustomerId.slice(3), 10) || 0; // Extract the number part after "CUS"
-        const nextCustomer = "CUS" + (lastCustomerNumber + 1).toString().padStart(3, '0'); // Ensures at least three digits
-                 setcustomerId(nextCustomer)
-              }
               if(e.key === "Enter"){
                 generatecustomerid()
               }
@@ -363,6 +364,35 @@ export default function CustomerAccountForm() {
                     className="w-full border border-gray-300 px-2 py-1 rounded-md text-xs"
                   />
                 </div>
+
+                <div>
+                    <label className="block text-xs text-gray-700 mb-1">
+                      Delivery Status
+                    </label>
+                    <input
+                      type="text"
+                      value={bill.deliveryStatus}
+                      onChange={(e) =>
+                        handleBillChange(index, 'deliveryStatus', e.target.value)
+                      }
+                      className="w-full border border-gray-300 px-2 py-1 rounded-md text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-1">
+                     Remark
+                    </label>
+                    <input
+                      type="text"
+                      value={bill.remark}
+                      onChange={(e) =>
+                        handleBillChange(index, 'remark', e.target.value)
+                      }
+                      className="w-full border border-gray-300 px-2 py-1 rounded-md text-xs"
+                    />
+                  </div>
+
               </div>
             </div>
           ))}

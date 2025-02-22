@@ -30,7 +30,7 @@ const Transition = forwardRef(function Transition(props, ref) {
 
 const SupplierAccountList = () => {
   const navigate = useNavigate();
-  const { user } = useAuth(); // If needed
+  const { user : userInfo } = useAuth(); // If needed
 
   // Main states
   const [accounts, setAccounts] = useState([]);
@@ -948,19 +948,6 @@ const SupplierAccountList = () => {
                 <thead className="bg-red-500 text-white">
                   <tr className="divide-y">
                     <th
-                      className="px-1 py-2 text-left cursor-pointer"
-                      onClick={() => handleSort("sellerId")}
-                    >
-                      ID{" "}
-                      {sortConfig.key === "sellerId" && (
-                        <i
-                          className={`fa fa-sort-${
-                            sortConfig.direction === "asc" ? "asc" : "desc"
-                          } ml-1`}
-                        />
-                      )}
-                    </th>
-                    <th
                       className="px-1 py-2 cursor-pointer"
                       onClick={() => handleSort("sellerName")}
                     >
@@ -1041,9 +1028,8 @@ const SupplierAccountList = () => {
                         onClick={() => navigate(`/supplier/edit/${acc._id}`)}
                         className="px-1 py-2 font-bold text-red-600 cursor-pointer"
                       >
-                        {acc.sellerId}
+                        {acc.sellerName}
                       </td>
-                      <td className="px-1 py-2">{acc.sellerName}</td>
                       <td className="px-1 py-2">{acc.sellerAddress}</td>
                       <td className="px-1 py-2">
                         ₹{(acc.totalBillAmount || 0).toFixed(2)}
@@ -1086,12 +1072,12 @@ const SupplierAccountList = () => {
                           >
                             <i className="fa fa-file-pdf-o" />
                           </button>
-                          <button
+                        {userInfo.isSuper &&  <button
                             onClick={() => handleRemove(acc._id)}
                             className="bg-red-500 text-white px-1 py-1 rounded hover:bg-red-600"
                           >
                             <i className="fa fa-trash" />
-                          </button>
+                          </button> }
                           <button
                             onClick={() => navigate(`/supplier/edit/${acc._id}`)}
                             className="bg-red-500 text-white px-1 py-1 rounded hover:bg-red-600"
@@ -1110,8 +1096,7 @@ const SupplierAccountList = () => {
             <div className="md:hidden flex flex-col space-y-2">
               {currentPageAccounts.map((acc) => (
                 <div key={acc._id} className="bg-white p-2 rounded shadow">
-                  <p className="text-red-600 font-bold">ID: {acc.sellerId}</p>
-                  <p>Name: {acc.sellerName}</p>
+                  <p className="text-red-600 font-bold">Name: {acc.sellerName}</p>
                   <p>Address: {acc.sellerAddress}</p>
                   <p>Bill: ₹{(acc.totalBillAmount || 0).toFixed(2)}</p>
                   <p>Paid: ₹{(acc.paidAmount || 0).toFixed(2)}</p>
@@ -1148,14 +1133,14 @@ const SupplierAccountList = () => {
                       onClick={() => generatePDF(acc)}
                       className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
                     >
-                      <i className="fa fa-file-pdf-o" />
+                      <i className="fa fa-file" />
                     </button>
-                    <button
+                   {userInfo.isSuper && <button
                       onClick={() => handleRemove(acc._id)}
                       className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
                     >
                       <i className="fa fa-trash" />
-                    </button>
+                    </button> }
                     <button
                       onClick={() => navigate(`/supplier/edit/${acc._id}`)}
                       className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
@@ -1359,19 +1344,20 @@ const SupplierAccountList = () => {
                   </div>
 
                   <div className="overflow-x-auto">
-                    <table className="min-w-full text-[10px] text-gray-700">
+                    <table className="min-w-full text-center text-[10px] text-gray-700">
                       <thead className="bg-gray-100">
                         <tr>
                           <th className="px-1 py-1">#</th>
                           <th className="px-1 py-1">InvoiceNo</th>
                           <th className="px-1 py-1">Amount(₹)</th>
                           <th className="px-1 py-1">Date</th>
+                          <th className="px-1 py-1">Remark</th>
                         </tr>
                       </thead>
                       <tbody>
                         {filteredBills.length ? (
                           filteredBills.map((bill, i) => (
-                            <tr key={i} className="border-b hover:bg-gray-50">
+                            <tr key={i} className="border-b text-center hover:bg-gray-50">
                               <td className="px-1 py-1">{i + 1}</td>
                               <td className="px-1 py-1">{bill.invoiceNo}</td>
                               <td className="px-1 py-1">
@@ -1379,6 +1365,9 @@ const SupplierAccountList = () => {
                               </td>
                               <td className="px-1 py-1">
                                 {new Date(bill.invoiceDate).toLocaleDateString()}
+                              </td>
+                              <td className="px-1 py-1">
+                                {bill.remark}
                               </td>
                             </tr>
                           ))

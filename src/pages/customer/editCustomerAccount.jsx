@@ -78,7 +78,7 @@ const CustomerAccountEdit = () => {
   };
 
   const addBill = () => {
-    setBills([...bills, { _id: null, invoiceNo: '', billAmount: '', invoiceDate: '' }]);
+    setBills([...bills, { _id: null, invoiceNo: '', billAmount: '', invoiceDate: '', remark: '', deliveryStatus: '' }]);
   };
 
   const removeBill = (index) => {
@@ -208,6 +208,7 @@ const CustomerAccountEdit = () => {
         billAmount: parseFloat(bill.billAmount),
         invoiceDate: bill.invoiceDate ? new Date(bill.invoiceDate) : undefined,
         deliveryStatus: bill.deliveryStatus || 'Pending',
+        remark: bill.remark || '',
       })),
       payments: payments.map((payment) => ({
         referenceId: payment.referenceId || undefined,
@@ -230,7 +231,7 @@ const CustomerAccountEdit = () => {
         // Optionally, redirect to the accounts list after a delay
         setTimeout(() => {
           setSuccessMessage('');
-          navigate('/customer-accounts'); // Adjust the path as needed
+          navigate('/customer/account'); // Adjust the path as needed
         }, 2000);
       } else {
         setError('Failed to update customer account. Please try again.');
@@ -406,6 +407,34 @@ const CustomerAccountEdit = () => {
                       className="w-full border border-gray-300 px-2 py-1 rounded-md text-xs"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-1">
+                      Delivery Status
+                    </label>
+                    <input
+                      type="text"
+                      value={bill.deliveryStatus}
+                      onChange={(e) =>
+                        handleBillChange(index, 'deliveryStatus', e.target.value)
+                      }
+                      className="w-full border border-gray-300 px-2 py-1 rounded-md text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-1">
+                     Remark
+                    </label>
+                    <input
+                      type="text"
+                      value={bill.remark}
+                      onChange={(e) =>
+                        handleBillChange(index, 'remark', e.target.value)
+                      }
+                      className="w-full border border-gray-300 px-2 py-1 rounded-md text-xs"
+                    />
+                  </div>
                 </div>
               </div>
             ))}
@@ -555,7 +584,7 @@ const CustomerAccountEdit = () => {
           <div className="text-right">
             <button
               type="submit"
-              disabled={formSubmitting}
+              disabled={formSubmitting && !userInfo?.isSuper}
               className={`bg-red-500 text-white text-sm font-bold py-2 px-4 rounded-lg hover:bg-red-600 ${
                 formSubmitting ? 'opacity-50 cursor-not-allowed' : ''
               }`}

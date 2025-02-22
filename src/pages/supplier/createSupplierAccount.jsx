@@ -59,7 +59,7 @@ export default function SupplierAccountForm() {
 
   // Handler to add a new bill
   const addBill = () => {
-    setBills([...bills, { invoiceNo: '', billAmount: '', invoiceDate: '' }]);
+    setBills([...bills, { invoiceNo: '', billAmount: '', invoiceDate: '', remark: '' }]);
   };
 
   // Handler to remove a bill
@@ -192,6 +192,7 @@ export default function SupplierAccountForm() {
         invoiceNo: bill.invoiceNo.trim(),
         billAmount: parseFloat(bill.billAmount),
         invoiceDate: bill.invoiceDate ? new Date(bill.invoiceDate) : new Date(),
+        remark: bill.remark || ' ',
       })),
       payments: payments.map((payment) => ({
         amount: parseFloat(payment.amount) || 0,
@@ -219,7 +220,7 @@ export default function SupplierAccountForm() {
         // Optionally, navigate to another page after a delay
         setTimeout(() => {
           setShowSuccessMessage('');
-          navigate('/dashboard/default/');
+          navigate('/supplier/account/');
         }, 2000);
       } else {
         setShowErrorMessage('Failed to create supplier account. Please try again.');
@@ -385,6 +386,15 @@ export default function SupplierAccountForm() {
                       type="date"
                       value={bill.invoiceDate ? bill.invoiceDate.slice(0, 10) : ''}
                       onChange={(e) => handleBillChange(index, 'invoiceDate', e.target.value)}
+                      className="w-full border border-gray-300 px-2 py-1 rounded-md text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-1">Remark</label>
+                    <input
+                      type="text"
+                      value={bill.remark}
+                      onChange={(e) => handleBillChange(index, 'remark', e.target.value)}
                       className="w-full border border-gray-300 px-2 py-1 rounded-md text-xs"
                     />
                   </div>

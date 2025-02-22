@@ -51,7 +51,7 @@ const EditCustomerAccount = Loadable(lazy(() => import('pages/customer/editCusto
 const BillPayment = Loadable(lazy(() => import('pages/invoice/payment')));
 
 
-
+const CreateSupplierAccount = Loadable(lazy(() => import('pages/supplier/createSupplierAccount')));
 const SupplierAccountList = Loadable(lazy(() => import('pages/supplier/listSupplierAccount')));
 const EditSupplierAccount = Loadable(lazy(() => import('pages/supplier/editSupplierAccount')));
 const SupplierPayment = Loadable(lazy(() => import('pages/supplier/payment')));
@@ -322,7 +322,7 @@ const MainRoutes = {
             },
             {
               path: 'create',
-              element: <CreateCustomerAccount />
+              element: <CreateSupplierAccount />
             },
             {
               path: 'payment',
