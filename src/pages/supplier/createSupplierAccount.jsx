@@ -59,7 +59,7 @@ export default function SupplierAccountForm() {
 
   // Handler to add a new bill
   const addBill = () => {
-    setBills([...bills, { invoiceNo: '', billAmount: '', invoiceDate: '', remark: '' }]);
+    setBills([...bills, { invoiceNo: '', billAmount: '', cashPart: '', invoiceDate: '', remark: '' }]);
   };
 
   // Handler to remove a bill
@@ -191,6 +191,7 @@ export default function SupplierAccountForm() {
       bills: bills.map((bill) => ({
         invoiceNo: bill.invoiceNo.trim(),
         billAmount: parseFloat(bill.billAmount),
+        cashPart: parseFloat(bill.cashPart),
         invoiceDate: bill.invoiceDate ? new Date(bill.invoiceDate) : new Date(),
         remark: bill.remark || ' ',
       })),
@@ -215,7 +216,7 @@ export default function SupplierAccountForm() {
         setsellerName('');
         setsellerAddress('');
         setsellerGst('');
-        setBills([{ invoiceNo: '', billAmount: '', invoiceDate: '' }]);
+        setBills([{ invoiceNo: '', billAmount: '', cashPart: '', remark: '', invoiceDate: '' }]);
         setPayments([{ amount: '', date: '', submittedBy: '', remark: '' }]);
         // Optionally, navigate to another page after a delay
         setTimeout(() => {
@@ -380,6 +381,23 @@ export default function SupplierAccountForm() {
                       required
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-1">
+                      Purchase Amount (₹) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={bill.cashPart}
+                      onChange={(e) => handleBillChange(index, 'cashPart', e.target.value)}
+                      className="w-full border border-gray-300 px-2 py-1 rounded-md text-xs"
+                      placeholder="Enter Bill Amount"
+                      required
+                    />
+                  </div>
+
                   <div>
                     <label className="block text-xs text-gray-700 mb-1">Invoice Date</label>
                     <input

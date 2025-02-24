@@ -10,13 +10,13 @@ import React, {
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { useNavigate } from "react-router-dom";
-import api from "../api"; // custom Axios or fetch
+import api from "../api"; // your custom Axios instance
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import debounce from "lodash.debounce";
 import useAuth from "hooks/useAuth";
 
-// MUI components
+// MUI
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
@@ -30,7 +30,7 @@ const Transition = forwardRef(function Transition(props, ref) {
 
 const SupplierAccountList = () => {
   const navigate = useNavigate();
-  const { user : userInfo } = useAuth(); // If needed
+  const { user: userInfo } = useAuth(); // If you have user roles, etc.
 
   // Main states
   const [accounts, setAccounts] = useState([]);
@@ -39,9 +39,11 @@ const SupplierAccountList = () => {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Aggregated from backend Purchase
-  const [totalBillPartAll, setTotalBillPartAll] = useState(0);
+  // GLOBAL totals (from backend)
+  const [totalBillAmountAll, setTotalBillAmountAll] = useState(0);
   const [totalCashPartAll, setTotalCashPartAll] = useState(0);
+  const [totalPaidAmountAll, setTotalPaidAmountAll] = useState(0);
+  const [totalPendingAmountAll, setTotalPendingAmountAll] = useState(0);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -75,15 +77,23 @@ const SupplierAccountList = () => {
     debouncedSearch(e.target.value);
   };
 
-  // Fetch data from server
+  // -----------------------------------------------
+  // FETCH from server
+  // -----------------------------------------------
   const fetchAccounts = async () => {
     setLoading(true);
     try {
-      // Should return { accounts, totalBillPartAll, totalCashPartAll }
+      // The route returns: { accounts, totalBillAmountAll, totalCashPartAll, totalPaidAmountAll, totalPendingAmountAll }
       const res = await api.get("/api/seller/allaccounts");
-      const { accounts, totalBillPartAll, totalCashPartAll } = res.data;
+      const {
+        accounts,
+        totalBillAmountAll,
+        totalCashPartAll,
+        totalPaidAmountAll,
+        totalPendingAmountAll
+      } = res.data;
 
-      // Insert arrays if missing
+      // Ensure arrays
       const formatted = accounts.map((acc) => ({
         ...acc,
         bills: acc.bills || [],
@@ -91,8 +101,10 @@ const SupplierAccountList = () => {
       }));
 
       setAccounts(formatted);
-      setTotalBillPartAll(totalBillPartAll);
+      setTotalBillAmountAll(totalBillAmountAll);
       setTotalCashPartAll(totalCashPartAll);
+      setTotalPaidAmountAll(totalPaidAmountAll);
+      setTotalPendingAmountAll(totalPendingAmountAll);
 
       // Restore or select all
       const stored = localStorage.getItem("selectedSupplierAccountIds");
@@ -101,10 +113,7 @@ const SupplierAccountList = () => {
       } else {
         const allIds = formatted.map((a) => a._id);
         setSelectedAccountIds(allIds);
-        localStorage.setItem(
-          "selectedSupplierAccountIds",
-          JSON.stringify(allIds)
-        );
+        localStorage.setItem("selectedSupplierAccountIds", JSON.stringify(allIds));
       }
     } catch (err) {
       console.error(err);
@@ -119,40 +128,53 @@ const SupplierAccountList = () => {
     // eslint-disable-next-line
   }, []);
 
-  // For each account, compute BillPartPaid, CashPartPaid, BillPartPending, CashPartPending
+  // -----------------------------------------------
+  // Derived aggregator: BillPart vs CashPart
+  // -----------------------------------------------
   const enrichedAccounts = useMemo(() => {
     return accounts.map((acc) => {
-      let billPaid = 0;
-      let cashPaid = 0;
-      // Sum up payments
-      for (const pay of acc.payments || []) {
-        const remark = pay.remark?.toLowerCase() || "";
+      // We already have totalBillAmount, totalCashPart, paidAmount, totalPendingAmount from the model
+      // Now let's separate out "bill part paid" vs "cash part paid"
+      let billPartPaid = 0;
+      let cashPartPaid = 0;
+
+      // Sum up payments by remark
+      for (const pay of acc.payments) {
+        const remark = (pay.remark || "").toLowerCase();
         if (remark.startsWith("bill:")) {
-          billPaid += pay.amount;
+          billPartPaid += pay.amount;
         } else if (remark.startsWith("cash:")) {
-          cashPaid += pay.amount;
+          cashPartPaid += pay.amount;
         }
       }
-      const billPend = (acc.totalBillPartBilled || 0) - billPaid;
-      const cashPend = (acc.totalCashPartBilled || 0) - cashPaid;
+
+      const billPartPending = (acc.totalBillAmount || 0) - billPartPaid;
+      const cashPartPending = (acc.totalCashPart || 0) - cashPartPaid;
+
       return {
         ...acc,
-        billPartPaid: billPaid,
-        cashPartPaid: cashPaid,
-        billPartPending: billPend,
-        cashPartPending: cashPend
+        // Expose these custom fields:
+        billPartPaid,
+        cashPartPaid,
+        billPartPending,
+        cashPartPending
       };
     });
   }, [accounts]);
 
-  // Filter & sort
+  // -----------------------------------------------
+  // Filtering & Sorting
+  // -----------------------------------------------
   const filteredAccounts = useMemo(() => {
     let temp = [...enrichedAccounts];
 
+    // Payment status filter
     if (paymentStatusFilter === "Paid") {
-      temp = temp.filter((acc) => acc.pendingAmount === 0);
+      // "Paid" meaning totalPendingAmount=0
+      temp = temp.filter((acc) => acc.totalPendingAmount === 0);
     } else if (paymentStatusFilter === "Pending") {
-      temp = temp.filter((acc) => acc.pendingAmount !== 0);
+      // "Pending" meaning totalPendingAmount>0
+      temp = temp.filter((acc) => acc.totalPendingAmount > 0);
     }
 
     // Bill range
@@ -165,19 +187,19 @@ const SupplierAccountList = () => {
 
     // Pending range
     if (pendingAmountMin) {
-      temp = temp.filter((acc) => acc.pendingAmount >= parseFloat(pendingAmountMin));
+      temp = temp.filter((acc) => acc.totalPendingAmount >= parseFloat(pendingAmountMin));
     }
     if (pendingAmountMax) {
-      temp = temp.filter((acc) => acc.pendingAmount <= parseFloat(pendingAmountMax));
+      temp = temp.filter((acc) => acc.totalPendingAmount <= parseFloat(pendingAmountMax));
     }
 
-    // Search
+    // Search by ID/Name
     if (accountSearch.trim()) {
       const q = accountSearch.toLowerCase();
       temp = temp.filter(
         (acc) =>
-          acc.sellerId?.toLowerCase().includes(q) ||
-          acc.sellerName?.toLowerCase().includes(q)
+          (acc.sellerId || "").toLowerCase().includes(q) ||
+          (acc.sellerName || "").toLowerCase().includes(q)
       );
     }
 
@@ -187,7 +209,7 @@ const SupplierAccountList = () => {
         let valA = a[sortConfig.key];
         let valB = b[sortConfig.key];
 
-        // Date
+        // If sorting by date
         if (sortConfig.key === "createdAt") {
           valA = new Date(valA);
           valB = new Date(valB);
@@ -216,23 +238,24 @@ const SupplierAccountList = () => {
     sortConfig
   ]);
 
-  // Select all listed
+  // -----------------------------------------------
+  // Selecting which accounts are displayed
+  // -----------------------------------------------
   const handleSelectAllListed = () => {
     const listedIds = filteredAccounts.map((acc) => acc._id);
     const allSelected = listedIds.every((id) => selectedAccountIds.includes(id));
     let newSelection;
     if (allSelected) {
-      // unselect them
+      // Unselect them
       newSelection = selectedAccountIds.filter((id) => !listedIds.includes(id));
     } else {
-      // select them
+      // Select them
       newSelection = Array.from(new Set([...selectedAccountIds, ...listedIds]));
     }
     setSelectedAccountIds(newSelection);
     localStorage.setItem("selectedSupplierAccountIds", JSON.stringify(newSelection));
   };
 
-  // Toggle single
   const toggleSelection = (id) => {
     setSelectedAccountIds((prev) => {
       let updated;
@@ -246,12 +269,14 @@ const SupplierAccountList = () => {
     });
   };
 
-  // final accounts to display
+  // Now only show selected IDs in the final list
   const finalAccounts = useMemo(() => {
     return filteredAccounts.filter((acc) => selectedAccountIds.includes(acc._id));
   }, [filteredAccounts, selectedAccountIds]);
 
+  // -----------------------------------------------
   // Pagination
+  // -----------------------------------------------
   const totalPages = Math.ceil(finalAccounts.length / itemsPerPage);
   const currentPageAccounts = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -263,7 +288,9 @@ const SupplierAccountList = () => {
     setCurrentPage(page);
   };
 
-  // Basic totals across displayed
+  // -----------------------------------------------
+  // Totals for the displayed set (not global)
+  // -----------------------------------------------
   const totalBilled = useMemo(
     () => finalAccounts.reduce((sum, a) => sum + (a.totalBillAmount || 0), 0),
     [finalAccounts]
@@ -273,11 +300,11 @@ const SupplierAccountList = () => {
     [finalAccounts]
   );
   const totalPending = useMemo(
-    () => finalAccounts.reduce((sum, a) => sum + (a.pendingAmount || 0), 0),
+    () => finalAccounts.reduce((sum, a) => sum + (a.totalPendingAmount || 0), 0),
     [finalAccounts]
   );
 
-  // For Bill part & Cash part paid across final accounts:
+  // Summaries of "bill part" / "cash part" across final displayed set
   const {
     totalBillPartPaidAll,
     totalBillPartPendingAll,
@@ -304,7 +331,9 @@ const SupplierAccountList = () => {
     };
   }, [finalAccounts]);
 
-  // PDF
+  // -----------------------------------------------
+  // PDF Generation
+  // -----------------------------------------------
   const generatePDF = (account) => {
     setPdfLoading(true);
     const doc = new jsPDF();
@@ -318,67 +347,72 @@ const SupplierAccountList = () => {
     doc.text(`Supplier Address: ${account.sellerAddress || "-"}`, 14, 40);
     doc.text(`Supplier GST: ${account.sellerGst || "-"}`, 14, 46);
 
-    doc.text(`Total Bill Amount: ₹${(account.totalBillAmount || 0).toFixed(2)}`, 14, 52);
-    doc.text(`Paid Amount: ₹${(account.paidAmount || 0).toFixed(2)}`, 14, 58);
-    doc.text(`Pending: ₹${(account.pendingAmount || 0).toFixed(2)}`, 14, 64);
-
     doc.text(
-      `BillPart Billed: ₹${(account.totalBillPartBilled || 0).toFixed(2)}`,
+      `Total Bill Amount: ₹${(account.totalBillAmount || 0).toFixed(2)}`,
+      14,
+      52
+    );
+    doc.text(
+      `Paid Amount: ₹${(account.paidAmount || 0).toFixed(2)}`,
+      14,
+      58
+    );
+    doc.text(
+      `Pending: ₹${(account.totalPendingAmount || 0).toFixed(2)}`,
+      14,
+      64
+    );
+
+    // Bill vs Cash aggregator from front-end
+    doc.text(
+      `BillPart Paid: ₹${(account.billPartPaid || 0).toFixed(2)}`,
       14,
       70
     );
     doc.text(
-      `BillPart Paid: ₹${(account.billPartPaid || 0).toFixed(2)}`,
+      `BillPart Pending: ₹${(account.billPartPending || 0).toFixed(2)}`,
       14,
       76
     );
-    doc.text(
-      `BillPart Pending: ₹${(account.billPartPending || 0).toFixed(2)}`,
-      14,
-      82
-    );
 
-    doc.text(
-      `CashPart Billed: ₹${(account.totalCashPartBilled || 0).toFixed(2)}`,
-      14,
-      88
-    );
     doc.text(
       `CashPart Paid: ₹${(account.cashPartPaid || 0).toFixed(2)}`,
       14,
-      94
+      82
     );
     doc.text(
       `CashPart Pending: ₹${(account.cashPartPending || 0).toFixed(2)}`,
       14,
-      100
+      88
     );
 
     doc.text(
       `Created At: ${new Date(account.createdAt).toLocaleString()}`,
       14,
-      106
+      94
     );
 
-    // Bills
+    // BILLS
     doc.setFontSize(12);
-    doc.text("Bills", 14, 116);
+    doc.text("Bills", 14, 104);
     const billsData = (account.bills || []).map((bill, idx) => [
       idx + 1,
       bill.invoiceNo,
       `₹${bill.billAmount.toFixed(2)}`,
-      new Date(bill.invoiceDate).toLocaleDateString()
+      `₹${(bill.cashPart || 0).toFixed(2)}`,
+      new Date(bill.invoiceDate).toLocaleDateString(),
+      bill.remark || "-"
     ]);
     doc.autoTable({
-      startY: 120,
-      head: [["#", "InvoiceNo", "Amount(₹)", "Date"]],
+      startY: 108,
+      head: [["#", "InvoiceNo", "Bill(₹)", "Cash(₹)", "Date", "Remark"]],
       body: billsData,
       theme: "grid",
       styles: { fontSize: 8 },
       headStyles: { fillColor: [200, 0, 0] }
     });
 
-    // Payments
+    // PAYMENTS
     const finalY = doc.lastAutoTable.finalY + 10;
     doc.setFontSize(12);
     doc.text("Payments", 14, finalY);
@@ -404,7 +438,9 @@ const SupplierAccountList = () => {
     setPdfLoading(false);
   };
 
+  // -----------------------------------------------
   // Delete
+  // -----------------------------------------------
   const handleRemove = async (id) => {
     if (window.confirm("Are you sure you want to delete this supplier account?")) {
       try {
@@ -421,7 +457,9 @@ const SupplierAccountList = () => {
     }
   };
 
-  // Modal states
+  // -----------------------------------------------
+  // Modal (View Bills / Payments)
+  // -----------------------------------------------
   const [activeModalTab, setActiveModalTab] = useState("bills");
 
   // Bills filters
@@ -449,7 +487,7 @@ const SupplierAccountList = () => {
     setSelectedAccount(acc);
     setActiveModalTab("bills");
 
-    // Reset
+    // Reset sub-filters
     setBillsSearch("");
     setBillsDateFrom("");
     setBillsDateTo("");
@@ -471,7 +509,9 @@ const SupplierAccountList = () => {
 
   const closeModal = () => setSelectedAccount(null);
 
+  // -----------------------------------------------
   // Sort main table
+  // -----------------------------------------------
   const handleSort = (key) => {
     let direction = "asc";
     if (sortConfig.key === key && sortConfig.direction === "asc") {
@@ -480,21 +520,25 @@ const SupplierAccountList = () => {
     setSortConfig({ key, direction });
   };
 
-  // Helper to filter & sort payments
+  // -----------------------------------------------
+  // Payment Filter/Sorter
+  // -----------------------------------------------
   const filterSortPayments = (payments, search, dFrom, dTo, sKey, sDir) => {
     let data = [...payments];
-    // search
+    // Search
     if (search.trim()) {
       const q = search.toLowerCase();
-      data = data.filter(
-        (p) =>
+      data = data.filter((p) => {
+        const remark = (p.remark || "").toLowerCase();
+        return (
           p.method.toLowerCase().includes(q) ||
           p.submittedBy.toLowerCase().includes(q) ||
           (p.referenceId || "").toLowerCase().includes(q) ||
-          (p.remark || "").toLowerCase().includes(q)
-      );
+          remark.includes(q)
+        );
+      });
     }
-    // date range
+    // Date range
     if (dFrom) {
       const from = new Date(dFrom);
       data = data.filter((p) => new Date(p.date) >= from);
@@ -503,20 +547,17 @@ const SupplierAccountList = () => {
       const to = new Date(dTo);
       data = data.filter((p) => new Date(p.date) <= to);
     }
-    // sort
+    // Sort
     data.sort((a, b) => {
       let valA = a[sKey];
       let valB = b[sKey];
-
       if (sKey === "date") {
         valA = new Date(valA);
         valB = new Date(valB);
-      }
-      if (typeof valA === "string") {
+      } else if (typeof valA === "string") {
         valA = valA.toLowerCase();
         valB = valB.toLowerCase();
       }
-
       if (valA < valB) return sDir === "asc" ? -1 : 1;
       if (valA > valB) return sDir === "asc" ? 1 : -1;
       return 0;
@@ -524,7 +565,7 @@ const SupplierAccountList = () => {
     return data;
   };
 
-  // Filter & sort bills
+  // Bills filter/sort
   const filteredBills = useMemo(() => {
     if (!selectedAccount) return [];
     let data = [...(selectedAccount.bills || [])];
@@ -532,7 +573,7 @@ const SupplierAccountList = () => {
     // search
     if (billsSearch.trim()) {
       const q = billsSearch.toLowerCase();
-      data = data.filter((b) => b.invoiceNo.toLowerCase().includes(q));
+      data = data.filter((b) => (b.invoiceNo || "").toLowerCase().includes(q));
     }
     // date
     if (billsDateFrom) {
@@ -547,6 +588,7 @@ const SupplierAccountList = () => {
     data.sort((a, b) => {
       let valA = a[billsSortKey];
       let valB = b[billsSortKey];
+
       if (billsSortKey === "invoiceDate") {
         valA = new Date(valA);
         valB = new Date(valB);
@@ -554,6 +596,7 @@ const SupplierAccountList = () => {
         valA = valA.toLowerCase();
         valB = valB.toLowerCase();
       }
+
       if (valA < valB) return billsSortDirection === "asc" ? -1 : 1;
       if (valA > valB) return billsSortDirection === "asc" ? 1 : -1;
       return 0;
@@ -568,11 +611,11 @@ const SupplierAccountList = () => {
     billsSortDirection
   ]);
 
-  // Bill part payments
+  // Bill part payments => those whose `remark` starts with "bill:"
   const filteredBillPayments = useMemo(() => {
     if (!selectedAccount) return [];
     const relevant = (selectedAccount.payments || []).filter((p) =>
-      p.remark?.toLowerCase().startsWith("bill:")
+      (p.remark || "").toLowerCase().startsWith("bill:")
     );
     return filterSortPayments(
       relevant,
@@ -591,11 +634,11 @@ const SupplierAccountList = () => {
     billPaySortDirection
   ]);
 
-  // Cash part payments
+  // Cash part payments => those whose `remark` starts with "cash:"
   const filteredCashPayments = useMemo(() => {
     if (!selectedAccount) return [];
     const relevant = (selectedAccount.payments || []).filter((p) =>
-      p.remark?.toLowerCase().startsWith("cash:")
+      (p.remark || "").toLowerCase().startsWith("cash:")
     );
     return filterSortPayments(
       relevant,
@@ -614,7 +657,7 @@ const SupplierAccountList = () => {
     cashPaySortDirection
   ]);
 
-  // Sums in modal
+  // Sums in the modal tabs
   const billPaymentsSum = useMemo(() => {
     return filteredBillPayments.reduce((sum, p) => sum + p.amount, 0);
   }, [filteredBillPayments]);
@@ -622,7 +665,9 @@ const SupplierAccountList = () => {
     return filteredCashPayments.reduce((sum, p) => sum + p.amount, 0);
   }, [filteredCashPayments]);
 
-  // Skeleton
+  // -----------------------------------------------
+  // Skeleton Render
+  // -----------------------------------------------
   const renderSkeleton = () => {
     const rows = Array.from({ length: itemsPerPage });
     return (
@@ -641,27 +686,13 @@ const SupplierAccountList = () => {
         <tbody>
           {rows.map((_, i) => (
             <tr key={i} className="hover:bg-gray-100 divide-y divide-x">
-              <td className="px-1 py-2">
-                <Skeleton height={10} />
-              </td>
-              <td className="px-1 py-2">
-                <Skeleton height={10} />
-              </td>
-              <td className="px-1 py-2">
-                <Skeleton height={10} />
-              </td>
-              <td className="px-1 py-2">
-                <Skeleton height={10} />
-              </td>
-              <td className="px-1 py-2">
-                <Skeleton height={10} />
-              </td>
-              <td className="px-1 py-2">
-                <Skeleton height={10} />
-              </td>
-              <td className="px-1 py-2">
-                <Skeleton height={10} />
-              </td>
+              <td className="px-1 py-2"><Skeleton height={10} /></td>
+              <td className="px-1 py-2"><Skeleton height={10} /></td>
+              <td className="px-1 py-2"><Skeleton height={10} /></td>
+              <td className="px-1 py-2"><Skeleton height={10} /></td>
+              <td className="px-1 py-2"><Skeleton height={10} /></td>
+              <td className="px-1 py-2"><Skeleton height={10} /></td>
+              <td className="px-1 py-2"><Skeleton height={10} /></td>
             </tr>
           ))}
         </tbody>
@@ -669,9 +700,12 @@ const SupplierAccountList = () => {
     );
   };
 
+  // -----------------------------------------------
+  // RENDER
+  // -----------------------------------------------
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-gray-100">
-      {/* SIDEBAR */}
+      {/* SIDEBAR FILTERS */}
       <div
         className={`fixed inset-y-0 left-0 transform ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -684,7 +718,7 @@ const SupplierAccountList = () => {
           Filters
         </h2>
 
-        {/* Search */}
+        {/* Search by ID/Name */}
         <div className="mb-3">
           <input
             type="text"
@@ -711,7 +745,7 @@ const SupplierAccountList = () => {
           </select>
         </div>
 
-        {/* Bill Amount */}
+        {/* Bill Amount range */}
         <div className="mb-3">
           <p className="text-gray-700 font-semibold mb-1">Bill Amount (₹)</p>
           <div className="flex space-x-2">
@@ -740,7 +774,7 @@ const SupplierAccountList = () => {
           </div>
         </div>
 
-        {/* Pending Amount */}
+        {/* Pending Amount range */}
         <div className="mb-3">
           <p className="text-gray-700 font-semibold mb-1">Pending (₹)</p>
           <div className="flex space-x-2">
@@ -775,7 +809,9 @@ const SupplierAccountList = () => {
           <div className="flex space-x-2">
             <select
               value={sortConfig.key}
-              onChange={(e) => setSortConfig({ ...sortConfig, key: e.target.value })}
+              onChange={(e) =>
+                setSortConfig({ ...sortConfig, key: e.target.value })
+              }
               className="border text-xs p-1 rounded w-1/2"
             >
               <option value="">Field</option>
@@ -783,7 +819,7 @@ const SupplierAccountList = () => {
               <option value="sellerName">Name</option>
               <option value="totalBillAmount">Total Bill</option>
               <option value="paidAmount">Paid</option>
-              <option value="pendingAmount">Pending</option>
+              <option value="totalPendingAmount">Pending</option>
               <option value="createdAt">Created</option>
             </select>
             <select
@@ -799,7 +835,7 @@ const SupplierAccountList = () => {
           </div>
         </div>
 
-        {/* Select Suppliers */}
+        {/* Select Suppliers checkbox list */}
         <div className="mb-3">
           <div className="flex items-center justify-between mb-1">
             <p className="text-gray-700 font-semibold">Select Suppliers</p>
@@ -814,7 +850,10 @@ const SupplierAccountList = () => {
             {filteredAccounts.map((acc) => {
               const checked = selectedAccountIds.includes(acc._id);
               return (
-                <label key={acc._id} className="flex items-center mb-1 text-xs">
+                <label
+                  key={acc._id}
+                  className="flex items-center mb-1 text-xs cursor-pointer"
+                >
                   <input
                     type="checkbox"
                     checked={checked}
@@ -849,6 +888,7 @@ const SupplierAccountList = () => {
           Filters
         </button>
       </div>
+      {/* Overlay if sidebar open */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-40 z-40 md:hidden"
@@ -860,55 +900,67 @@ const SupplierAccountList = () => {
       <div className="flex-1 p-2 md:p-4 lg:p-6 text-xs">
         {error && <p className="text-red-500 text-center mb-2">{error}</p>}
 
-        {/* TOP CARDS: might be multiple rows to fit them all */}
+        {/* TOP CARDS for totals */}
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 mb-3">
-          {/* Basic totals */}
+          {/* Totals for the *displayed* subset */}
           <div className="bg-white shadow rounded p-2 flex flex-col items-center">
-            <p className="text-gray-400 text-[10px]">Total Billed</p>
+            <p className="text-gray-400 text-[10px]">Displayed Bill</p>
             <p className="font-bold text-green-700">
               ₹{totalBilled.toFixed(2)}
             </p>
           </div>
           <div className="bg-white shadow rounded p-2 flex flex-col items-center">
-            <p className="text-gray-400 text-[10px]">Total Paid</p>
+            <p className="text-gray-400 text-[10px]">Displayed Paid</p>
             <p className="font-bold text-blue-700">
               ₹{totalPaid.toFixed(2)}
             </p>
           </div>
           <div className="bg-white shadow rounded p-2 flex flex-col items-center">
-            <p className="text-gray-400 text-[10px]">Total Pending</p>
+            <p className="text-gray-400 text-[10px]">Displayed Pending</p>
             <p className="font-bold text-red-700">
               ₹{totalPending.toFixed(2)}
             </p>
           </div>
 
-          {/* Bill aggregator */}
+          {/* Global totals from the backend */}
           <div className="bg-white shadow rounded p-2 flex flex-col items-center">
-            <p className="text-gray-400 text-[10px]">BillPart Billed</p>
+            <p className="text-gray-400 text-[10px]">All BillAmount</p>
             <p className="font-bold text-purple-700">
-              ₹{totalBillPartAll.toFixed(2)}
+              ₹{totalBillAmountAll.toFixed(2)}
             </p>
           </div>
           <div className="bg-white shadow rounded p-2 flex flex-col items-center">
+            <p className="text-gray-400 text-[10px]">All CashPart</p>
+            <p className="font-bold text-orange-700">
+              ₹{totalCashPartAll.toFixed(2)}
+            </p>
+          </div>
+          <div className="bg-white shadow rounded p-2 flex flex-col items-center">
+            <p className="text-gray-400 text-[10px]">All Paid</p>
+            <p className="font-bold text-blue-700">
+              ₹{totalPaidAmountAll.toFixed(2)}
+            </p>
+          </div>
+          <div className="bg-white shadow rounded p-2 flex flex-col items-center">
+            <p className="text-gray-400 text-[10px]">All Pending</p>
+            <p className="font-bold text-red-700">
+              ₹{totalPendingAmountAll.toFixed(2)}
+            </p>
+          </div>
+        </div>
+
+        {/* BillPart / CashPart across displayed set */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 mb-3">
+          <div className="bg-white shadow rounded p-2 flex flex-col items-center">
             <p className="text-gray-400 text-[10px]">BillPart Paid</p>
-            <p className="font-bold text-indigo-700">
+            <p className="font-bold text-green-700">
               ₹{totalBillPartPaidAll.toFixed(2)}
             </p>
           </div>
           <div className="bg-white shadow rounded p-2 flex flex-col items-center">
             <p className="text-gray-400 text-[10px]">BillPart Pending</p>
-            <p className="font-bold text-pink-700">
-              {/* totalBillPartPendingAll = totalBillPartAll - totalBillPartPaidAll
-                  But we actually computed it above, so use that: */}
+            <p className="font-bold text-red-700">
               ₹{totalBillPartPendingAll.toFixed(2)}
-            </p>
-          </div>
-
-          {/* Cash aggregator */}
-          <div className="bg-white shadow rounded p-2 flex flex-col items-center">
-            <p className="text-gray-400 text-[10px]">CashPart Billed</p>
-            <p className="font-bold text-orange-700">
-              ₹{totalCashPartAll.toFixed(2)}
             </p>
           </div>
           <div className="bg-white shadow rounded p-2 flex flex-col items-center">
@@ -925,7 +977,7 @@ const SupplierAccountList = () => {
           </div>
         </div>
 
-        {/* PDF loading */}
+        {/* PDF loading overlay */}
         {pdfLoading && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
             <div className="flex flex-col items-center">
@@ -939,10 +991,12 @@ const SupplierAccountList = () => {
         {loading ? (
           renderSkeleton()
         ) : finalAccounts.length === 0 ? (
-          <p className="text-center text-gray-500 mt-4">No supplier accounts to display.</p>
+          <p className="text-center text-gray-500 mt-4">
+            No supplier accounts to display.
+          </p>
         ) : (
           <>
-            {/* Desktop Table */}
+            {/* DESKTOP TABLE */}
             <div className="hidden md:block">
               <table className="w-full text-[10px] text-gray-600 bg-white shadow rounded overflow-hidden">
                 <thead className="bg-red-500 text-white">
@@ -1001,10 +1055,10 @@ const SupplierAccountList = () => {
                     </th>
                     <th
                       className="px-1 py-2 cursor-pointer"
-                      onClick={() => handleSort("pendingAmount")}
+                      onClick={() => handleSort("totalPendingAmount")}
                     >
                       Pending
-                      {sortConfig.key === "pendingAmount" && (
+                      {sortConfig.key === "totalPendingAmount" && (
                         <i
                           className={`fa fa-sort-${
                             sortConfig.direction === "asc" ? "asc" : "desc"
@@ -1012,10 +1066,9 @@ const SupplierAccountList = () => {
                         />
                       )}
                     </th>
-                    <th className="px-1 py-2">BillB</th>
+                    {/* BillPart & CashPart (computed in front-end) */}
                     <th className="px-1 py-2">BillPaid</th>
                     <th className="px-1 py-2">BillPend</th>
-                    <th className="px-1 py-2">CashB</th>
                     <th className="px-1 py-2">CashPaid</th>
                     <th className="px-1 py-2">CashPend</th>
                     <th className="px-1 py-2">Actions</th>
@@ -1038,19 +1091,13 @@ const SupplierAccountList = () => {
                         ₹{(acc.paidAmount || 0).toFixed(2)}
                       </td>
                       <td className="px-1 py-2">
-                        ₹{(acc.pendingAmount || 0).toFixed(2)}
-                      </td>
-                      <td className="px-1 py-2 text-purple-700">
-                        ₹{(acc.totalBillPartBilled || 0).toFixed(2)}
+                        ₹{(acc.totalPendingAmount || 0).toFixed(2)}
                       </td>
                       <td className="px-1 py-2 text-green-700">
                         ₹{(acc.billPartPaid || 0).toFixed(2)}
                       </td>
                       <td className="px-1 py-2 text-red-700">
                         ₹{(acc.billPartPending || 0).toFixed(2)}
-                      </td>
-                      <td className="px-1 py-2 text-orange-700">
-                        ₹{(acc.totalCashPartBilled || 0).toFixed(2)}
                       </td>
                       <td className="px-1 py-2 text-green-700">
                         ₹{(acc.cashPartPaid || 0).toFixed(2)}
@@ -1072,12 +1119,14 @@ const SupplierAccountList = () => {
                           >
                             <i className="fa fa-file-pdf-o" />
                           </button>
-                        {userInfo.isSuper &&  <button
-                            onClick={() => handleRemove(acc._id)}
-                            className="bg-red-500 text-white px-1 py-1 rounded hover:bg-red-600"
-                          >
-                            <i className="fa fa-trash" />
-                          </button> }
+                          {userInfo?.isSuper && (
+                            <button
+                              onClick={() => handleRemove(acc._id)}
+                              className="bg-red-500 text-white px-1 py-1 rounded hover:bg-red-600"
+                            >
+                              <i className="fa fa-trash" />
+                            </button>
+                          )}
                           <button
                             onClick={() => navigate(`/supplier/edit/${acc._id}`)}
                             className="bg-red-500 text-white px-1 py-1 rounded hover:bg-red-600"
@@ -1092,28 +1141,23 @@ const SupplierAccountList = () => {
               </table>
             </div>
 
-            {/* Mobile Cards */}
+            {/* MOBILE CARDS */}
             <div className="md:hidden flex flex-col space-y-2">
               {currentPageAccounts.map((acc) => (
                 <div key={acc._id} className="bg-white p-2 rounded shadow">
-                  <p className="text-red-600 font-bold">Name: {acc.sellerName}</p>
+                  <p className="text-red-600 font-bold">
+                    Name: {acc.sellerName}
+                  </p>
                   <p>Address: {acc.sellerAddress}</p>
                   <p>Bill: ₹{(acc.totalBillAmount || 0).toFixed(2)}</p>
                   <p>Paid: ₹{(acc.paidAmount || 0).toFixed(2)}</p>
-                  <p>Pending: ₹{(acc.pendingAmount || 0).toFixed(2)}</p>
+                  <p>Pending: ₹{(acc.totalPendingAmount || 0).toFixed(2)}</p>
 
-                  <p className="text-purple-700">
-                    BillB: ₹{(acc.totalBillPartBilled || 0).toFixed(2)}
-                  </p>
                   <p className="text-green-700">
                     BillPaid: ₹{(acc.billPartPaid || 0).toFixed(2)}
                   </p>
                   <p className="text-red-700">
                     BillPend: ₹{(acc.billPartPending || 0).toFixed(2)}
-                  </p>
-
-                  <p className="text-orange-700">
-                    CashB: ₹{(acc.totalCashPartBilled || 0).toFixed(2)}
                   </p>
                   <p className="text-green-700">
                     CashPaid: ₹{(acc.cashPartPaid || 0).toFixed(2)}
@@ -1135,12 +1179,14 @@ const SupplierAccountList = () => {
                     >
                       <i className="fa fa-file" />
                     </button>
-                   {userInfo.isSuper && <button
-                      onClick={() => handleRemove(acc._id)}
-                      className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
-                    >
-                      <i className="fa fa-trash" />
-                    </button> }
+                    {userInfo?.isSuper && (
+                      <button
+                        onClick={() => handleRemove(acc._id)}
+                        className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+                      >
+                        <i className="fa fa-trash" />
+                      </button>
+                    )}
                     <button
                       onClick={() => navigate(`/supplier/edit/${acc._id}`)}
                       className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
@@ -1152,7 +1198,7 @@ const SupplierAccountList = () => {
               ))}
             </div>
 
-            {/* Pagination */}
+            {/* PAGINATION */}
             <div className="flex justify-between items-center mt-2">
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
@@ -1215,9 +1261,7 @@ const SupplierAccountList = () => {
         }}
       >
         <DialogTitle sx={{ m: 0, p: 1, fontSize: "0.8rem", fontWeight: "bold" }}>
-          {selectedAccount && (
-            <>Supplier: {selectedAccount.sellerName || "-"}</>
-          )}
+          {selectedAccount && <>Supplier: {selectedAccount.sellerName || "-"}</>}
           <IconButton
             aria-label="close"
             onClick={closeModal}
@@ -1238,32 +1282,46 @@ const SupplierAccountList = () => {
             <div className="flex flex-col text-xs space-y-2">
               {/* Basic Info */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <p><strong>ID:</strong> {selectedAccount.sellerId}</p>
-                <p><strong>GST:</strong> {selectedAccount.sellerGst || "-"}</p>
-                <p><strong>Total Bill:</strong> ₹{(selectedAccount.totalBillAmount || 0).toFixed(2)}</p>
-                <p><strong>Paid:</strong> ₹{(selectedAccount.paidAmount || 0).toFixed(2)}</p>
-                <p><strong>Pending:</strong> ₹{(selectedAccount.pendingAmount || 0).toFixed(2)}</p>
+                <p>
+                  <strong>ID:</strong> {selectedAccount.sellerId}
+                </p>
+                <p>
+                  <strong>GST:</strong> {selectedAccount.sellerGst || "-"}
+                </p>
+                <p>
+                  <strong>Total Bill:</strong> ₹
+                  {(selectedAccount.totalBillAmount || 0).toFixed(2)}
+                </p>
+                <p>
+                  <strong>Cash Part:</strong> ₹
+                  {(selectedAccount.totalCashPart || 0).toFixed(2)}
+                </p>
+                <p>
+                  <strong>Paid:</strong> ₹
+                  {(selectedAccount.paidAmount || 0).toFixed(2)}
+                </p>
+                <p>
+                  <strong>Pending:</strong> ₹
+                  {(selectedAccount.totalPendingAmount || 0).toFixed(2)}
+                </p>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
-                <p className="text-purple-700">
-                  <strong>BillB:</strong> ₹{(selectedAccount.totalBillPartBilled || 0).toFixed(2)}
-                </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
                 <p className="text-green-700">
-                  <strong>BillPaid:</strong> ₹{(selectedAccount.billPartPaid || 0).toFixed(2)}
+                  <strong>BillPart Paid:</strong>{" "}
+                  ₹{(selectedAccount.billPartPaid || 0).toFixed(2)}
                 </p>
                 <p className="text-red-700">
-                  <strong>BillPend:</strong> ₹{(selectedAccount.billPartPending || 0).toFixed(2)}
-                </p>
-
-                <p className="text-orange-700">
-                  <strong>CashB:</strong> ₹{(selectedAccount.totalCashPartBilled || 0).toFixed(2)}
+                  <strong>BillPart Pend:</strong>{" "}
+                  ₹{(selectedAccount.billPartPending || 0).toFixed(2)}
                 </p>
                 <p className="text-green-700">
-                  <strong>CashPaid:</strong> ₹{(selectedAccount.cashPartPaid || 0).toFixed(2)}
+                  <strong>CashPart Paid:</strong>{" "}
+                  ₹{(selectedAccount.cashPartPaid || 0).toFixed(2)}
                 </p>
                 <p className="text-red-700">
-                  <strong>CashPend:</strong> ₹{(selectedAccount.cashPartPending || 0).toFixed(2)}
+                  <strong>CashPart Pend:</strong>{" "}
+                  ₹{(selectedAccount.cashPartPending || 0).toFixed(2)}
                 </p>
               </div>
 
@@ -1349,7 +1407,8 @@ const SupplierAccountList = () => {
                         <tr>
                           <th className="px-1 py-1">#</th>
                           <th className="px-1 py-1">InvoiceNo</th>
-                          <th className="px-1 py-1">Amount(₹)</th>
+                          <th className="px-1 py-1">Bill(₹)</th>
+                          <th className="px-1 py-1">Cash(₹)</th>
                           <th className="px-1 py-1">Date</th>
                           <th className="px-1 py-1">Remark</th>
                         </tr>
@@ -1357,23 +1416,27 @@ const SupplierAccountList = () => {
                       <tbody>
                         {filteredBills.length ? (
                           filteredBills.map((bill, i) => (
-                            <tr key={i} className="border-b text-center hover:bg-gray-50">
+                            <tr
+                              key={i}
+                              className="border-b text-center hover:bg-gray-50"
+                            >
                               <td className="px-1 py-1">{i + 1}</td>
                               <td className="px-1 py-1">{bill.invoiceNo}</td>
                               <td className="px-1 py-1">
                                 ₹{bill.billAmount.toFixed(2)}
                               </td>
                               <td className="px-1 py-1">
-                                {new Date(bill.invoiceDate).toLocaleDateString()}
+                                ₹{(bill.cashPart || 0).toFixed(2)}
                               </td>
                               <td className="px-1 py-1">
-                                {bill.remark}
+                                {new Date(bill.invoiceDate).toLocaleDateString()}
                               </td>
+                              <td className="px-1 py-1">{bill.remark || ""}</td>
                             </tr>
                           ))
                         ) : (
                           <tr>
-                            <td colSpan={4} className="text-center py-2 text-gray-400">
+                            <td colSpan={6} className="text-center py-2 text-gray-400">
                               No bills found.
                             </td>
                           </tr>
@@ -1389,7 +1452,9 @@ const SupplierAccountList = () => {
                 <div className="mt-2">
                   <p className="mb-1">
                     <strong>Total Bill Part Payments:</strong>{" "}
-                    <span className="text-green-600">₹{billPaymentsSum.toFixed(2)}</span>
+                    <span className="text-green-600">
+                      ₹{billPaymentsSum.toFixed(2)}
+                    </span>
                   </p>
                   <div className="flex flex-wrap gap-2 mb-2">
                     <input
@@ -1450,7 +1515,9 @@ const SupplierAccountList = () => {
                               <td className="px-1 py-1">{idx + 1}</td>
                               <td
                                 className={`px-1 py-1 ${
-                                  pay.amount >= 0 ? "text-green-600" : "text-red-600"
+                                  pay.amount >= 0
+                                    ? "text-green-600"
+                                    : "text-red-600"
                                 }`}
                               >
                                 ₹{pay.amount.toFixed(2)}
@@ -1482,7 +1549,9 @@ const SupplierAccountList = () => {
                 <div className="mt-2">
                   <p className="mb-1">
                     <strong>Total Cash Part Payments:</strong>{" "}
-                    <span className="text-green-600">₹{cashPaymentsSum.toFixed(2)}</span>
+                    <span className="text-green-600">
+                      ₹{cashPaymentsSum.toFixed(2)}
+                    </span>
                   </p>
                   <div className="flex flex-wrap gap-2 mb-2">
                     <input
@@ -1543,7 +1612,9 @@ const SupplierAccountList = () => {
                               <td className="px-1 py-1">{idx + 1}</td>
                               <td
                                 className={`px-1 py-1 ${
-                                  pay.amount >= 0 ? "text-green-600" : "text-red-600"
+                                  pay.amount >= 0
+                                    ? "text-green-600"
+                                    : "text-red-600"
                                 }`}
                               >
                                 ₹{pay.amount.toFixed(2)}
