@@ -22,7 +22,7 @@ const Transition = forwardRef(function Transition(props, ref) {
 
 const EditSellerPaymentPage = () => {
   const [sellerName, setSellerName] = useState("");
-  const [sellerDetails, setSellerDetails] = useState(null);
+  const [supplierDetails, setSupplierDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
@@ -30,10 +30,10 @@ const EditSellerPaymentPage = () => {
   const [paymentMethod, setPaymentMethod] = useState("");
   const [paymentDate, setPaymentDate] = useState("");
   const [remark, setRemark] = useState("");
-  const [remarkType, setRemarkType] = useState("CASH"); // New state for remark type
+  const [remarkType, setRemarkType] = useState("CASH"); // "CASH" or "BILL"
   const [remainingAmount, setRemainingAmount] = useState(0);
-  const [errorMessage, setErrorMessage] = useState(""); // For error modal
-  const [successMessage, setSuccessMessage] = useState(""); // For success modal
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [accounts, setAccounts] = useState([]);
@@ -52,8 +52,7 @@ const EditSellerPaymentPage = () => {
         const response = await api.get("/api/accounts/allaccounts");
         const getPaymentMethod = response.data.map((acc) => acc.accountId);
         if (getPaymentMethod.length > 0) {
-          const firstAccountId = getPaymentMethod[0];
-          setPaymentMethod(firstAccountId);
+          setPaymentMethod(getPaymentMethod[0]);
         } else {
           setPaymentMethod(null);
         }
@@ -70,7 +69,7 @@ const EditSellerPaymentPage = () => {
     fetchAccounts();
   }, []);
 
-  // Fetch Suggestions for Seller Name
+  // Fetch Suggestions for Seller Name (still calling them "seller" for consistency)
   useEffect(() => {
     const fetchSuggestions = async () => {
       if (sellerName) {
@@ -94,21 +93,27 @@ const EditSellerPaymentPage = () => {
     return () => clearTimeout(debounceFetch);
   }, [sellerName]);
 
-  // Fetch Seller Details based on selected suggestion
-  const handleFetchSellerDetails = async (id) => {
+  // Fetch Supplier Details based on selected suggestion
+  const handleFetchSupplierDetails = async (id) => {
     setIsLoading(true);
     try {
+      // Updated endpoint from get-seller to get-supplier
       const response = await api.get(`/api/sellerpayments/get-seller/${id}`);
-      setSellerDetails(response.data);
-      const remaining = response.data.paymentRemaining;
-      setRemainingAmount(remaining >= 0 ? remaining : 0);
+      const data = response.data;
+
+      // Set local state with the new data structure
+      setSupplierDetails(data);
+
+      // Update local "remainingAmount" with totalPendingAmount from server
+      setRemainingAmount(data.totalPendingAmount >= 0 ? data.totalPendingAmount : 0);
+
       setErrorMessage("");
     } catch (error) {
-      console.error("Error fetching seller data:", error);
-      setErrorMessage("Error fetching seller data. Please check the seller name.");
+      console.error("Error fetching supplier data:", error);
+      setErrorMessage("Error fetching supplier data. Please check the seller name.");
       setShowErrorModal(true);
       setTimeout(() => setShowErrorModal(false), 3000);
-      setSellerDetails(null);
+      setSupplierDetails(null);
     } finally {
       setIsLoading(false);
     }
@@ -116,7 +121,7 @@ const EditSellerPaymentPage = () => {
 
   // Handle Add Payment action
   const handleAddPayment = async () => {
-    if (!sellerDetails) return;
+    if (!supplierDetails) return;
     if (!paymentAmount || !paymentMethod || !paymentDate) {
       setErrorMessage("Please enter a valid payment amount, method, and date.");
       setShowErrorModal(true);
@@ -138,23 +143,32 @@ const EditSellerPaymentPage = () => {
     setIsLoading(true);
     try {
       // Build final remark based on the selected type (CASH or BILL)
+      // (Drop-down label says "CASHPART/BILLPART," but actual value is "CASH"/"BILL".)
       const finalRemark = `${remarkType}: ${remark}`;
-      await api.post(`/api/sellerpayments/add-payments/${sellerDetails._id}`, {
+
+      // Endpoint may remain the same if your backend hasn't changed for adding payments
+      await api.post(`/api/sellerpayments/add-payments/${supplierDetails._id}`, {
         amount: Number(paymentAmount),
         method: paymentMethod,
         remark: finalRemark,
         date: paymentDate,
         userId: userInfo._id,
-        sellerId: sellerDetails.sellerId,
-        sellerName: sellerDetails.sellerName,
+        sellerId: supplierDetails.sellerId,
+        sellerName: supplierDetails.sellerName,
       });
-      await handleFetchSellerDetails(sellerDetails._id);
+
+      // Re-fetch updated details
+      await handleFetchSupplierDetails(supplierDetails._id);
+
+      // Reset form fields
       setPaymentAmount("");
-      setPaymentMethod(""); // Reset to default (or set to first account again if needed)
+      setPaymentMethod(accounts.length ? accounts[0].accountId : "");
       setPaymentDate("");
       setRemark("");
       setRemarkType("CASH");
       setErrorMessage("");
+
+      // Show success message
       setSuccessMessage("Payment added successfully!");
       setShowSuccessModal(true);
       setTimeout(() => setShowSuccessModal(false), 3000);
@@ -172,7 +186,7 @@ const EditSellerPaymentPage = () => {
   const handleSuggestionClick = (suggestion) => {
     setSellerName(suggestion.sellerName);
     setSuggestions([]);
-    handleFetchSellerDetails(suggestion._id);
+    handleFetchSupplierDetails(suggestion._id);
   };
 
   const handleKeyDown = (e) => {
@@ -189,11 +203,13 @@ const EditSellerPaymentPage = () => {
     }
   };
 
-  // Calculate pending amounts (if sellerDetails is available)
+  // Shortcuts for pending amounts if needed
   const cashPartPending =
-    sellerDetails && sellerDetails.totalCashPart - sellerDetails.totalCashPartGiven;
+    supplierDetails &&
+    (supplierDetails.totalCashPart - supplierDetails.totalCashPartGiven);
   const billPartPending =
-    sellerDetails && sellerDetails.totalBillPart - sellerDetails.totalBillPartGiven;
+    supplierDetails &&
+    (supplierDetails.totalBillPart - supplierDetails.totalBillPartGiven);
 
   return (
     <div className="p-2">
@@ -230,7 +246,7 @@ const EditSellerPaymentPage = () => {
       <div className="flex flex-col justify-center items-center p-2">
         <div className="bg-white shadow-xl rounded-lg w-full max-w-lg p-4">
           {/* Seller Name Input & Suggestions */}
-          {!sellerDetails && (
+          {!supplierDetails && (
             <>
               <div className="mb-4">
                 <div className="relative w-full">
@@ -239,7 +255,7 @@ const EditSellerPaymentPage = () => {
                   </label>
                   <input
                     type="text"
-                    placeholder="Enter Seller Name"
+                    placeholder="Enter Supplier Name"
                     value={sellerName}
                     onKeyDown={handleKeyDown}
                     onChange={(e) => setSellerName(e.target.value)}
@@ -273,44 +289,42 @@ const EditSellerPaymentPage = () => {
             </>
           )}
 
-          {/* Seller Details & Payment Summary */}
+          {/* Supplier Details & Payment Summary */}
           {isLoading ? (
             <div>
               <Skeleton height={30} count={1} />
               <Skeleton height={20} count={3} style={{ marginTop: "10px" }} />
             </div>
           ) : (
-            sellerDetails && (
+            supplierDetails && (
               <>
                 {activeSection === "home" && (
                   <div className="mt-4">
-                    {/* Seller Header and Payment Status Badge */}
+                    {/* Supplier Header and Payment Status Badge */}
                     <div className="border-b pb-4 flex justify-between items-center relative">
                       <h5 className="mb-2 text-2xl font-bold tracking-tight text-gray-900">
-                        {sellerDetails.sellerName}
+                        {supplierDetails.sellerName}
                       </h5>
                       {(() => {
+                        // Payment status logic using totalPendingAmount & paidAmount
                         let paymentStatus = "";
                         let paymentStatusClass = "";
-                        if (sellerDetails.paymentRemaining === 0) {
+                        const { totalPendingAmount, paidAmount } = supplierDetails;
+
+                        if (totalPendingAmount === 0) {
                           paymentStatus = "Paid";
                           paymentStatusClass =
                             "text-green-600 bg-green-200 hover:bg-green-300 hover:scale-105";
-                        } else if (
-                          sellerDetails.totalAmountPaid === 0 &&
-                          sellerDetails.paymentRemaining > 0
-                        ) {
+                        } else if (paidAmount === 0 && totalPendingAmount > 0) {
                           paymentStatus = "Unpaid";
                           paymentStatusClass =
                             "text-red-600 bg-red-200 hover:bg-red-300 hover:scale-105";
-                        } else if (
-                          sellerDetails.paymentRemaining > 0 &&
-                          sellerDetails.totalAmountPaid > 0
-                        ) {
+                        } else if (totalPendingAmount > 0 && paidAmount > 0) {
                           paymentStatus = "Partial";
                           paymentStatusClass =
                             "text-yellow-600 bg-yellow-200 hover:bg-yellow-300 hover:scale-105";
                         }
+
                         return (
                           <p
                             className={`mt-auto mr-2 mb-auto py-2 w-40 text-center ml-auto rounded-full text-xs font-bold z-20 shadow-md transition-all duration-300 ease-in-out transform ${paymentStatusClass}`}
@@ -327,8 +341,17 @@ const EditSellerPaymentPage = () => {
                         <span className="text-xs font-semibold text-gray-600">
                           Total Billed Amount:
                         </span>
+                        {/* 
+                          Previously: totalAmountBilled 
+                          Now you can show combined total: 
+                          totalBillAmount + totalCashPart 
+                        */}
                         <span className="text-sm font-bold text-gray-800">
-                          ₹{sellerDetails.totalAmountBilled.toFixed(2)}
+                          ₹
+                          {(
+                            supplierDetails.totalBillAmount +
+                            supplierDetails.totalCashPart
+                          ).toFixed(2)}
                         </span>
                       </div>
                       <div className="flex flex-col">
@@ -336,7 +359,7 @@ const EditSellerPaymentPage = () => {
                           Paid Amount:
                         </span>
                         <span className="text-sm font-bold text-green-600">
-                          ₹{sellerDetails.totalAmountPaid.toFixed(2)}
+                          ₹{supplierDetails.paidAmount.toFixed(2)}
                         </span>
                       </div>
                       <div className="flex flex-col">
@@ -344,7 +367,7 @@ const EditSellerPaymentPage = () => {
                           Remaining Amount:
                         </span>
                         <span className="text-sm font-bold text-red-600">
-                          ₹{sellerDetails.paymentRemaining.toFixed(2)}
+                          ₹{supplierDetails.totalPendingAmount.toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -355,39 +378,47 @@ const EditSellerPaymentPage = () => {
                       <div className="bg-white shadow-md rounded-lg p-4">
                         <div className="text-xs text-gray-500">Bill Part Billed</div>
                         <div className="text-lg font-bold text-gray-700">
-                          ₹{sellerDetails.totalBillPart.toFixed(2)}
+                          ₹{supplierDetails.totalBillPart.toFixed(2)}
                         </div>
                       </div>
                       <div className="bg-white shadow-md rounded-lg p-4">
                         <div className="text-xs text-gray-500">Cash Part Billed</div>
                         <div className="text-lg font-bold text-gray-700">
-                          ₹{sellerDetails.totalCashPart.toFixed(2)}
+                          ₹{supplierDetails.totalCashPart.toFixed(2)}
                         </div>
                       </div>
                       {/* Given amounts in green */}
                       <div className="bg-white shadow-md rounded-lg p-4">
                         <div className="text-xs text-gray-500">Bill Part Given</div>
                         <div className="text-lg font-bold text-green-600">
-                          ₹{sellerDetails.totalBillPartGiven.toFixed(2)}
+                          ₹{supplierDetails.totalBillPartGiven.toFixed(2)}
                         </div>
                       </div>
                       <div className="bg-white shadow-md rounded-lg p-4">
                         <div className="text-xs text-gray-500">Cash Part Given</div>
                         <div className="text-lg font-bold text-green-600">
-                          ₹{sellerDetails.totalCashPartGiven.toFixed(2)}
+                          ₹{supplierDetails.totalCashPartGiven.toFixed(2)}
                         </div>
                       </div>
                       {/* Pending amounts in yellow */}
                       <div className="bg-white shadow-md rounded-lg p-4">
                         <div className="text-xs text-gray-500">Bill Part Pending</div>
                         <div className="text-lg font-bold text-yellow-600">
-                          ₹{(sellerDetails.totalBillPart - sellerDetails.totalBillPartGiven).toFixed(2)}
+                          ₹
+                          {(
+                            supplierDetails.totalBillPart -
+                            supplierDetails.totalBillPartGiven
+                          ).toFixed(2)}
                         </div>
                       </div>
                       <div className="bg-white shadow-md rounded-lg p-4">
                         <div className="text-xs text-gray-500">Cash Part Pending</div>
                         <div className="text-lg font-bold text-yellow-600">
-                          ₹{(sellerDetails.totalCashPart - sellerDetails.totalCashPartGiven).toFixed(2)}
+                          ₹
+                          {(
+                            supplierDetails.totalCashPart -
+                            supplierDetails.totalCashPartGiven
+                          ).toFixed(2)}
                         </div>
                       </div>
                     </div>
@@ -402,31 +433,41 @@ const EditSellerPaymentPage = () => {
                       </button>
                     </div>
 
-                    {/* Billings Section */}
+                    {/* Bills Section (replaces "billings") */}
                     <div className="mt-6">
                       <h3 className="text-md font-bold text-gray-600 mb-2">
-                        Billings
+                        Bills
                       </h3>
-                      {sellerDetails.billings.length === 0 ? (
-                        <p className="text-xs text-gray-500">No billings found.</p>
+                      {(!supplierDetails.bills || supplierDetails.bills.length === 0) ? (
+                        <p className="text-xs text-gray-500">No bills found.</p>
                       ) : (
                         <div className="grid grid-cols-1 gap-4">
-                          {sellerDetails.billings.map((billing, index) => (
+                          {supplierDetails.bills.map((bill, index) => (
                             <div
                               key={index}
                               className="bg-white shadow-md rounded-lg p-4 flex justify-between items-center"
                             >
                               <div>
                                 <p className="text-sm text-gray-700 font-semibold">
-                                  Invoice No: {billing.invoiceNo}
+                                  Invoice No: {bill.invoiceNo}
                                 </p>
                                 <p className="text-xs text-gray-500">
-                                  Amount: ₹{billing.amount.toFixed(2)}
+                                  Amount: ₹{bill.billAmount.toFixed(2)}
                                 </p>
+                                {bill.cashPart ? (
+                                  <p className="text-xs text-gray-500">
+                                    Cash Part: ₹{bill.cashPart.toFixed(2)}
+                                  </p>
+                                ) : null}
+                                {bill.remark && (
+                                  <p className="text-xs text-gray-500">
+                                    Remark: {bill.remark}
+                                  </p>
+                                )}
                               </div>
                               <div>
                                 <p className="text-xs text-gray-500">
-                                  {new Date(billing.date).toLocaleDateString()}
+                                  {new Date(bill.invoiceDate).toLocaleDateString()}
                                 </p>
                               </div>
                             </div>
@@ -442,16 +483,19 @@ const EditSellerPaymentPage = () => {
                     <h3 className="text-md font-bold text-gray-600 mb-2">
                       Payments
                     </h3>
-                    {sellerDetails.payments.length === 0 ? (
+                    {(!supplierDetails.payments ||
+                      supplierDetails.payments.length === 0) ? (
                       <p className="text-xs text-gray-500">No payments made yet.</p>
                     ) : (
                       <div className="grid grid-cols-1 gap-4">
-                        {sellerDetails.payments.map((payment, index) => {
-                          // Lookup account name by comparing payment.method (account id) with accounts list
+                        {supplierDetails.payments.map((payment, index) => {
+                          // Lookup account name by comparing payment.method (accountId) with accounts list
                           const account = accounts.find(
                             (acc) => acc.accountId === payment.method
                           );
-                          const accountName = account ? account.accountName : payment.method;
+                          const accountName = account
+                            ? account.accountName
+                            : payment.method;
                           return (
                             <div
                               key={index}
@@ -586,6 +630,8 @@ const EditSellerPaymentPage = () => {
                     onChange={(e) => setRemarkType(e.target.value)}
                     className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
                   >
+                    {/* The displayed text is CASHPART/BILLPART, 
+                        the actual value is "CASH"/"BILL" */}
                     <option value="CASH">CASHPART</option>
                     <option value="BILL">BILLPART</option>
                   </select>

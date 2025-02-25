@@ -901,9 +901,9 @@ const SupplierAccountList = () => {
         {error && <p className="text-red-500 text-center mb-2">{error}</p>}
 
         {/* TOP CARDS for totals */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 mb-3">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-6 gap-2 mb-3">
           {/* Totals for the *displayed* subset */}
-          <div className="bg-white shadow rounded p-2 flex flex-col items-center">
+          {/* <div className="bg-white shadow rounded p-2 flex flex-col items-center">
             <p className="text-gray-400 text-[10px]">Displayed Bill</p>
             <p className="font-bold text-green-700">
               ₹{totalBilled.toFixed(2)}
@@ -920,7 +920,7 @@ const SupplierAccountList = () => {
             <p className="font-bold text-red-700">
               ₹{totalPending.toFixed(2)}
             </p>
-          </div>
+          </div> */}
 
           {/* Global totals from the backend */}
           <div className="bg-white shadow rounded p-2 flex flex-col items-center">
@@ -947,10 +947,6 @@ const SupplierAccountList = () => {
               ₹{totalPendingAmountAll.toFixed(2)}
             </p>
           </div>
-        </div>
-
-        {/* BillPart / CashPart across displayed set */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 mb-3">
           <div className="bg-white shadow rounded p-2 flex flex-col items-center">
             <p className="text-gray-400 text-[10px]">BillPart Paid</p>
             <p className="font-bold text-green-700">
@@ -963,6 +959,10 @@ const SupplierAccountList = () => {
               ₹{totalBillPartPendingAll.toFixed(2)}
             </p>
           </div>
+        </div>
+
+        {/* BillPart / CashPart across displayed set */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 mb-3">
           <div className="bg-white shadow rounded p-2 flex flex-col items-center">
             <p className="text-gray-400 text-[10px]">CashPart Paid</p>
             <p className="font-bold text-blue-700">
