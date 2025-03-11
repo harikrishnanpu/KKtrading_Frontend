@@ -15,7 +15,6 @@ import {
   Paper,
   Divider,
   FormLabel,
-  MenuItem,
   Alert,
   Skeleton
 } from '@mui/material';
@@ -219,14 +218,17 @@ export default function ProductEditScreen() {
     setLoadingUpload(true);
     setErrorUpload('');
     try {
-      // Cloudinary upload
+      // Example of uploading to Cloudinary:
+      // Adjust your "upload_preset" or endpoint as needed
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', 'ml_default');
+
       const response = await api.post(
         'https://api.cloudinary.com/v1_1/dnde4xq0y/image/upload',
         formData
       );
+
       setImage(response.data.secure_url);
       setImageError(false);
     } catch (error) {
@@ -239,13 +241,38 @@ export default function ProductEditScreen() {
     setLoadingUpload(false);
   };
 
+  // ------------------- Handle "Enter" Key to go Next Input -------------------
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      // Attempt to focus next input-like element
+      const form = e.target.form;
+      if (!form) return;
+
+      const elements = Array.from(form.elements).filter((el) => {
+        return (
+          el.tagName === 'INPUT' ||
+          el.tagName === 'TEXTAREA' ||
+          el.tagName === 'SELECT'
+        );
+      });
+      const index = elements.indexOf(e.target);
+      if (index >= 0 && index < elements.length - 1) {
+        elements[index + 1].focus();
+      }
+    }
+  };
+
   // ------------------- Render -------------------
   if (loading) {
     return <ProductEditSkeleton />;
   }
 
   return (
-    <form onSubmit={submitHandler}>
+    <form
+      onSubmit={submitHandler}
+      onKeyDown={handleKeyDown}
+    >
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
@@ -272,54 +299,59 @@ export default function ProductEditScreen() {
                       borderRadius: '50%',
                       overflow: 'hidden',
                       cursor: (canEditAll || canEditBasic) ? 'pointer' : 'default',
-                      '&:hover .overlay': { opacity: (canEditAll || canEditBasic) ? 1 : 0 }
+                      width: 100,
+                      height: 100,
+                      border: `2px solid ${theme.palette.primary.main}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      '&:hover .overlay': {
+                        opacity: (canEditAll || canEditBasic) ? 1 : 0
+                      }
                     }}
                   >
                     <Avatar
                       alt="Product Image"
-                      src={image || defaultImages}
-                      sx={{ width: 76, height: 76 }}
+                      src={!imageError && image ? image : defaultImages}
+                      sx={{ width: 98, height: 98 }}
                       onError={() => setImageError(true)}
                     />
                     {/* Hover overlay for upload */}
-                    <Box
-                      className="overlay"
-                      sx={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        backgroundColor:
-                          theme.palette.mode === 'dark'
-                            ? 'rgba(255, 255, 255, 0.75)'
-                            : 'rgba(0, 0, 0, 0.65)',
-                        width: '100%',
-                        height: '100%',
-                        opacity: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'opacity 0.3s'
-                      }}
-                    >
-                      {loadingUpload ? (
-                        <CircularProgress size={24} />
-                      ) : (canEditAll || canEditBasic) ? (
-                        <Stack spacing={0.5} alignItems="center">
-                          <Camera
-                            style={{
-                              color: theme.palette.secondary.lighter,
-                              fontSize: '1.5rem'
-                            }}
-                          />
-                          <Typography
-                            sx={{ color: 'secondary.lighter' }}
-                            variant="caption"
-                          >
-                            Upload
-                          </Typography>
-                        </Stack>
-                      ) : null}
-                    </Box>
+                    {(canEditAll || canEditBasic) && (
+                      <Box
+                        className="overlay"
+                        sx={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          backgroundColor:
+                            theme.palette.mode === 'dark'
+                              ? 'rgba(255, 255, 255, 0.75)'
+                              : 'rgba(0, 0, 0, 0.65)',
+                          width: '100%',
+                          height: '100%',
+                          opacity: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'opacity 0.3s'
+                        }}
+                      >
+                        {loadingUpload ? (
+                          <CircularProgress size={24} />
+                        ) : (
+                          <Stack spacing={0.5} alignItems="center">
+                            <Camera style={{ fontSize: '1.5rem', color: '#fff' }} />
+                            <Typography
+                              variant="caption"
+                              sx={{ color: '#fff' }}
+                            >
+                              Upload
+                            </Typography>
+                          </Stack>
+                        )}
+                      </Box>
+                    )}
                   </FormLabel>
 
                   {/* Hidden file input */}
@@ -353,7 +385,7 @@ export default function ProductEditScreen() {
                 </Stack>
               </Grid>
 
-              {/* Item ID */}
+              {/* Item ID (Admins only) */}
               <Grid item xs={12}>
                 <Stack spacing={1}>
                   <InputLabel htmlFor="item-id">Item ID</InputLabel>
@@ -362,7 +394,7 @@ export default function ProductEditScreen() {
                     id="item-id"
                     value={itemId}
                     onChange={(e) => setItemId(e.target.value)}
-                    disabled={!canEditAll} // Only admins/supers
+                    disabled={!canEditAll}
                   />
                 </Stack>
               </Grid>
@@ -430,7 +462,7 @@ export default function ProductEditScreen() {
         <Grid item xs={12} sm={6}>
           <MainCard title="Additional & Stock Info">
             <Grid container spacing={3}>
-              {/* Description */}
+              {/* Description (Admins only) */}
               <Grid item xs={12}>
                 <Stack spacing={1}>
                   <InputLabel htmlFor="description">Description</InputLabel>
@@ -446,7 +478,7 @@ export default function ProductEditScreen() {
                 </Stack>
               </Grid>
 
-              {/* Price */}
+              {/* Price (Admins only) */}
               <Grid item xs={12} sm={6}>
                 <Stack spacing={1}>
                   <InputLabel htmlFor="price">Price</InputLabel>
@@ -461,7 +493,7 @@ export default function ProductEditScreen() {
                 </Stack>
               </Grid>
 
-              {/* Bill Part Price */}
+              {/* Bill Part Price (Admins only) */}
               <Grid item xs={12} sm={6}>
                 <Stack spacing={1}>
                   <InputLabel htmlFor="billPartPrice">Bill Part Price</InputLabel>
@@ -476,7 +508,7 @@ export default function ProductEditScreen() {
                 </Stack>
               </Grid>
 
-              {/* Cash Part Price */}
+              {/* Cash Part Price (Admins only) */}
               <Grid item xs={12} sm={6}>
                 <Stack spacing={1}>
                   <InputLabel htmlFor="cashPartPrice">Cash Part Price</InputLabel>
@@ -491,7 +523,7 @@ export default function ProductEditScreen() {
                 </Stack>
               </Grid>
 
-              {/* Count In Stock */}
+              {/* Count In Stock (Admins only) */}
               <Grid item xs={12} sm={6}>
                 <Stack spacing={1}>
                   <InputLabel htmlFor="countInStock">Count In Stock</InputLabel>
@@ -506,7 +538,7 @@ export default function ProductEditScreen() {
                 </Stack>
               </Grid>
 
-              {/* Rating */}
+              {/* Rating (Admins only) */}
               <Grid item xs={12} sm={4}>
                 <Stack spacing={1}>
                   <InputLabel htmlFor="rating">Rating</InputLabel>
@@ -521,7 +553,7 @@ export default function ProductEditScreen() {
                 </Stack>
               </Grid>
 
-              {/* Number of Reviews */}
+              {/* Number of Reviews (Admins only) */}
               <Grid item xs={12} sm={4}>
                 <Stack spacing={1}>
                   <InputLabel htmlFor="numReviews">Num Reviews</InputLabel>
@@ -536,7 +568,7 @@ export default function ProductEditScreen() {
                 </Stack>
               </Grid>
 
-              {/* GST Percent */}
+              {/* GST Percent (Admins only) */}
               <Grid item xs={12} sm={4}>
                 <Stack spacing={1}>
                   <InputLabel htmlFor="gstPercent">GST Percent</InputLabel>
@@ -551,7 +583,7 @@ export default function ProductEditScreen() {
                 </Stack>
               </Grid>
 
-              {/* HSN Code */}
+              {/* HSN Code (Admins only) */}
               <Grid item xs={12} sm={4}>
                 <Stack spacing={1}>
                   <InputLabel htmlFor="hsnCode">HSN Code</InputLabel>
@@ -565,7 +597,7 @@ export default function ProductEditScreen() {
                 </Stack>
               </Grid>
 
-              {/* pUnit */}
+              {/* pUnit (Admins only) */}
               <Grid item xs={12} sm={4}>
                 <Stack spacing={1}>
                   <InputLabel htmlFor="pUnit">P Unit</InputLabel>
@@ -579,7 +611,7 @@ export default function ProductEditScreen() {
                 </Stack>
               </Grid>
 
-              {/* sUnit */}
+              {/* sUnit (Admins only) */}
               <Grid item xs={12} sm={4}>
                 <Stack spacing={1}>
                   <InputLabel htmlFor="sUnit">S Unit</InputLabel>
@@ -593,7 +625,7 @@ export default function ProductEditScreen() {
                 </Stack>
               </Grid>
 
-              {/* psRatio */}
+              {/* psRatio (Admins only) */}
               <Grid item xs={12} sm={4}>
                 <Stack spacing={1}>
                   <InputLabel htmlFor="psRatio">P S Ratio</InputLabel>
@@ -607,7 +639,7 @@ export default function ProductEditScreen() {
                 </Stack>
               </Grid>
 
-              {/* Length */}
+              {/* Length (Admins only) */}
               <Grid item xs={12} sm={4}>
                 <Stack spacing={1}>
                   <InputLabel htmlFor="length">Length</InputLabel>
@@ -621,7 +653,7 @@ export default function ProductEditScreen() {
                 </Stack>
               </Grid>
 
-              {/* Breadth */}
+              {/* Breadth (Admins only) */}
               <Grid item xs={12} sm={4}>
                 <Stack spacing={1}>
                   <InputLabel htmlFor="breadth">Breadth</InputLabel>
@@ -635,7 +667,7 @@ export default function ProductEditScreen() {
                 </Stack>
               </Grid>
 
-              {/* Actual Length */}
+              {/* Actual Length (Admins only) */}
               <Grid item xs={12} sm={4}>
                 <Stack spacing={1}>
                   <InputLabel htmlFor="actLength">Actual Length</InputLabel>
@@ -649,7 +681,7 @@ export default function ProductEditScreen() {
                 </Stack>
               </Grid>
 
-              {/* Actual Breadth */}
+              {/* Actual Breadth (Admins only) */}
               <Grid item xs={12} sm={4}>
                 <Stack spacing={1}>
                   <InputLabel htmlFor="actBreadth">Actual Breadth</InputLabel>
@@ -663,7 +695,7 @@ export default function ProductEditScreen() {
                 </Stack>
               </Grid>
 
-              {/* Size */}
+              {/* Size (Admins only) */}
               <Grid item xs={12} sm={4}>
                 <Stack spacing={1}>
                   <InputLabel htmlFor="size">Size</InputLabel>
@@ -677,7 +709,7 @@ export default function ProductEditScreen() {
                 </Stack>
               </Grid>
 
-              {/* Unit */}
+              {/* Unit (Admins only) */}
               <Grid item xs={12} sm={4}>
                 <Stack spacing={1}>
                   <InputLabel htmlFor="unit">Unit</InputLabel>
@@ -691,7 +723,7 @@ export default function ProductEditScreen() {
                 </Stack>
               </Grid>
 
-              {/* Type */}
+              {/* Type (Admins only) */}
               <Grid item xs={12} sm={4}>
                 <Stack spacing={1}>
                   <InputLabel htmlFor="type">Type</InputLabel>
