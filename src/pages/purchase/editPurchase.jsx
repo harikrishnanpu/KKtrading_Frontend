@@ -633,8 +633,9 @@ export default function EditPurchaseScreen() {
 
         const itemBillWithoutGst = q * bPrice;
         const itemGstAmount = (itemBillWithoutGst * gstPercent) / 100;
-        const itemCgst = itemGstAmount / 2;
-        const itemSgst = itemGstAmount / 2;
+        const iteminsurancewithoutGst =  (parseFloat(insurance)  - parseFloat(insurance || 0) / 1.18 ) / 2;
+        const itemCgst = itemGstAmount / 2 + iteminsurancewithoutGst;
+        const itemSgst = itemGstAmount / 2 + iteminsurancewithoutGst;
 
         totalBillPartWithoutGst += itemBillWithoutGst;
         totalBillGst += itemGstAmount;
@@ -648,7 +649,7 @@ export default function EditPurchaseScreen() {
     const billPartTotal = totalBillPartWithoutGst + totalBillGst + parseFloat(insurance || 0); // Add insurance to Bill Part Total
     const cashPartTotal = totalCashPart;
 
-    const amountWithoutGSTItems = totalBillPartWithoutGst + parseFloat(insurance || 0);
+    const amountWithoutGSTItems = totalBillPartWithoutGst + parseFloat(insurance || 0) / 1.18;
     const gstAmountItems = totalBillGst;
     const cgstItems = totalCgst;
     const sgstItems = totalSgst;
@@ -1851,7 +1852,7 @@ export default function EditPurchaseScreen() {
                           </p>
                         </div>
                         <div className="flex justify-between mt-2">
-    <p className="text-xs font-bold">Insurance (Included in Bill Part):</p>
+    <p className="text-xs font-bold">Insurance :</p>
     <p className="text-xs">{parseFloat(insurance || 0).toFixed(2)}</p>
   </div>
                         <div className="flex justify-between">
