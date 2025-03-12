@@ -1947,18 +1947,21 @@ const netTotal = rateWithoutGST + gstAmount;
                       </div>
 
                       {/* Total Amount Display */}
-                      <div className="bg-gray-100 ml-2 w-60  items-center text-center rounded-lg p-4 h-full shadow-inner">
-                        <div className="text-gray-600 mt-2">
-                          <p className="text-sm font-bold">Total</p>
-                          <p className="text-xs font-bold">Bill Amount:</p>
-                        </div>
-                        <h2 className="text-sm font-bold text-gray-700">
-                          INR {parseFloat(grandTotal).toFixed(2)}
-                          <p className="font-bold text-xs">
-                            Discount: {parseFloat(discount || 0)?.toFixed(2)}
-                          </p>
-                        </h2>
-                      </div>
+                      <div className="bg-gray-100 ml-2 w-60 items-center text-center rounded-lg shadow-inner p-4">
+  <div className="mt-2 text-xs font-bold text-gray-700">
+    <p>Amount (Without GST): {parseFloat(amountWithoutGST).toFixed(2)}</p>
+  </div>
+  <div className="mt-2 font-bold text-xs text-gray-700">
+    <p>Total GST: {parseFloat(gstAmount).toFixed(2)}</p>
+  </div>
+  <div className="mt-2 font-bold text-xs text-gray-700">
+    <p>Bill Amount: {parseFloat(grandTotal).toFixed(2)}</p>
+  </div>
+  <div className="mt-2 text-xs font-bold text-gray-700">
+    <p>Discount: {parseFloat(discount || 0).toFixed(2)}</p>
+  </div>
+</div>
+
                   </div>
                 </div>
               </div>

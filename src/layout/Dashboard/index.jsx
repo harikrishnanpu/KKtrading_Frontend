@@ -95,7 +95,8 @@ export default function MainLayout() {
             }}
           >
             <Breadcrumbs />
-            <KeepAlive id={location.pathname + location.search}>
+            <KeepAlive id={location.pathname + location.search}            
+            >
             <Outlet key={location.pathname + location.search} />
             </KeepAlive>
             <Footer />

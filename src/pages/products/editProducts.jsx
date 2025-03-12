@@ -24,7 +24,9 @@ import { Camera } from 'iconsax-react';
 import Avatar from 'components/@extended/Avatar';
 import MainCard from 'components/MainCard';
 import api from '../api';
-import defaultImages from 'assets/images/users/default.png';
+import defaultImages from 'assets/images/upload/upload.svg';
+import DeleteIcon from '@mui/icons-material/Delete';
+
 
 // Example role logic: (replace with your real auth hook / context)
 const user = {
@@ -162,6 +164,20 @@ export default function ProductEditScreen() {
       fetchProduct();
     }
   }, [productId, successUpdate, navigate]);
+
+
+    const deleteHandler = async () => {
+      if (!productId) return;
+      if (window.confirm('Are you sure you want to delete this product?')) {
+        try {
+          await api.delete(`/api/products/${productId}`);
+          navigate('/products/all');
+        } catch (err) {
+          console.error('Delete error:', err);
+          alert('Error deleting product.');
+        }
+      }
+    };
 
   // ------------------- Form Submit Handler -------------------
   const submitHandler = async (e) => {
@@ -750,6 +766,14 @@ export default function ProductEditScreen() {
             >
               Cancel
             </Button>
+              <Button
+                              variant="outlined"
+                              color="error"
+                              startIcon={<DeleteIcon />}
+                              onClick={deleteHandler}
+                            >
+                              Delete
+              </Button>
             <Button
               type="submit"
               variant="outlined"

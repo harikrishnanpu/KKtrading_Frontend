@@ -619,108 +619,92 @@ export default function EditPurchaseScreen() {
   // Calculate Totals (Item-level GST)
   // ----------------------------
   const calculateTotals = () => {
-    let totalBillPartWithoutGst = 0; 
+    let totalBillPartWithoutGst = 0;
     let totalBillGst = 0;
     let totalCgst = 0;
     let totalSgst = 0;
     let totalCashPart = 0;
 
     items.forEach((item) => {
-      const q = parseFloat(item.quantityInNumbers) || 0;
-      const bPrice = parseFloat(item.billPriceInNumbers) || 0;
-      const cPrice = parseFloat(item.cashPriceInNumbers) || 0;
-      const gstPercent = parseFloat(item.gstPercent) || 0;
+        const q = parseFloat(item.quantityInNumbers) || 0;
+        const bPrice = parseFloat(item.billPriceInNumbers) || 0;
+        const cPrice = parseFloat(item.cashPriceInNumbers) || 0;
+        const gstPercent = parseFloat(item.gstPercent) || 0;
 
-      // Bill part (no GST included)
-      const itemBillWithoutGst = q * bPrice;
-      // GST for this item
-      const itemGstAmount = (itemBillWithoutGst * gstPercent) / 100;
-      const itemCgst = itemGstAmount / 2;
-      const itemSgst = itemGstAmount / 2;
+        const itemBillWithoutGst = q * bPrice;
+        const itemGstAmount = (itemBillWithoutGst * gstPercent) / 100;
+        const itemCgst = itemGstAmount / 2;
+        const itemSgst = itemGstAmount / 2;
 
-      totalBillPartWithoutGst += itemBillWithoutGst;
-      totalBillGst += itemGstAmount;
-      totalCgst += itemCgst;
-      totalSgst += itemSgst;
+        totalBillPartWithoutGst += itemBillWithoutGst;
+        totalBillGst += itemGstAmount;
+        totalCgst += itemCgst;
+        totalSgst += itemSgst;
 
-      // Cash part remains GST-free
-      const itemCashPart = q * cPrice;
-      totalCashPart += itemCashPart;
+        const itemCashPart = q * cPrice;
+        totalCashPart += itemCashPart;
     });
 
-    // Final Bill part = sum of no-GST bill + all item GST
-    const billPartTotal = totalBillPartWithoutGst + totalBillGst;
-    // Cash part total (no GST)
+    const billPartTotal = totalBillPartWithoutGst + totalBillGst + parseFloat(insurance || 0); // Add insurance to Bill Part Total
     const cashPartTotal = totalCashPart;
 
-    // For reference
-    const amountWithoutGSTItems = totalBillPartWithoutGst;
+    const amountWithoutGSTItems = totalBillPartWithoutGst + parseFloat(insurance || 0);
     const gstAmountItems = totalBillGst;
     const cgstItems = totalCgst;
     const sgstItems = totalSgst;
 
-    // Transportation (we'll keep your logic of 18% for transport as in new code, or if you want a different rate, adjust here)
     const logisticAmountValue = parseFloat(logisticAmount || 0);
     const localAmountValue = parseFloat(localAmount || 0);
     const totalTransportationCharges = logisticAmountValue + localAmountValue;
 
-    // For example, 18% on transport:
     const gstRateTransport = 1.18;
-    const amountWithoutGSTTransport =
-      totalTransportationCharges / gstRateTransport;
-    const gstAmountTransport =
-      totalTransportationCharges - amountWithoutGSTTransport;
+    const amountWithoutGSTTransport = totalTransportationCharges / gstRateTransport;
+    const gstAmountTransport = totalTransportationCharges - amountWithoutGSTTransport;
     const cgstTransport = gstAmountTransport / 2;
     const sgstTransport = gstAmountTransport / 2;
 
-    // Other expenses
     const unloadingChargeValue = parseFloat(unloadingCharge || 0);
-    const insuranceValue = parseFloat(insurance || 0);
     const damagePriceValue = parseFloat(damagePrice || 0);
+
     const additionalExpensesSum = otherExpenses.reduce(
-      (acc, curr) => acc + (parseFloat(curr.amount) || 0),
-      0
+        (acc, curr) => acc + (parseFloat(curr.amount) || 0),
+        0
     );
-    
-    const totalOtherExpenses =
-      totalTransportationCharges +
-      unloadingChargeValue +
-      insuranceValue +
-      damagePriceValue +
-      additionalExpensesSum;
 
-    // For splitting other expenses across items if needed
+    const totalOtherExpenses = 
+        totalTransportationCharges +
+        unloadingChargeValue +
+        damagePriceValue +
+        additionalExpensesSum; // Removed insurance
+
     const totalItems = items.reduce(
-      (acc, it) => acc + parseFloat(it.quantityInNumbers || 0),
-      0
+        (acc, item) => acc + parseFloat(item.quantityInNumbers || 0),
+        0
     );
-    const perItemOtherExpense =
-      totalItems > 0 ? totalOtherExpenses / totalItems : 0;
 
-    // Combined purchase = Bill (with item-level GST) + Cash (no GST)
+    const perItemOtherExpense = totalItems > 0 ? totalOtherExpenses / totalItems : 0;
+
     const totalPurchaseAmount = billPartTotal + cashPartTotal;
-
-    // Grand total includes other expenses
     const grandTotalPurchaseAmount = totalPurchaseAmount + totalOtherExpenses;
 
     return {
-      billPartTotal,
-      cashPartTotal,
-      amountWithoutGSTItems,
-      gstAmountItems,
-      cgstItems,
-      sgstItems,
-      totalTransportationCharges,
-      amountWithoutGSTTransport,
-      gstAmountTransport,
-      cgstTransport,
-      sgstTransport,
-      totalOtherExpenses,
-      perItemOtherExpense,
-      totalPurchaseAmount,
-      grandTotalPurchaseAmount,
+        billPartTotal,
+        cashPartTotal,
+        amountWithoutGSTItems,
+        gstAmountItems,
+        cgstItems,
+        sgstItems,
+        totalTransportationCharges,
+        amountWithoutGSTTransport,
+        gstAmountTransport,
+        cgstTransport,
+        sgstTransport,
+        totalOtherExpenses,
+        perItemOtherExpense,
+        totalPurchaseAmount,
+        grandTotalPurchaseAmount,
     };
-  };
+};
 
   const {
     billPartTotal,
@@ -764,70 +748,70 @@ export default function EditPurchaseScreen() {
       invoiceDate,
       otherExpenses,
       items: items.map((item) => ({
-        itemId: item.itemId || itemId,
-        name: item.name,
-        brand: item.brand,
-        category: item.category,
-        quantity: item.quantity,
-        quantityInNumbers: item.quantityInNumbers,
-        pUnit: item.pUnit,
-        sUnit: item.sUnit,
-        psRatio: item.psRatio,
-        length: item.length,
-        breadth: item.breadth,
-        size: item.size,
-        actLength: item.actLength,
-        actBreadth: item.actBreadth,
-        billPartPrice: item.billPrice,
-        cashPartPrice: item.cashPrice,
-        billPartPriceInNumbers: item.billPriceInNumbers * (1 + item.gstPercent / 100),
-        cashPartPriceInNumbers: item.cashPriceInNumbers,
-        hsnCode: item.hsnCode,
-        gstPercent: item.gstPercent, // NEW: sending item-level GST
-        allocatedOtherExpense: perItemOtherExpense * item.quantityInNumbers,
-        totalPriceInNumbers:
-        item.billPriceInNumbers * (1 + item.gstPercent / 100) + item.cashPriceInNumbers + perItemOtherExpense,
+          itemId: item.itemId || itemId,
+          name: item.name,
+          brand: item.brand,
+          category: item.category,
+          quantity: item.quantity,
+          quantityInNumbers: item.quantityInNumbers,
+          pUnit: item.unit,
+          sUnit: item.sUnit,
+          psRatio: item.psRatio,
+          length: item.length,
+          breadth: item.breadth,
+          actLength: item.actLength,
+          actBreadth: item.actBreadth,
+          size: item.size,
+          billPartPrice: item.billPrice,
+          cashPartPrice: item.cashPrice,
+          billPartPriceInNumbers: item.billPriceInNumbers * (1 + item.gstPercent / 100),
+          cashPartPriceInNumbers: item.cashPriceInNumbers,
+          allocatedOtherExpense: perItemOtherExpense * item.quantityInNumbers,
+          hsnCode: item.hsnCode,
+          totalPriceInNumbers:
+              item.billPriceInNumbers * (1 + item.gstPercent / 100) + item.cashPriceInNumbers + perItemOtherExpense,
+          gstPercent: item.gstPercent,
       })),
       totals: {
-        billPartTotal,
-        cashPartTotal,
-        amountWithoutGSTItems,
-        gstAmountItems,
-        cgstItems,
-        sgstItems,
-        amountWithoutGSTTransport,
-        gstAmountTransport,
-        cgstTransport,
-        sgstTransport,
-        unloadingCharge,
-        insurance,
-        damagePrice,
-        totalPurchaseAmount,
-        totalOtherExpenses,
-        grandTotalPurchaseAmount,
-        transportationCharges: totalTransportationCharges,
+          billPartTotal, // Insurance is already included in billPartTotal in the updated calculation
+          cashPartTotal,
+          amountWithoutGSTItems,
+          gstAmountItems,
+          cgstItems,
+          sgstItems,
+          amountWithoutGSTTransport,
+          gstAmountTransport,
+          cgstTransport,
+          sgstTransport,
+          unloadingCharge,
+          insurance,
+          damagePrice,
+          totalPurchaseAmount,
+          totalOtherExpenses, // Insurance removed here
+          grandTotalPurchaseAmount,
+          transportationCharges: totalTransportationCharges,
       },
       transportationDetails: {
-        logistic: {
-          purchaseId: purchaseId,
-          invoiceNo: invoiceNo,
-          billId: logisticBillId,
-          companyGst: logisticCompanyGst,
-          transportCompanyName: logisticCompany,
-          transportationCharges: logisticAmount,
-          remark: logisticRemark,
-        },
-        local: {
-          purchaseId: purchaseId,
-          invoiceNo: invoiceNo,
-          billId: localBillId,
-          companyGst: localCompanyGst,
-          transportCompanyName: localCompany,
-          transportationCharges: localAmount,
-          remark: localRemark,
-        },
+          logistic: {
+              purchaseId: purchaseId,
+              invoiceNo: invoiceNo,
+              billId: logisticBillId,
+              companyGst: logisticCompanyGst,
+              transportCompanyName: logisticCompany,
+              transportationCharges: logisticAmount,
+              remark: logisticRemark,
+          },
+          local: {
+              purchaseId: purchaseId,
+              invoiceNo: invoiceNo,
+              billId: localBillId,
+              companyGst: localCompanyGst,
+              transportCompanyName: localCompany,
+              transportationCharges: localAmount,
+              remark: localRemark,
+          }
       },
-    };
+  };
 
     try {
       setLoading(true);
@@ -939,7 +923,7 @@ export default function EditPurchaseScreen() {
         </div>
 
         {/* Total Amount Display (Step 4) */}
-        {currentStep === 4 && (
+        {/* {currentStep === 4 && (
           <div className="bg-gray-100 p-4 rounded-lg shadow-inner mb-4">
             <div className="flex justify-between">
               <p className="text-xs font-bold">Bill Price Total:</p>
@@ -986,7 +970,7 @@ export default function EditPurchaseScreen() {
               </p>
             </div>
           </div>
-        )}
+        )} */}
 
         {/* Form Steps */}
         <div>
@@ -1866,6 +1850,10 @@ export default function EditPurchaseScreen() {
                             {billPartTotal.toFixed(2)}
                           </p>
                         </div>
+                        <div className="flex justify-between mt-2">
+    <p className="text-xs font-bold">Insurance (Included in Bill Part):</p>
+    <p className="text-xs">{parseFloat(insurance || 0).toFixed(2)}</p>
+  </div>
                         <div className="flex justify-between">
                           <p className="text-xs">Amount without GST:</p>
                           <p className="text-xs">
@@ -2020,7 +2008,7 @@ export default function EditPurchaseScreen() {
     onClick={() =>
       setOtherExpenses([...otherExpenses, { amount: "", remark: "" }])
     }
-    className="mt-2 py-1 px-2 bg-green-500 text-white text-xs rounded"
+    className="mt-2 py-1 px-2 bg-red-500 text-white text-xs rounded"
   >
     Add Another Other Expense
   </button>
@@ -2253,6 +2241,10 @@ export default function EditPurchaseScreen() {
                     <p className="text-xs font-bold">Bill Price Total:</p>
                     <p className="text-xs">₹{billPartTotal.toFixed(2)}</p>
                   </div>
+                  <div className="flex justify-between mt-2">
+    <p className="text-xs font-bold">Insurance (Included in Bill Part):</p>
+    <p className="text-xs">{parseFloat(insurance || 0).toFixed(2)}</p>
+  </div>
                   <div className="flex justify-between">
                     <p className="text-xs">Subtotal (without GST):</p>
                     <p className="text-xs">
