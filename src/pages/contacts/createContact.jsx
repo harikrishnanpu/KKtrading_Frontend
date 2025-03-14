@@ -72,10 +72,10 @@ export default function CreateContactForm() {
     }
 
     // Optionally require the user to fetch location first
-    if (!hasFetchedLocation) {
-      setError('Please click "Fetch Location" to include coordinates.');
-      return;
-    }
+    // if (!hasFetchedLocation) {
+    //   setError('Please click "Fetch Location" to include coordinates.');
+    //   return;
+    // }
 
     try {
       const response = await api.post('/api/contacts', {

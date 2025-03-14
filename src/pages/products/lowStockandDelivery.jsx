@@ -123,7 +123,7 @@ const LowStockAndBillingPage = () => {
             {displayedProducts.length > 0 ? (
               <ul className="space-y-3">
                 {displayedProducts.map((product) => (
-                  <li onClick={()=> navigate(`/get-product/${product.item_id}`)} key={product._id} className="flex justify-between items-center bg-gray-50 p-4 rounded-md hover:bg-gray-100 transition cursor-pointer">
+                  <li onClick={()=> navigate(`/products/${product.item_id}`)} key={product._id} className="flex justify-between items-center bg-gray-50 p-4 rounded-md hover:bg-gray-100 transition cursor-pointer">
                     <div>
                       <p className="text-xs font-semibold text-gray-700">{product.name}</p>
                       <p className="text-xs text-red-600">In Stock: {product.countInStock}</p>
@@ -253,7 +253,7 @@ const LowStockAndBillingPage = () => {
                   <td className="px-4 py-2 text-center font-bold">{product.item_id}</td>
                   <td className="px-4 py-2">{product.name}</td>
                   <td className={`px-4 py-2 text-center ${product.countInStock > 5 ? 'text-yellow-500' : 'text-red-500'}`}>{product.countInStock}</td>
-                  <td className="px-4 py-2"><p onClick={()=> navigate(`/get-product/${product.item_id}`)} className='bg-red-500 text-xs text-white font-bold cursor-pointer text-center px-2 py-1 rounded-lg'>Edit</p></td> 
+                  <td className="px-4 py-2"><p onClick={()=> navigate(`/products/${product.item_id}`)} className='bg-red-500 text-xs text-white font-bold cursor-pointer text-center px-2 py-1 rounded-lg'>Edit</p></td> 
                 </tr>
               ))}
             </tbody>
