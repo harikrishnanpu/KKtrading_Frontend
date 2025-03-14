@@ -134,6 +134,10 @@ const AllLogs = Loadable(lazy(() => import('pages/admin/allLogs')));
 
 const LeaveApplication = Loadable(lazy(() => import('pages/user/leaveApplication')));
 
+const ContactsList = Loadable(lazy(() => import('pages/contacts/contactsList')));
+const CreateContacts = Loadable(lazy(() => import('pages/contacts/createContact')));
+const EditContacts = Loadable(lazy(() => import('pages/contacts/editContacts')));
+
 
 // ==============================|| MAIN ROUTES ||============================== //
 
@@ -539,6 +543,25 @@ const MainRoutes = {
         {
           path: 'all',
           element: <Notifications />
+        }
+      ]
+    },
+
+    {
+      path: '/contacts',
+      element: <DashboardLayout />,
+      children:[
+        {
+          path: 'all',
+          element: <ContactsList />
+        },
+        {
+          path: 'create',
+          element: <CreateContacts />
+        },
+        {
+          path: 'edit/:id',
+          element: <EditContacts />
         }
       ]
     },

@@ -1235,7 +1235,7 @@ const DailyTransactions = () => {
                 onChange={(e) => setNewCategoryName(e.target.value)}
               />
               <Button
-                variant="contained"
+                variant="outlined"
                 color="success"
                 size="small"
                 onClick={handleAddCategory}
@@ -1306,7 +1306,7 @@ const DailyTransactions = () => {
             Cancel
           </Button>
           <Button
-            variant="contained"
+            variant="outlined"
             color="secondary"
             size="small"
             onClick={handleTransactionSubmit}

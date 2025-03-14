@@ -12,11 +12,12 @@ import estimate from './estimate';
 import purchase from './purchase';
 import products from './products';
 import admin from './admin';
+import contacts from './contacts';
 
 // ==============================|| MENU ITEMS ||============================== //
 
 const menuItems = {
-  items: [dashboard,admin, products,estimate,purchase, apps, driver, payments, stocks, reports, accounts]
+  items: [dashboard,admin, products,estimate,purchase, apps, driver, payments, stocks, reports, accounts, contacts]
 };
 
 export default menuItems;
