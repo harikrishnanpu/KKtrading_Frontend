@@ -212,11 +212,9 @@ export default function DamageBillPage() {
             <input
   type="number"
   ref={itemQuantityRef}
-  min={1}
   value={quantity}
   onChange={(e) => {
-    const value = Math.min(selectedProduct.countInStock, Number(e.target.value));
-    setQuantity(value);
+    setQuantity(e.target.value);
   }}
   onKeyDown={(e) => e.key === 'Enter' && handleAddDamagedItem()}
   className="w-full px-4 py-2 border rounded-md focus:outline-none focus:border-red-500 focus:ring-red-500"
