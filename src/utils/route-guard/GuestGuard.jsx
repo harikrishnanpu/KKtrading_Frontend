@@ -1,8 +1,9 @@
 import PropTypes from 'prop-types';
 import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useAliveController } from 'react-activation'; // Import for cache clearing
 
-// project-imports
+// project imports
 import { APP_DEFAULT_PATH } from 'config';
 import useAuth from 'hooks/useAuth';
 import { setAuthHeaders } from 'pages/api';
@@ -13,21 +14,32 @@ export default function GuestGuard({ children }) {
   const { isLoggedIn, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  
-  
-    useEffect(() => {
-      setAuthHeaders(user);
-    }, [user]);
+  const { dropScope } = useAliveController(); // Clears react-activation cache
 
+  // 1️⃣ Set auth headers when user data changes
+  useEffect(() => {
+    setAuthHeaders(user);
+  }, [user]);
+
+  // 2️⃣ Clear cache on a full page reload
+  useEffect(() => {
+    const wasReloaded = sessionStorage.getItem('appReloaded');
+
+    if (!wasReloaded) {
+      sessionStorage.setItem('appReloaded', 'true'); // Mark app as loaded
+      dropScope(); // Clears all cached pages
+      console.log('Cache cleared after reload');
+    }
+  }, []);
+
+  // 3️⃣ Redirect logged-in users away from guest-only pages
   useEffect(() => {
     if (isLoggedIn) {
-      // If the user is an employee, redirect to the default path.
-      // Otherwise (e.g. if not an employee), redirect to /employee.
-      if (user && user.isEmployee) {
-        navigate(
-          location?.state?.from ? location.state.from : APP_DEFAULT_PATH,
-          { state: { from: '' }, replace: true }
-        );
+      if (user?.isEmployee) {
+        navigate(location?.state?.from || APP_DEFAULT_PATH, {
+          state: { from: '' },
+          replace: true
+        });
       } else {
         navigate('/employee', { state: { from: '' }, replace: true });
       }
