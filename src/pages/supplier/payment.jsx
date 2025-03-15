@@ -97,27 +97,22 @@ const EditSellerPaymentPage = () => {
   const handleFetchSupplierDetails = async (id) => {
     setIsLoading(true);
     try {
-      // Updated endpoint from get-seller to get-supplier
       const response = await api.get(`/api/sellerpayments/get-seller/${id}`);
-      const data = response.data;
-
-      // Set local state with the new data structure
-      setSupplierDetails(data);
-
-      // Update local "remainingAmount" with totalPendingAmount from server
-      setRemainingAmount(data.totalPendingAmount >= 0 ? data.totalPendingAmount : 0);
-
-      setErrorMessage("");
+      if (!response.data) {
+        throw new Error("Invalid supplier response");
+      }
+      setSupplierDetails(response.data);
+      setRemainingAmount(response.data.totalPendingAmount ?? 0);
     } catch (error) {
-      console.error("Error fetching supplier data:", error);
-      setErrorMessage("Error fetching supplier data. Please check the seller name.");
+      console.error("Error fetching supplier:", error);
+      setErrorMessage("Error fetching supplier details.");
       setShowErrorModal(true);
       setTimeout(() => setShowErrorModal(false), 3000);
-      setSupplierDetails(null);
     } finally {
       setIsLoading(false);
     }
   };
+  
 
   // Handle Add Payment action
   const handleAddPayment = async () => {
@@ -158,7 +153,7 @@ const EditSellerPaymentPage = () => {
       });
 
       // Re-fetch updated details
-      await handleFetchSupplierDetails(supplierDetails._id);
+     await  handleFetchSupplierDetails(supplierDetails._id);
 
       // Reset form fields
       setPaymentAmount("");
@@ -205,11 +200,15 @@ const EditSellerPaymentPage = () => {
 
   // Shortcuts for pending amounts if needed
   const cashPartPending =
-    supplierDetails &&
-    (supplierDetails.totalCashPart - supplierDetails.totalCashPartGiven);
-  const billPartPending =
-    supplierDetails &&
-    (supplierDetails.totalBillPart - supplierDetails.totalBillPartGiven);
+  supplierDetails?.totalCashPart && supplierDetails?.totalCashPartGiven
+    ? supplierDetails.totalCashPart - supplierDetails.totalCashPartGiven
+    : 0;
+
+const billPartPending =
+  supplierDetails?.totalBillPart && supplierDetails?.totalBillPartGiven
+    ? supplierDetails.totalBillPart - supplierDetails.totalBillPartGiven
+    : 0;
+
 
   return (
     <div className="p-2">

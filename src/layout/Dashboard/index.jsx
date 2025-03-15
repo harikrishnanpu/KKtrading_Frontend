@@ -22,7 +22,7 @@ import useConfig from 'hooks/useConfig';
 import { handlerDrawerOpen, useGetMenuMaster } from 'api/menu';
 import { useTabs } from 'contexts/TabsContext';
 import TabBar from './tabBar';
-import KeepAlive from 'react-activation';
+import KeepAlive, { AliveScope, useAliveController } from 'react-activation';
 import { isMobile } from 'react-device-detect';
 
 // ==============================|| MAIN LAYOUT ||============================== //
@@ -52,8 +52,12 @@ export default function MainLayout() {
     return formatted.join(' ').slice(0,18);
   }
   
+  const { drop } = useAliveController();
+
   
-  
+  useEffect(() => {
+    return () => drop(location.pathname + location.search);
+  }, [location.pathname, location.search]);
 
 
   useEffect(() => {
@@ -64,6 +68,7 @@ export default function MainLayout() {
     openTab(location.pathname + location.search, label);
   }, [location.pathname, location.search]);
 
+  
   // set media wise responsive drawer
   useEffect(() => {
     if (!miniDrawer) {
@@ -73,6 +78,14 @@ export default function MainLayout() {
   }, [downXL]);
 
   if (menuMasterLoading) return <Loader />;
+
+  const forceReloadRoutes = [
+    '/list', '/all', '/account', '/need-to-purchase',
+    '/delivery', '/registry', '/update', '/report', '/payment',
+    '/products/upcomming/lowstock'
+  ];
+  
+  const shouldForceReload = forceReloadRoutes.some(route => location.pathname.includes(route));
 
   return (
     <AuthGuard>
@@ -95,10 +108,14 @@ export default function MainLayout() {
             }}
           >
             <Breadcrumbs />
-            <KeepAlive id={location.pathname + location.search}            
-            >
-            <Outlet key={location.pathname + location.search} />
-            </KeepAlive>
+            <AliveScope max={3}>  {/* Limit cached components */}
+  <KeepAlive id={location.pathname + location.search} when={!shouldForceReload}>
+  <Outlet key={shouldForceReload ? Date.now() : location.pathname + location.search} />
+</KeepAlive>
+</AliveScope>
+
+
+
             <Footer />
           </Container>
         </Box>

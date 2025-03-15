@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
+import { useAliveController } from 'react-activation';
 import { useNavigate } from 'react-router-dom';
 
 const TabsContext = createContext(null);
@@ -47,18 +48,22 @@ export const TabsProvider = ({ children }) => {
   // Each tab = { path, label }
   const [tabs, setTabs] = useState([]);
   const [activeTab, setActiveTab] = useState(null);
+  const { drop } = useAliveController();
 
   // 1) OPEN or ACTIVATE a tab
   const openTab = (path, label) => {
-
-    // if (['list', 'all', 'account','need-to-purchase','delivery', 'payment','registry', 'update','report'].some(substr => path.includes(substr)) || path === '/products/upcomming/lowstock' ) {
-    //   navigate(path);
-    //   return;
-    // }
-
-
+    const reloadRoutes = [
+      'list', 'all', 'account', 'need-to-purchase', 'delivery', 'registry', 'update', 'report', 'payment'
+    ];
+  
+    // If the path matches, force reload and bypass caching
+    if (reloadRoutes.some(substr => path.includes(substr)) || path === '/products/upcomming/lowstock') {
+      navigate(path, { replace: true }); // Use replace to prevent adding it to history
+      return;
+    }
+  
     const basePath = stripTimestamp(path);
-
+  
     // Check if a tab with the same base path (ignoring _ts) already exists
     const existingTab = tabs.find((t) => stripTimestamp(t.path) === basePath);
     if (existingTab) {
@@ -67,13 +72,13 @@ export const TabsProvider = ({ children }) => {
       navigate(existingTab.path);
       return;
     }
-
+  
     // Otherwise, create a new timestamped path
     const hasQuery = path.includes('?');
     const newPath = hasQuery
       ? `${path}&_ts=${Date.now()}`
       : `${path}?_ts=${Date.now()}`;
-
+  
     // Add it to the list
     setTabs((prevTabs) => [
       ...prevTabs,
@@ -82,6 +87,7 @@ export const TabsProvider = ({ children }) => {
     setActiveTab(newPath);
     navigate(newPath);
   };
+  
 
   // 2) SWITCH to an existing tab by exact path
   const switchTab = (path) => {
