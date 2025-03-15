@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useAliveController } from 'react-activation'; // Clears KeepAlive cache
+import { useAliveController } from 'react-activation'; // Import for cache clearing
 
 // project imports
 import { APP_DEFAULT_PATH } from 'config';
@@ -16,53 +16,23 @@ export default function GuestGuard({ children }) {
   const location = useLocation();
   const { dropScope } = useAliveController(); // Clears react-activation cache
 
-  // Function to clear ALL caches, local storage, session storage
-  const clearAllCaches = () => {
-    console.log('Clearing all caches...');
+  // 1️⃣ Set auth headers when user data changes
+  useEffect(() => {
+    setAuthHeaders(user);
+  }, [user]);
 
-    // 1️⃣ Clear KeepAlive cache
-    dropScope();
-    
-    // 2️⃣ Clear browser cache
-    if ('caches' in window) {
-      caches.keys().then((names) => {
-        names.forEach((name) => caches.delete(name));
-      });
-    }
-
-    // 3️⃣ Clear localStorage & sessionStorage
-    localStorage.clear();
-    sessionStorage.clear();
-
-    // 4️⃣ Clear service worker cache if applicable
-    if (navigator.serviceWorker) {
-      navigator.serviceWorker.getRegistrations().then((registrations) => {
-        registrations.forEach((registration) => registration.unregister());
-      });
-    }
-  };
-
-  // 1️⃣ Detect full page reload & clear all caches
+  // 2️⃣ Clear cache on a full page reload
   useEffect(() => {
     const wasReloaded = sessionStorage.getItem('appReloaded');
 
     if (!wasReloaded) {
       sessionStorage.setItem('appReloaded', 'true'); // Mark app as loaded
-      clearAllCaches();
-      
-      // 5️⃣ Hard reload the page to ensure a fresh start
-      setTimeout(() => {
-        window.location.reload(true);
-      }, 100); // Ensures cache is cleared first
+      dropScope(); // Clears all cached pages
+      console.log('Cache cleared after reload');
     }
   }, []);
 
-  // 2️⃣ Set auth headers when user data changes
-  useEffect(() => {
-    setAuthHeaders(user);
-  }, [user]);
-
-  // 3️⃣ Redirect logged-in users
+  // 3️⃣ Redirect logged-in users away from guest-only pages
   useEffect(() => {
     if (isLoggedIn) {
       if (user?.isEmployee) {
