@@ -50,36 +50,33 @@ export const TabsProvider = ({ children }) => {
   const [activeTab, setActiveTab] = useState(null);
   const { drop } = useAliveController();
 
-  // 1) OPEN or ACTIVATE a tab
   const openTab = (path, label) => {
     const reloadRoutes = [
-      'list', 'all', 'account', 'need-to-purchase', 'delivery', 'registry', 'update', 'report', 'payment'
+      'list', 'all', 'account', 'need-to-purchase', 'delivery', 
+      'registry', 'update', 'report', 'payment', 'default'
     ];
   
-    // If the path matches, force reload and bypass caching
+    // If the path matches, force reload by clearing cache and bypassing navigation
     if (reloadRoutes.some(substr => path.includes(substr)) || path === '/products/upcomming/lowstock') {
-      navigate(path, { replace: true }); // Use replace to prevent adding it to history
+      drop(path); // Clear cached content of the route
+      navigate(path, { replace: true });
       return;
     }
   
     const basePath = stripTimestamp(path);
-  
-    // Check if a tab with the same base path (ignoring _ts) already exists
     const existingTab = tabs.find((t) => stripTimestamp(t.path) === basePath);
+  
     if (existingTab) {
-      // If it exists, just activate & navigate to that tab
       setActiveTab(existingTab.path);
       navigate(existingTab.path);
       return;
     }
   
-    // Otherwise, create a new timestamped path
     const hasQuery = path.includes('?');
     const newPath = hasQuery
       ? `${path}&_ts=${Date.now()}`
       : `${path}?_ts=${Date.now()}`;
   
-    // Add it to the list
     setTabs((prevTabs) => [
       ...prevTabs,
       { path: newPath, label: label || deriveLabelFromPath(path) }
@@ -87,6 +84,7 @@ export const TabsProvider = ({ children }) => {
     setActiveTab(newPath);
     navigate(newPath);
   };
+  
   
 
   // 2) SWITCH to an existing tab by exact path
