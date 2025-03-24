@@ -739,6 +739,8 @@ useEffect(() => {
 
   let newSubTotal = 0; // Base subtotal (sum of all product amounts without GST)
   let newTotalGST = 0; // Total GST for all products
+  let amtWithGst = 0;
+  let TotalGstAmt = 0;
 
   products.forEach((product) => {
     const productQty = parseFloat(product.quantity) || 0;
@@ -777,9 +779,13 @@ const itemDiscount = itemBase * discountRatio;
     const gstForProduct = baseAmount * (productGSTRate / 100);
 
     const netAmount = rateAfterDiscount + gstAmount;
+    const rate = rateWithoutGST * (1 + gstRate / 100);
+    const totalGstAmt = rate - rateWithoutGST;
 
     // Accumulate totals
     newSubTotal += netAmount;
+    amtWithGst += rateWithoutGST;
+    TotalGstAmt +=  totalGstAmt;
     newTotalGST += gstForProduct;
   });
 
@@ -793,8 +799,8 @@ const itemDiscount = itemBase * discountRatio;
     parsedHandling - roundOff;
 
   // Set calculated values
-  setAmountWithoutGST(newSubTotal.toFixed(2)); // Total base amount
-  setGSTAmount(newTotalGST.toFixed(2)); // Total GST
+  setAmountWithoutGST(amtWithGst.toFixed(2)); // Total base amount
+  setGSTAmount(TotalGstAmt.toFixed(2)); // Total GST
   setTotalAmount(netWithoutOtherCharges.toFixed(2)); // Net total (Subtotal + GST - Discount)
   setGrandTotal(finalGrandTotal.toFixed(2)); // Final grand total (including charges)
   // setPerItemDiscount(parsedDiscount / (products.length || 1)); // Discount per item

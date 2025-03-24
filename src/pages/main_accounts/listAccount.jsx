@@ -401,7 +401,7 @@ const PaymentAccountsList = () => {
                   </td>
                   <td className="px-4 py-2 text-xs">{payment.method}</td>
                   <td className="px-4 py-2 text-xs">{payment.remark || '-'}</td>
-                  <td className="px-4 py-2 text-xs">{allUsers.find((usr) => usr._id === payment.submittedBy).name}</td>
+                  <td className="px-4 py-2 text-xs">{allUsers.find((usr) => usr._id === payment.submittedBy)?.name}</td>
                   <td className="px-4 py-2 text-xs">{new Date(payment.date).toLocaleString()}</td>
                   <td className="px-4 py-2 text-xs">
                    {user.isSuper && <button
@@ -483,7 +483,7 @@ const PaymentAccountsList = () => {
             <span className="text-xs text-gray-700">Select All</span>
           </div>
           <div className="max-h-60 overflow-auto border p-2 rounded">
-            {accounts.map((acc) => (
+            {accounts?.map((acc) => (
               <div key={acc._id} className="flex items-center mb-2">
                 <input
                   type="checkbox"
