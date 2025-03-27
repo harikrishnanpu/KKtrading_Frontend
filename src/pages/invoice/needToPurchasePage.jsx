@@ -57,7 +57,7 @@ const NeedToPurchaseList = () => {
         (item) => !item.purchased || !item.verified
       );
       // For each such item, add invoice info so we can show the invoice number and link to details.
-      return filteredItems.map((item) => ({
+      return filteredItems?.map((item) => ({
         ...item,
         invoiceNo: billing.invoiceNo,
         invoiceDate: billing.invoiceDate,
@@ -114,7 +114,7 @@ const NeedToPurchaseList = () => {
                   <td className="px-4 py-2">{item.item_id}</td>
 
                   <td className="px-4 py-2">
-  {product.image.length > 10 ? (
+  {product?.image?.length > 10 ? (
     <img
       src={product.image}
       alt={product.name}
