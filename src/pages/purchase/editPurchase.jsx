@@ -633,7 +633,7 @@ export default function EditPurchaseScreen() {
 
         const itemBillWithoutGst = q * bPrice;
         const itemGstAmount = (itemBillWithoutGst * gstPercent) / 100;
-        const iteminsurancewithoutGst =  (parseFloat(insurance)  - parseFloat(insurance || 0) / 1.18 ) / 2;
+        const iteminsurancewithoutGst =  (parseFloat(insurance)  - parseFloat(insurance || 0) / 1.18 ) / 2 || 0;
         const itemCgst = itemGstAmount / 2 + iteminsurancewithoutGst;
         const itemSgst = itemGstAmount / 2 + iteminsurancewithoutGst;
 
@@ -903,11 +903,15 @@ export default function EditPurchaseScreen() {
           <div className="text-right">
             {currentStep === 4 ? (
               <button
-                onClick={submitHandler}
-                className="py-2 font-bold px-4 bg-red-600 text-white rounded-md hover:bg-red-700 text-xs"
-              >
-                Update
-              </button>
+  onClick={submitHandler}
+  disabled={loading}  // Now it disables when loading is true
+  className="py-2 font-bold px-4 bg-red-600 text-white rounded-md 
+             hover:bg-red-700 text-xs disabled:bg-gray-300 
+             disabled:cursor-not-allowed disabled:opacity-50"
+>
+  Update
+</button>
+
             ) : (
               <button
                 type="button"

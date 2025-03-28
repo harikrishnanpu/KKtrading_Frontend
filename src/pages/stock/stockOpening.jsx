@@ -395,7 +395,7 @@ const StockRegistry = () => {
                         className="hover:bg-gray-100 divide-y divide-x"
                       >
                         <td className="px-2 py-1 text-center">
-                          {new Date(log.date).toLocaleDateString()}
+                        {new Date(log.date).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
                         </td>
                         <td className="px-2 py-1">{log.itemId}</td>
                         <td className="px-2 py-1">{log.name}</td>
@@ -423,7 +423,7 @@ const StockRegistry = () => {
                         {log.name}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {new Date(log.date).toLocaleDateString()}
+                      {new Date(log.date).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
                       </p>
                     </div>
                     <p className="text-gray-600 text-xs mt-1">

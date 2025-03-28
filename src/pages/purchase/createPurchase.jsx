@@ -532,7 +532,7 @@ export default function PurchasePage() {
 
         const itemBillWithoutGst = q * bPrice;
         const itemGstAmount = (itemBillWithoutGst * gstPercent) / 100;
-        const iteminsurancewithoutGst =  (parseFloat(insurance) - parseFloat(insurance || 0) / 1.18 ) / 2;
+        const iteminsurancewithoutGst =  (parseFloat(insurance) - parseFloat(insurance || 0) / 1.18 ) / 2 || 0;
         const itemCgst = itemGstAmount / 2 + iteminsurancewithoutGst;
         const itemSgst = itemGstAmount / 2 + iteminsurancewithoutGst;
 
@@ -829,6 +829,7 @@ export default function PurchasePage() {
             {currentStep === 4 ? (
               <button
                 onClick={()=> submitHandler()}
+                disabled={loading}
                 className="py-2 font-bold px-4 bg-red-600 text-white rounded-md hover:bg-red-700 text-xs"
               >
                 Submit

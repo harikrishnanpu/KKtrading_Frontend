@@ -82,6 +82,7 @@ export default function Details() {
   const [loading, setLoading] = useState(true);
   const [openDeliveryInfo, setOpenDeliveryInfo] = useState(false);
   const [openPaymentInfo, setOpenPaymentInfo] = useState(false);
+  const [openBillingExpenses, setOpenBillingExpenses] = useState(false);
 
   const iconColor =
     theme.palette.mode === ThemeMode.DARK
@@ -395,6 +396,7 @@ export default function Details() {
                                 <Typography variant="body2">Vehicle: {delivery.vehicleNumber || 'N/A'}</Typography>
                                 <Typography variant="body2">KM Travelled: {delivery.kmTravelled || 0}</Typography>
                                 <Typography variant="body2">Fuel Charge: {delivery.fuelCharge || 0}</Typography>
+                                <Typography variant="body2">Bata: {delivery.bata || 0}</Typography>
                                 <Typography variant="body2">Method: {delivery.method || 'N/A'}</Typography>
                               </Stack>
 
@@ -445,6 +447,60 @@ export default function Details() {
                   </Collapse>
                 </MainCard>
               </Grid>
+
+
+              {/* Billing-Level Other Expenses */}
+<Grid item xs={12}>
+  <MainCard
+    title="Additional Expenses"
+    secondary={
+      <Button
+        variant="text"
+        onClick={() => setOpenBillingExpenses((prev) => !prev)}
+        size="small"
+      >
+        {openBillingExpenses ? 'Hide' : 'Show'}
+      </Button>
+    }
+  >
+    <Collapse in={openBillingExpenses}>
+      {loading ? (
+        <Skeleton height={50} />
+      ) : (
+        billing?.otherExpenses?.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            No Billing-Level Expenses
+          </Typography>
+        ) : (
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Date</TableCell>
+                  <TableCell>Amount</TableCell>
+                  <TableCell>Method</TableCell>
+                  <TableCell>Remark</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {billing?.otherExpenses?.map((expense) => (
+                  <TableRow key={expense._id}>
+                    <TableCell>
+                      {new Date(expense.date).toLocaleDateString('en-GB')}
+                    </TableCell>
+                    <TableCell>{expense.amount?.toFixed(2)}</TableCell>
+                    <TableCell>{expense.method || 'N/A'}</TableCell>
+                    <TableCell>{expense.remark || '--'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )
+      )}
+    </Collapse>
+  </MainCard>
+</Grid>
 
               {/* Payments Section */}
               <Grid item xs={12}>
@@ -517,6 +573,68 @@ export default function Details() {
                   )}
                 </MainCard>
               </Grid>
+
+              {/* Financial Summary Section */}
+<Grid item xs={12}>
+  <MainCard title="Financial Summary">
+    <Stack spacing={1}>
+      {/* Billing-Level Other Expenses */}
+      <Stack direction="row" justifyContent="space-between">
+        <Typography variant="subtitle1">Billing-Level Expenses:</Typography>
+        {loading ? (
+          <Skeleton width={80} />
+        ) : (
+          <Typography>
+            {billing?.otherExpenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0).toFixed(2)}
+          </Typography>
+        )}
+      </Stack>
+
+      {/* Delivery Expenses (Fuel + Bata + Delivery Other Expenses) */}
+      <Stack direction="row" justifyContent="space-between">
+        <Typography variant="subtitle1">Total Delivery Expenses:</Typography>
+        {loading ? (
+          <Skeleton width={80} />
+        ) : (
+          <Typography>
+            {billing?.deliveries?.reduce((total, delivery) => {
+              const fuel = delivery.fuelCharge || 0;
+              const bata = delivery.bata || 0;
+              const other = delivery.otherExpenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0;
+              return total + fuel + bata + other;
+            }, 0).toFixed(2)}
+          </Typography>
+        )}
+      </Stack>
+
+      {/* Total Payments Received */}
+      <Stack direction="row" justifyContent="space-between">
+        <Typography variant="subtitle1">Total Payments Received:</Typography>
+        {loading ? (
+          <Skeleton width={80} />
+        ) : (
+          <Typography sx={{ color: theme.palette.success.main }}>
+            {billing?.payments?.reduce((sum, payment) => sum + (payment.amount || 0), 0).toFixed(2)}
+          </Typography>
+        )}
+      </Stack>
+
+      {/* Optional: Net Balance */}
+      <Stack direction="row" justifyContent="space-between">
+        <Typography variant="subtitle1">Outstanding Balance:</Typography>
+        {loading ? (
+          <Skeleton width={80} />
+        ) : (
+          <Typography sx={{ color: theme.palette.error.main }}>
+            {(billing?.grandTotal - 
+              billing?.payments?.reduce((sum, payment) => sum + (payment.amount || 0), 0)
+            ).toFixed(2)}
+          </Typography>
+        )}
+      </Stack>
+    </Stack>
+  </MainCard>
+</Grid>
             </Grid>
           </Box>
 
