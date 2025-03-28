@@ -153,7 +153,7 @@ const EditSellerPaymentPage = () => {
       });
 
       // Re-fetch updated details
-     await  handleFetchSupplierDetails(supplierDetails._id);
+     await handleFetchSupplierDetails(supplierDetails.sellerId);
 
       // Reset form fields
       setPaymentAmount("");
