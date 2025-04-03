@@ -105,8 +105,8 @@ const NeedToPurchaseList = () => {
               return (
                 <tr key={index} className="border-b hover:bg-gray-100">
                   <td
-                    className="px-4 py-2 cursor-pointer text-blue-600 hover:underline"
-                    onClick={() => navigate(`/invoice/details/${item.billingId}`)}
+                    className="px-4 py-2 cursor-pointer bg-red-200 rounded text-red-600 hover:underline"
+                    onClick={() => userInfo.isAdmin && navigate(`/invoice/details/${item.billingId}`)}
                   >
                     {item.invoiceNo}
                   </td>
