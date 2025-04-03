@@ -23,7 +23,7 @@ const icons = {
 // ==============================|| MENU ITEMS - PAGES ||============================== //
 
 const admin = {
-  id: 'group-pages',
+  id: 'admin',
   title: <FormattedMessage id="Admin" />,
   type: 'group',
   children: [
@@ -38,6 +38,15 @@ const admin = {
       target: false,
       breadcrumbs: false
     },
+        {
+          id: 'daily',
+          title: <FormattedMessage id="Daily Transactions" />,
+          type: 'item',
+          url: '/daily/transactions/',
+          icon: icons.daily,
+          target: false,
+          breadcrumbs: false
+        },
     {
       id: 'allUsers',
       title: <FormattedMessage id="All Users" />,
@@ -48,6 +57,15 @@ const admin = {
       target: false,
       breadcrumbs: true
     },
+        {
+          id: 'announcements',
+          title: <FormattedMessage id="Announcements" />,
+          type: 'item',
+          url: '/announcements/all/',
+          icon: icons.announcement,
+          target: false,
+          breadcrumbs: true
+        },
     {
       id: 'allLogs',
       title: <FormattedMessage id="All Logs" />,

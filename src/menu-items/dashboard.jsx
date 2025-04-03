@@ -45,29 +45,11 @@ const dashboard = {
       ]
     },
     {
-      id: 'daily',
-      title: <FormattedMessage id="Daily Transactions" />,
-      type: 'item',
-      url: '/daily/transactions/',
-      icon: icons.daily,
-      target: false,
-      breadcrumbs: false
-    },
-    {
       id: 'allProducts',
       title: <FormattedMessage id="All Products" />,
       type: 'item',
       url: '/products/all/',
       icon: icons.products,
-      target: false,
-      breadcrumbs: true
-    },
-    {
-      id: 'announcements',
-      title: <FormattedMessage id="Announcements" />,
-      type: 'item',
-      url: '/announcements/all/',
-      icon: icons.announcement,
       target: false,
       breadcrumbs: true
     },

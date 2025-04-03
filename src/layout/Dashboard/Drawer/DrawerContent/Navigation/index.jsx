@@ -14,6 +14,7 @@ import menuItem from 'menu-items';
 import useConfig from 'hooks/useConfig';
 import { HORIZONTAL_MAX_ITEM, MenuOrientation } from 'config';
 import { useGetMenuMaster } from 'api/menu';
+import useAuth from 'hooks/useAuth';
 
 // ==============================|| DRAWER CONTENT - NAVIGATION ||============================== //
 
@@ -22,16 +23,18 @@ export default function Navigation() {
   const { menuMaster } = useGetMenuMaster();
   const drawerOpen = menuMaster.isDashboardDrawerOpened;
   const downLG = useMediaQuery((theme) => theme.breakpoints.down('lg'));
-
+const {user} = useAuth();
   const [selectedID, setSelectedID] = useState('');
   const [selectedItems, setSelectedItems] = useState('');
   const [selectedLevel, setSelectedLevel] = useState(0);
   const [menuItems, setMenuItems] = useState({ items: [] });
 
   useLayoutEffect(() => {
-    setMenuItems(menuItem);
-    // eslint-disable-next-line
-  }, [menuItem]);
+    const filteredMenu = {
+      items: menuItem.items.filter(item => item.id !== 'admin' || user?.isAdmin)
+    };
+    setMenuItems(filteredMenu);
+  }, [menuItem,user]);
 
   const isHorizontal = menuOrientation === MenuOrientation.HORIZONTAL && !downLG;
 

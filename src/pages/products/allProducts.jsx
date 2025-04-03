@@ -232,12 +232,12 @@ export default function SearchScreen() {
             <Sort />
           </button>
           {/* Add Product Button */}
-          <button
+         {userInfo.isAdmin && <button
             onClick={handleAddProduct}
             className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
           >
             Add Product
-          </button>
+          </button> }
         </div>
       </div>
 

@@ -1236,7 +1236,7 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
                       <tr>
                       <th className="px-4 py-3">Id</th>
                         <th className="px-4 py-3">Product</th>
-                        <th className="px-4 py-3">Cost Price</th>
+                       {userInfo.isAdmin && <th className="px-4 py-3">Cost Price</th>}
                         <th className="px-4 py-3">Selling Price</th>
                         <th className="px-4 py-3">Qty</th>
                         {userInfo.isSuper && (
@@ -1264,7 +1264,7 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
                           >
                             <td className="px-4 py-3 font-semibold">{product.item_id}</td>
                             <td className="px-4 py-3 font-semibold">{product.name}</td>
-                            <td className="px-4 py-3">₹{cost}</td>
+                            {userInfo.isAdmin && <td className="px-4 py-3">₹{cost}</td> }
                             <td className="px-4 py-3">₹{selling.toFixed(2)}</td>
                             <td className="px-4 py-3">{qty}</td>
                             {userInfo.isSuper && (
