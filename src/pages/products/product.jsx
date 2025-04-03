@@ -339,7 +339,7 @@ export default function ProductScreen() {
                       </TableCell>
                       <TableCell>{product.breadth}</TableCell>
                     </TableRow>
-                    <TableRow>
+                   {userInfo.isAdmin && <TableRow>
                       <TableCell>
                         <strong>Act Length</strong>
                       </TableCell>
@@ -348,7 +348,7 @@ export default function ProductScreen() {
                         <strong>Act Breadth</strong>
                       </TableCell>
                       <TableCell>{product.actBreadth}</TableCell>
-                    </TableRow>
+                    </TableRow> }
                     <TableRow>
                       <TableCell>
                         <strong>Type</strong>
@@ -446,14 +446,6 @@ export default function ProductScreen() {
           <Grid item xs={12}>
             <MainCard title="Actions">
               <Stack direction="row" spacing={2} flexWrap="wrap">
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  startIcon={<VisibilityIcon />}
-                  onClick={() => navigate(`/products/${product._id}/preview`)}
-                >
-                  Preview
-                </Button>
                 <Button
                   variant="outlined"
                   color="secondary"

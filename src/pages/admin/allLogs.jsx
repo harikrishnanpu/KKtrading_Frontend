@@ -24,9 +24,11 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import PersonIcon from '@mui/icons-material/Person';
 import InfoIcon from '@mui/icons-material/Info';
+import useAuth from 'hooks/useAuth';
 
 export default function AdminLogsPage() {
   const navigate = useNavigate();
+  const {user} = useAuth();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -139,12 +141,13 @@ export default function AdminLogsPage() {
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       {/* Header */}
-      <Box
+     {user.isSuper && <Box
         sx={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           bgcolor: 'grey.100',
+          maxWidth: 'fit-content',
           p: 2,
           borderRadius: 2,
           mb: 3,
@@ -153,7 +156,7 @@ export default function AdminLogsPage() {
         <IconButton color="error" onClick={handleDeleteLogs}>
           <DeleteIcon />
         </IconButton>
-      </Box>
+      </Box> }
 
       {/* Logs Section */}
       {loading ? (
