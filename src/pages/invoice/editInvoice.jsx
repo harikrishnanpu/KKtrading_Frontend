@@ -304,22 +304,22 @@ const [printOptions, setPrintOptions] = useState({
         if (unit === 'SQFT') {
           setDisplaysellingPrice(
             (
-              parseFloat(selectedProduct.price / 0.80) / parsedArea
+              parseFloat(selectedProduct.price / 0.78) / parsedArea
             ).toFixed(2)
           );
         } else if (unit === 'BOX') {
           setDisplaysellingPrice(
-            (parseFloat(selectedProduct.price / 0.80) * selectedProduct.psRatio
+            (parseFloat(selectedProduct.price / 0.78) * selectedProduct.psRatio
             ).toFixed(2)
           );
         } else {
           setDisplaysellingPrice(
-            parseFloat((selectedProduct.price / 0.80).toFixed(2))
+            parseFloat((selectedProduct.price / 0.78).toFixed(2))
           );
         }
       } else if (selectedProduct.category === 'GRANITE') {
         setDisplaysellingPrice(
-          (parseFloat(selectedProduct.price) / 0.65).toFixed(2)
+          (parseFloat(selectedProduct.price) / 0.75).toFixed(2)
         );
       } else {
         setDisplaysellingPrice(
@@ -470,24 +470,24 @@ const [printOptions, setPrintOptions] = useState({
 
       if (data.category === 'TILES') {
         if (unit === 'SQFT') {
-          setSellingPrice((parseFloat(data.price / 0.80) / parsedArea).toFixed(2));
+          setSellingPrice((parseFloat(data.price / 0.78) / parsedArea).toFixed(2));
           setDisplaysellingPrice(
-            (parseFloat(data.price / 0.80) / parsedArea).toFixed(2)
+            (parseFloat(data.price / 0.78) / parsedArea).toFixed(2)
           );
         } else if (unit === 'BOX') {
           setSellingPrice(
-            (parseFloat(data.price / 0.80) * data.psRatio).toFixed(2)
+            (parseFloat(data.price / 0.78) * data.psRatio).toFixed(2)
           );
           setDisplaysellingPrice(
-            (parseFloat(data.price / 0.80) * data.psRatio).toFixed(2)
+            (parseFloat(data.price / 0.78) * data.psRatio).toFixed(2)
           );
         } else {
-          setSellingPrice(parseFloat(data.price / 0.80).toFixed(2));
-          setDisplaysellingPrice(parseFloat(data.price / 0.80).toFixed(2));
+          setSellingPrice(parseFloat(data.price / 0.78).toFixed(2));
+          setDisplaysellingPrice(parseFloat(data.price / 0.78).toFixed(2));
         }
       } else if (data.category === 'GRANITE') {
-        setSellingPrice((parseFloat(data.price) / 0.65).toFixed(2));
-        setDisplaysellingPrice((parseFloat(data.price) / 0.65).toFixed(2));
+        setSellingPrice((parseFloat(data.price) / 0.75).toFixed(2));
+        setDisplaysellingPrice((parseFloat(data.price) / 0.75).toFixed(2));
       } else {
         setSellingPrice((parseFloat(data.price) / 0.60).toFixed(2));
         setDisplaysellingPrice((parseFloat(data.price) / 0.60).toFixed(2));

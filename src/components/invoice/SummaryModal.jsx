@@ -9,10 +9,6 @@ import {
   DialogActions,
   Typography,
   IconButton,
-  TextField,
-  Select,
-  MenuItem,
-  Button,
   Grid,
   Slide,
   Box,
@@ -286,7 +282,9 @@ export default function SummaryModal({
   ref={remarkRef}
   onKeyDown={(e) => {
     if (e.key === "Enter") {
-      onSubmit(); // Corrected to match the prop name
+      if(!isSubmitting){
+        onSubmit(); // Corrected to match the prop name
+      }
     }
   }}
   placeholder="Enter Remark"
