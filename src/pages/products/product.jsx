@@ -168,7 +168,7 @@ export default function ProductScreen() {
 
     if (product.category === 'TILES') {
       // Example calculation
-      const tileBase = basePrice / 0.8; // Sample multiplier
+      const tileBase = basePrice / 0.78; // Sample multiplier
       if (selectedUnit === 'SQFT' && area > 0) {
         newPrice = (tileBase / area).toFixed(2);
       } else if (selectedUnit === 'BOX') {
@@ -177,9 +177,9 @@ export default function ProductScreen() {
         newPrice = tileBase.toFixed(2);
       }
     } else if (product.category === 'GRANITE') {
-      newPrice = (basePrice / 0.65).toFixed(2);
+      newPrice = (basePrice / 0.75).toFixed(2);
     } else {
-      newPrice = (basePrice / 0.6).toFixed(2);
+      newPrice = (basePrice / 0.60).toFixed(2);
     }
     setDisplaySellingPrice(newPrice.toString());
   }, [selectedUnit, product]);
