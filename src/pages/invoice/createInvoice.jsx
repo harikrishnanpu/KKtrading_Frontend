@@ -299,46 +299,46 @@ const [printOptions, setPrintOptions] = useState({
     };
 
     // Save the data to local storage as a JSON string
-    // localStorage.setItem('savedBill', JSON.stringify(billingData));
-    // localStorage.setItem('savedProducts', JSON.stringify(products));
+    localStorage.setItem('savedBill', JSON.stringify(billingData));
+    localStorage.setItem('savedProducts', JSON.stringify(products));
     alert('Billing data saved');
     setSaveModal(false);
     setShowSummaryModal(false);
   };
 
-  // useEffect(() => {
-  //   const fetchLocalSavedBill = async () => {
-  //     // Retrieve saved data from local storage
-  //     const savedData = localStorage.getItem('savedBill');
-  //     if (savedData) {
-  //       // Parse the JSON string back into an object
-  //       const parsedData = JSON.parse(savedData);
+  useEffect(() => {
+    const fetchLocalSavedBill = async () => {
+      // Retrieve saved data from local storage
+      const savedData = localStorage.getItem('savedBill');
+      if (savedData) {
+        // Parse the JSON string back into an object
+        const parsedData = JSON.parse(savedData);
 
-  //       // Set your state with the fetched data
-  //       setInvoiceNo(parsedData.invoiceNo);
-  //       setInvoiceDate(parsedData.invoiceDate);
-  //       setSalesmanName(parsedData.salesmanName);
-  //       setExpectedDeliveryDate(parsedData.expectedDeliveryDate);
-  //       setDeliveryStatus(parsedData.deliveryStatus);
-  //       setPaymentStatus(parsedData.paymentStatus);
-  //       setReceivedAmount(parsedData.paymentAmount);
-  //       setPaymentMethod(parsedData.paymentMethod);
-  //       setReceivedDate(parsedData.paymentReceivedDate);
-  //       setCustomerName(parsedData.customerName);
-  //       setCustomerAddress(parsedData.customerAddress);
-  //       setCustomerContactNumber(parsedData.customerContactNumber);
-  //       setMarketedBy(parsedData.marketedBy);
-  //       setDiscount(parsedData.discount);
-  //       setTransportation(parsedData.transportation);
-  //       setHandlingCharge(parsedData.handlingcharge);
-  //       setSalesmanPhoneNumber(parsedData.salesmanPhoneNumber);
-  //       setUnloading(parsedData.unloading);
-  //       setshowRoom(parsedData.showroom);
-  //     }
-  //   };
+        // Set your state with the fetched data
+        setInvoiceNo(parsedData.invoiceNo);
+        setInvoiceDate(parsedData.invoiceDate);
+        setSalesmanName(parsedData.salesmanName);
+        setExpectedDeliveryDate(parsedData.expectedDeliveryDate);
+        setDeliveryStatus(parsedData.deliveryStatus);
+        setPaymentStatus(parsedData.paymentStatus);
+        setReceivedAmount(parsedData.paymentAmount);
+        setPaymentMethod(parsedData.paymentMethod);
+        setReceivedDate(parsedData.paymentReceivedDate);
+        setCustomerName(parsedData.customerName);
+        setCustomerAddress(parsedData.customerAddress);
+        setCustomerContactNumber(parsedData.customerContactNumber);
+        setMarketedBy(parsedData.marketedBy);
+        setDiscount(parsedData.discount);
+        setTransportation(parsedData.transportation);
+        setHandlingCharge(parsedData.handlingcharge);
+        setSalesmanPhoneNumber(parsedData.salesmanPhoneNumber);
+        setUnloading(parsedData.unloading);
+        setshowRoom(parsedData.showroom);
+      }
+    };
 
-  //   fetchLocalSavedBill();
-  // }, []);
+    fetchLocalSavedBill();
+  }, []);
 
   useEffect(() => {
     const loadSavedProducts = () => {
@@ -365,7 +365,7 @@ const [printOptions, setPrintOptions] = useState({
           'KK' + (lastInvoiceNumber + 1).toString().padStart(2, '0'); // Ensures at least two digits
 
         // Generate the next customer ID
-        const lastCustomerNumber =
+       const  lastCustomerNumber =
           parseInt(data.lastCustomerId.slice(3), 10) || 0; // Extract the number part after "CUS"
         const nextCustomer =
           'CUS' + (lastCustomerNumber + 1).toString().padStart(3, '0') + Date.now().toString().slice(5,10); // Ensures at least three digits
@@ -384,6 +384,14 @@ const [printOptions, setPrintOptions] = useState({
     };
     fetchLastBill();
   }, []);
+
+  const generatecustomerid = async () => {
+    const { data } = await api.get('/api/billing/lastOrder/id');
+    const  lastCustomerNumber =
+    parseInt(data.lastCustomerId.slice(3), 10) || 0;
+   let Id = 'CUS' + (lastCustomerNumber + 1).toString().padStart(3, '0') + Date.now().toString().slice(5,10);
+   setCustomerId(Id);
+  };
 
   useEffect(() => {
     if (selectedProduct) {
@@ -1211,7 +1219,7 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
       {/* Top Banner */}
 
       {saveModal && (
-        <div className="fixed transform font-bold fixed inset-0 flex items-center justify-center z-50 bg-gray-800 bg-opacity-50">
+        <div className="fixed transform font-bold fixed inset-0 flex items-center justify-center z-50 bg-gray-800 bg-opacity-20">
           <div className="bg-white p-8 text-center rounded-md space-y-6">
             <div className="flex justify-between">
               <p className="text-md">Save Bill</p>
@@ -1268,14 +1276,14 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
           </div>
           <div className="text-right">
             <button
-              onClick={generatePDF}
-              className={`mb-2 bg-red-500 text-xs text-white font-bold py-2 px-4 rounded-lg mr-2 ${
-                products.length === 0 ? 'opacity-70 cursor-not-allowed' : 'hover:bg-red-600'
-              }`}
-              disabled={products.length === 0 || !userInfo.isAdmin}
+              onClick={()=>{
+                setSaveModal(true);
+              }}
+              className={`mb-2 bg-red-500 text-xs text-white font-bold py-2 px-4 rounded-lg mr-2
+                hover:bg-red-600'
+              `}
             >
-              <i className="fa fa-download" />
-            </button>
+<i class="fa fa-save"></i>            </button>
 
             <button
   onClick={() => setShowPrintModal(true)}
@@ -1332,6 +1340,7 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
             </div>
             <div className="mb-4">
               <label className="block text-xs text-gray-700">Customer Name</label>
+              <div className='flex gap-2'>
               <input
                 type="text"
                 ref={customerNameRef}
@@ -1368,15 +1377,6 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
                       setCustomerSuggestions([]);
                     } else {
                       if (!customerId) {
-                        const generatecustomerid = async () => {
-                          const { data } = await api.get('/api/billing/lastOrder/id');
-                          const nextCustomer =
-                            'CUS00' +
-                            parseInt(
-                              parseInt(data.lastCustomerId.slice(3), 10) + 1
-                            ) + Date.now().toString().slice(0,10);
-                          setCustomerId(nextCustomer);
-                        };
                         generatecustomerid();
                       }
                       customerContactNumberRef.current?.focus();
@@ -1386,6 +1386,11 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
                 className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
                 placeholder="Enter Customer Name"
               />
+              <button className='p-2 bg-red-500 rounded-md text-white font-bold' 
+              onClick={()=>{
+                generatecustomerid();
+              }}>Id</button>
+              </div>
               {customerSuggestions.length > 0 && (
                 <div className="mt-2 bg-white border rounded-md max-h-60 divide-y overflow-y-auto">
                   {customerSuggestions.map((customer, index) => (
@@ -2153,12 +2158,9 @@ const netTotal = rateWithoutGST + gstAmount;
 
                 {selectedProduct && (
                   <div className="p-4 border border-gray-200 rounded-lg shadow-md bg-white mb-4">
-                    <div className="flex justify-between items-center">
-                      <p className="text-xs font-bold truncate">
-                        {selectedProduct.name.slice(0, 25)}... ID: {selectedProduct.item_id}
-                      </p>
-                      <p
-                        className={`text-xs font-bold px-2 py-1 rounded ${
+                        <div className='ml-3 flex  mb-2 justify-between align-center'>
+                        <p
+                        className={`text-xs font-bold align-center flex justify-center px-2 py-1 rounded ${
                           fetchQuantity > 10
                             ? 'bg-green-300 text-green-700'
                             : fetchQuantity > 0
@@ -2172,10 +2174,20 @@ const netTotal = rateWithoutGST + gstAmount;
                           ? 'Low Stock'
                           : 'Out of Stock'}
                       </p>
+                      <button className="bg-red-500 rounded-md p-1 px-2 text-white font-bold" onClick={()=>{
+                        setItemId('');
+                        setSelectedProduct(null);
+                      }}>   
+                                                     <i className="fa fa-trash" aria-hidden="true"></i>
+                      </button>
+                      </div>
+                    <div className="flex mt-2 justify-between items-center">
+                        <p className="text-xs font-bold truncate">
+                        {selectedProduct.name.slice(0, 25)}... ID: {selectedProduct.item_id}
+                      </p>
+    
                     </div>
-                    <p className="text-xs font-bold truncate mb-2">
-                      Size: {selectedProduct.size}
-                    </p>
+
                     <p
                       className={`text-xs font-bold text-gray-500 mb-2 ${
                         fetchQuantity > 10

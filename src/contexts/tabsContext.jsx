@@ -52,8 +52,10 @@ export const TabsProvider = ({ children }) => {
 
   const openTab = (path, label) => {
     const reloadRoutes = [
-      'list', 'all', 'account', 'need-to-purchase', 'delivery', 
-      'registry', 'update', 'report', 'payment', 'default', 'transactions'
+      '/list', '/all', '/account', '/need-to-purchase',
+      '/delivery', '/registry', '/update', '/report', '/payment',
+      '/products/upcomming/lowstock', '/default', '/transactions',
+      '/tasks/board','/calendar', '/chat','/products'
     ];
   
     // If the path matches, force reload by clearing cache and bypassing navigation

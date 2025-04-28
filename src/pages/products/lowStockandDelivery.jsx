@@ -95,7 +95,7 @@ const LowStockAndBillingPage = () => {
                     <p className={`text-xs mt-2 ${isToday(bill.expectedDeliveryDate) ? 'text-red-500 font-semibold' : 'text-yellow-500'}`}>
                       {isToday(bill.expectedDeliveryDate)
                         ? 'Expected Delivery: Today'
-                        : `Expected Delivery: ${new Date(bill.expectedDeliveryDate).toLocaleDateString()}`}
+                        : `Expected Delivery: ${new Date(bill.expectedDeliveryDate).toISOString().slice(0, 16).split("T").join(" ")}`}
                     </p>
                   </li>
                 ))}
@@ -216,7 +216,7 @@ const LowStockAndBillingPage = () => {
                   <td className="px-4 py-2 text-center font-bold">{bill.invoiceNo}</td>
                   <td className="px-4 py-2">{bill.customerName}</td>
                   <td className={`py-2 px-2 text-center ${isToday(bill.expectedDeliveryDate) ? 'text-red-500 font-semibold' : 'text-yellow-500'}`}>
-                    {isToday(bill.expectedDeliveryDate) ? 'Today' : new Date(bill.expectedDeliveryDate).toLocaleDateString()}
+                    {isToday(bill.expectedDeliveryDate) ? 'Today' : new Date(bill.expectedDeliveryDate).toISOString().slice(0, 16).split("T").join(" ")}
                   </td>
                 </tr>
               ))}

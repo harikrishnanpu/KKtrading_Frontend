@@ -156,7 +156,8 @@ const LowStockPreview = ({ driverPage, adminPage }) => {
                     <p className={`text-xs ${isToday(bill.expectedDeliveryDate) ? 'text-red-600' : 'text-yellow-600'}`}>
                       {isToday(bill.expectedDeliveryDate)
                         ? 'Expected Delivery Date: Today'
-                        : `Expected Delivery Date: ${new Date(bill.expectedDeliveryDate).toLocaleDateString()}`}
+                        : `Expected Delivery Date: ${ new Date(bill.expectedDeliveryDate).toISOString().slice(0, 16).split("T").join(" ")
+                      }`}
                     </p>
                     <p className="text-xs font-medium text-gray-500">Location: {bill.customerAddress}</p>
                   </div>
@@ -169,7 +170,7 @@ const LowStockPreview = ({ driverPage, adminPage }) => {
                   >
                     {isToday(bill.expectedDeliveryDate)
                       ? 'Today'
-                      : new Date(bill.expectedDeliveryDate).toLocaleDateString()}
+                      : new Date(bill.expectedDeliveryDate).toISOString().slice(0, 16).split("T").join(" ")}
                   </span>
                 </div>
               ))

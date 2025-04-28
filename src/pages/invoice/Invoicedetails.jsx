@@ -567,7 +567,7 @@ export default function Details() {
                       <Typography variant="body2">Approved: {billing?.isApproved ? 'Yes' : 'No'}</Typography>
                       <Typography variant="body2">Approved By: {billing?.approvedBy || 'N/A'}</Typography>
                       <Typography variant="body2">Marketed By: {billing?.marketedBy || 'N/A'}</Typography>
-                      <Typography variant="body2">Needed to Purchase: {billing?.neededToPurchase ? 'Yes' : 'No'}</Typography>
+                      <Typography variant="body2">Needed to Purchase: {billing?.isneededToPurchase ? 'Yes' : 'No'}</Typography>
                       <Typography variant="body2">Delivery Status: {billing?.deliveryStatus}</Typography>
                     </Stack>
                   )}

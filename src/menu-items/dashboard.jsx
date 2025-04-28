@@ -2,7 +2,7 @@
 import { FormattedMessage } from 'react-intl';
 
 // assets
-import { Menu, MoneyRecive , BoxSearch, NotificationStatus, MenuBoard, Calendar, Messages2, Notification1, Profile2User} from 'iconsax-react';
+import { Menu, MoneyRecive , BoxSearch, NotificationStatus, MenuBoard, Calendar, Messages2, Notification1, Profile2User, RepeatCircle } from 'iconsax-react';
 
 // type
 
@@ -17,7 +17,8 @@ const icons = {
   calendar: Calendar,
   chat: Messages2,
   notify: Notification1,
-  users: Profile2User
+  users: Profile2User,
+  update: RepeatCircle
 };
 
 // ==============================|| MENU ITEMS - PAGES ||============================== //
@@ -80,6 +81,16 @@ const dashboard = {
       url: '/chat',
       icon: icons.chat,
       link: '/chat',
+      target: false,
+      breadcrumbs: false
+    },
+    {
+      id: 'Updates',
+      title: <FormattedMessage id="Updates" />,
+      type: 'item',
+      url: '/updates/all',
+      icon: icons.update,
+      link: '/updates/all',
       target: false,
       breadcrumbs: false
     },

@@ -139,6 +139,9 @@ const CreateContacts = Loadable(lazy(() => import('pages/contacts/createContact'
 const EditContacts = Loadable(lazy(() => import('pages/contacts/editContacts')));
 
 
+const UpdateListPage = Loadable(lazy(()=> import('pages/UpdatesInfo/updatesList')));
+
+
 // ==============================|| MAIN ROUTES ||============================== //
 
 const MainRoutes = {
@@ -564,6 +567,19 @@ const MainRoutes = {
           element: <EditContacts />
         }
       ]
+    },
+
+    {
+      path: '/updates',
+      element: <DashboardLayout />,
+      children:[
+        {
+          path: 'all',
+          element: <UpdateListPage />
+        },
+      ]
+
+
     },
 
 

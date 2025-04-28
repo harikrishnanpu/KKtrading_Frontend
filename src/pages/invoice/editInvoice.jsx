@@ -194,6 +194,14 @@ const [printOptions, setPrintOptions] = useState({
     }
   }, [invoiceNo, id]);
 
+    const generatecustomerid = async () => {
+      const { data } = await api.get('/api/billing/lastOrder/id');
+      const  lastCustomerNumber =
+      parseInt(data.lastCustomerId.slice(3), 10) || 0;
+     let Id = 'CUS' + (lastCustomerNumber + 1).toString().padStart(3, '0') + Date.now().toString().slice(5,10);
+     setCustomerId(Id);
+    };
+
   const handleSuggestionClick = (suggestion) => {
     navigate(`/invoice/edit/${suggestion._id}`);
     navigate(0);
@@ -1223,6 +1231,7 @@ const netTotal = rateWithoutGST + gstAmount;
             </div>
             <div className="mb-4 relative">
               <label className="block text-xs text-gray-700">Customer Name</label>
+              <div className='flex gap-2'>
               <input
                 type="text"
                 ref={customerNameRef}
@@ -1259,16 +1268,6 @@ const netTotal = rateWithoutGST + gstAmount;
                       setCustomerSuggestions([]);
                     } else {
                       if (!customerId) {
-                        const generatecustomerid = async () => {
-                          const { data } = await api.get('/api/billing/lastOrder/id');
-                          const lastCustomerNumber = parseInt(
-                            data.lastCustomerId.slice(3),
-                            10
-                          );
-                          const nextCustomer =
-                            'CUS' + (lastCustomerNumber + 1).toString().padStart(3, '0') + Date.now().toString().slice(5,10);
-                          setCustomerId(nextCustomer);
-                        };
                         generatecustomerid();
                       }
                       customerContactNumberRef.current?.focus();
@@ -1278,6 +1277,11 @@ const netTotal = rateWithoutGST + gstAmount;
                 className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
                 placeholder="Enter Customer Name"
               />
+                            <button className='p-2 bg-red-500 rounded-md text-white font-bold' 
+              onClick={()=>{
+                generatecustomerid();
+              }}>Id</button>
+              </div>
               {customerSuggestions.length > 0 && (
                 <div className="absolute z-10 mt-1 w-full bg-white border rounded-md max-h-60 overflow-y-auto">
                   {customerSuggestions.map((customer, index) => (
