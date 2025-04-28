@@ -18,6 +18,7 @@ import { ThemeMode } from 'config';
 import WelcomeImage from 'assets/images/analytics/welcome-banner.png';
 import cardBack from 'assets/images/widget/img-dropbox-bg.svg';
 import api from 'pages/api';
+import { useNavigate } from 'react-router';
 
 // Define pulse animation
 const glitterEffect = keyframes`
@@ -52,6 +53,7 @@ export default function WelcomeBanner() {
   const containerRef = useRef(null);
   const [progress, setProgress] = useState(0);
   const progressInterval = useRef(null);
+  const navigate = useNavigate();
 
   const timeAgo = (timestamp) => {
     const now = new Date();
@@ -331,7 +333,9 @@ export default function WelcomeBanner() {
                               key={idx}
                               variant="contained"
                               color={btn.color || 'primary'}
-                              href={`/${btn.url}`}
+                              onClick={()=>{
+                                navigate(btn.url.startsWith('/') ? btn.url : '/' + btn.url);
+                              }}
                               sx={{
                                 textTransform: 'none',
                                 boxShadow: 'none',
@@ -393,7 +397,7 @@ export default function WelcomeBanner() {
               color={theme.palette.background.paper}
               sx={{ mt: 2 }}
             >
-              KK Trading 1.0.0
+              KK Trading 1.0.2
             </Typography>
           </Stack>
         </Grid>
