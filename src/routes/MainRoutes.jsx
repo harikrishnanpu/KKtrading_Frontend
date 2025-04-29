@@ -141,6 +141,8 @@ const EditContacts = Loadable(lazy(() => import('pages/contacts/editContacts')))
 
 const UpdateListPage = Loadable(lazy(()=> import('pages/UpdatesInfo/updatesList')));
 
+const CreatePurchaseRequest = Loadable(lazy(()=> import('pages/purchase/createPurchaseRequest')));
+const ListPurchaseRequest = Loadable(lazy(()=> import('pages/purchase/listPurchaseRequest')));
 
 // ==============================|| MAIN ROUTES ||============================== //
 
@@ -233,6 +235,14 @@ const MainRoutes = {
             {
               path: 'report',
               element: <PurchaseReport />
+            },
+            {
+              path: 'create-purchase-request',
+              element: <CreatePurchaseRequest />
+            },
+            {
+              path: 'list-purchase-request',
+              element: <ListPurchaseRequest />
             },
             {
               path: 'edit',

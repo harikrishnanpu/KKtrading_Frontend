@@ -38,6 +38,14 @@ const purchase = {
           url: '/purchase/list/',
           target: false,
           breadcrumbs: true
+        },
+        {
+          id: 'Purchase Request',
+          title: <FormattedMessage id="Purchase Request" />,
+          type: 'item',
+          url: '/purchase/list-purchase-request',
+          target: false,
+          breadcrumbs: true
         }
       ],
 }

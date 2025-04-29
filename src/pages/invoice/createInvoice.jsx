@@ -465,7 +465,7 @@ const [printOptions, setPrintOptions] = useState({
     }
   
     try {
-      const { data } = await api.get(`/api/products/searchform/search?q=${newValue}`);
+      const { data } = await api.get(`/api/products/searchform/search?q=${newValue}&limit=20`);
       setSuggestions(data);
       setError('');
       if (data && data.length > 0) {
@@ -2143,7 +2143,7 @@ const netTotal = rateWithoutGST + gstAmount;
                   />
                   {error && <p className="text-red-500 mt-1 text-xs">{error}</p>}
                   {suggestions.length > 0 && (
-                    <div className="mt-2 bg-white border rounded-md max-h-40 divide-y overflow-y-auto">
+                    <div className="mt-2 bg-white border rounded-md max-h-60 divide-y overflow-y-auto">
                       {suggestions.map((suggestion, index) => (
                         <div
                           key={index}
@@ -2153,7 +2153,7 @@ const netTotal = rateWithoutGST + gstAmount;
                             setItemCategory(suggestion.category);
                             setItemBrand(suggestion.brand);
                           }}
-                          className={`p-2 text-xs cursor-pointer hover:bg-gray-100 ${
+                          className={`p-4 text-xs font-bold text-gray-600 cursor-pointer hover:bg-gray-100 ${
                             index === selectedSuggestionIndex ? 'bg-gray-200' : ''
                           }`}
                         >

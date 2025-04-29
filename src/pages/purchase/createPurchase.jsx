@@ -1118,7 +1118,7 @@ export default function PurchasePage() {
                     <>
                       {/* Desktop Table */}
                       <div className="hidden md:block">
-                        <table className="min-w-full table-auto bg-white shadow-md rounded-md">
+                        <table style={{marginBottom: '50%'}} className="min-w-full table-auto bg-white shadow-md rounded-md">
                           <thead>
                             <tr className="bg-red-500 text-white text-xs">
                               <th className="px-2 py-2 text-left">Item ID</th>
