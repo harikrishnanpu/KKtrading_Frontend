@@ -1,8 +1,8 @@
 import React from 'react';
-import { Navigate } from 'react-router';
+import { useNavigate } from 'react-router-dom';
 
 export default function PurchaseRequestPreview({ data, onBack }) {
-  const navigate = Navigate();
+  const navigate = useNavigate();
   return (
     <div className="max-w-3xl mx-auto bg-white shadow p-6">
       <button onClick={onBack} className="text-blue-600 mb-4 text-xs">
