@@ -828,7 +828,7 @@ const PurchaseList = () => {
                           {new Date(purchase.billingDate || purchase.invoiceDate).toLocaleDateString()}
                           {sortField === 'invoiceDate' && (sortOrder === 'asc' ? ' ↑' : ' ↓')}
                         </td>
-
+                        
                         {/* Supplier Name with sorting */}
                         <td
                           className="px-2 py-2 text-xs cursor-pointer"

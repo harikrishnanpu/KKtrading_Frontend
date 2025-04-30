@@ -7,72 +7,129 @@ import 'react-loading-skeleton/dist/skeleton.css';
 import useAuth from 'hooks/useAuth';
 import { Dialog, DialogContent, IconButton, Slide } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import { FaFilter, FaPrint, FaPlus } from 'react-icons/fa';
+import { FaPrint, FaPlus, FaFilter, FaUser, FaEye } from 'react-icons/fa';
 
-const Transition = React.forwardRef(function Transition(props, ref) {
-  return <Slide direction="up" ref={ref} {...props} />;
-});
+const Transition = React.forwardRef((p, ref) => (
+  <Slide direction="up" ref={ref} {...p} />
+));
 
 export default function PurchaseRequestList() {
   const navigate = useNavigate();
   const { user: userInfo } = useAuth();
 
-  // State
+  /* ───────── state ───────── */
   const [requests, setRequests] = useState([]);
-  const [selectedRequest, setSelectedRequest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [htmlLoading, setHtmlLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Pagination
+  const [selected, setSelected] = useState(null);
+  const [showSidebar, setShowSidebar] = useState(false);
+
+  /* pagination */
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
-  // Filters & Sorting
+  /* filters */
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+
+  /* sort */
   const [sortField, setSortField] = useState('');
   const [sortOrder, setSortOrder] = useState('asc');
 
-  // Fetch data
+  /* purchase-id list (for linking) */
+  const [purchaseIds, setPurchaseIds] = useState([]);
+
+  /* ───────── fetch ───────── */
   useEffect(() => {
     (async () => {
-      setLoading(true);
       try {
-        const { data } = await api.get('/api/purchase-requests');
-        setRequests(data);
+        const [{ data: reqs }, { data: purchases }] = await Promise.all([
+          api.get('/api/purchase-requests'),
+          api.get('/api/products/purchases/all', {
+            params: { fields: '_id,purchaseId' },
+          }),
+        ]);
+        setRequests(reqs);
+        setPurchaseIds(purchases.map((p) => ({ id: p._id, label: p.purchaseId })));
       } catch {
-        setError('Failed to fetch requests.');
+        setError('Failed to fetch data');
       } finally {
         setLoading(false);
       }
     })();
   }, []);
 
-  // Filtering + sorting
+  /* ───────── helpers ───────── */
+  const patchRequest = (id, patch) =>
+    setRequests((rs) => rs.map((r) => (r._id === id ? { ...r, ...patch } : r)));
+
+  const changeStatus = async (id, newStatus) => {
+    const { data } = await api.put(`/api/purchase-requests/${id}`, {
+      status: newStatus,
+    });
+    patchRequest(id, data);
+  };
+
+  const linkPurchase = async (id, purchaseId) => {
+    const { data } = await api.put(`/api/purchase-requests/${id}`, {
+      linkedPurchaseId: purchaseId,
+    });
+    patchRequest(id, data);
+  };
+
+  const handlePrint = async (req) => {
+    setHtmlLoading(true);
+    try {
+      const { data: html } = await api.post('/api/print/generate-request-letter', req);
+      const w = window.open('', '', 'width=1000,height=700');
+      w.document.write(html);
+      w.document.close();
+    } catch {
+      setError('Print failed');
+    } finally {
+      setHtmlLoading(false);
+    }
+  };
+
+  const resetFilters = () => {
+    setSearchTerm('');
+    setStartDate('');
+    setEndDate('');
+    setStatusFilter('all');
+    setSortField('');
+    setSortOrder('asc');
+  };
+
+  /* ───────── compute lists ───────── */
   const filtered = useMemo(() => {
     let d = [...requests];
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
       d = d.filter(
-        r =>
+        (r) =>
           r.requestFrom.name.toLowerCase().includes(q) ||
           r.requestTo.name.toLowerCase().includes(q) ||
           r._id.toLowerCase().includes(q)
       );
     }
-    if (startDate) d = d.filter(r => new Date(r.requestDate) >= new Date(startDate));
-    if (endDate)   d = d.filter(r => new Date(r.requestDate) <= new Date(endDate));
-    if (statusFilter !== 'all') d = d.filter(r => r.status === statusFilter);
+    if (startDate) d = d.filter((r) => new Date(r.requestDate) >= new Date(startDate));
+    if (endDate) d = d.filter((r) => new Date(r.requestDate) <= new Date(endDate));
+    if (statusFilter !== 'all') d = d.filter((r) => r.status === statusFilter);
     if (sortField) {
-      const get = (o, p) => p.split('.').reduce((x,k)=>x?.[k], o);
-      d.sort((a,b) => {
-        let A = get(a, sortField), B = get(b, sortField);
-        if (typeof A === 'string') { A = A.toLowerCase(); B = B.toLowerCase(); }
-        if (A < B) return sortOrder==='asc'? -1:1;
-        if (A > B) return sortOrder==='asc'? 1:-1;
+      const get = (o, p) => p.split('.').reduce((x, k) => x?.[k], o);
+      d.sort((a, b) => {
+        let A = get(a, sortField),
+          B = get(b, sortField);
+        if (typeof A === 'string') {
+          A = A.toLowerCase();
+          B = B.toLowerCase();
+        }
+        if (A < B) return sortOrder === 'asc' ? -1 : 1;
+        if (A > B) return sortOrder === 'asc' ? 1 : -1;
         return 0;
       });
     }
@@ -81,91 +138,88 @@ export default function PurchaseRequestList() {
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const pageData = useMemo(
-    () => filtered.slice((currentPage-1)*itemsPerPage, currentPage*itemsPerPage),
+    () => filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage),
     [filtered, currentPage]
   );
 
-  // Quick stats
-  const stats = useMemo(() => {
-    const total = filtered.length;
-    const items = filtered.reduce((s, r) => s + r.items.length, 0);
-    const pending = filtered.filter(r=>r.status==='pending').length;
-    const received = filtered.filter(r=>r.status==='received').length;
-    const notSub = filtered.filter(r=>r.status==='not-submitted').length;
-    return { total, items, pending, received, notSub };
-  }, [filtered]);
+  /* stats */
+  const stats = useMemo(
+    () => ({
+      total: filtered.length,
+      items: filtered.reduce((s, r) => s + r.items.length, 0),
+      pending: filtered.filter((r) => r.status === 'pending').length,
+      received: filtered.filter((r) => r.status === 'received').length,
+      notSub: filtered.filter((r) => r.status === 'not-submitted').length,
+    }),
+    [filtered]
+  );
 
-  // Helpers
-  const resetFilters = () => {
-    setSearchTerm(''); setStartDate(''); setEndDate('');
-    setStatusFilter('all'); setSortField(''); setSortOrder('asc');
+  /* ───────── UI helpers ───────── */
+  const StatusPill = ({ r }) => {
+    const color = {
+      pending: 'bg-yellow-100 text-yellow-800',
+      received: 'bg-green-100 text-green-800',
+      'not-submitted': 'bg-gray-200 text-gray-800',
+    }[r.status];
+
+    return (
+      <select
+        value={r.status === 'received' ? r.linkedPurchaseId || 'received' : r.status}
+        onChange={(e) => {
+          const val = e.target.value;
+          if (['pending', 'not-submitted'].includes(val)) changeStatus(r._id, val);
+          else if (val === 'received') changeStatus(r._id, 'received');
+          else linkPurchase(r._id, val);
+        }}
+        className={`${color} uppercase text-xs font-bold rounded-full px-3 py-1 appearance-none cursor-pointer border-none focus:outline-none`}
+      >
+        <option hidden value={r.status}>
+          {r.status === 'received' && r.linkedPurchaseId
+            ? `RECEIVED • ${purchaseIds.find((p) => p.id === r.linkedPurchaseId)?.label || r.linkedPurchaseId.slice(-6)}`
+            : r.status.toUpperCase()}
+        </option>
+        <option value="pending">PENDING</option>
+        <option value="received">RECEIVED</option>
+        <option value="not-submitted">NOT SUBMITTED</option>
+        {r.status === 'received' &&
+          purchaseIds.map((p) => (
+            <option key={p.id} value={p.id}>
+              LINK → {p.label}
+            </option>
+          ))}
+      </select>
+    );
   };
 
-  // Print letter
-  const handlePrint = async req => {
-    setHtmlLoading(true);
-    try {
-      const { data: html } = await api.post('/api/print/generate-request-letter', req);
-      const win = window.open('', '', 'width=1000,height=700');
-      win.document.write(html);
-      win.document.close();
-    } catch {
-      setError('Print failed.');
-    } finally {
-      setHtmlLoading(false);
-    }
-  };
-
-  // Update status
-  const changeStatus = async (id, newStatus) => {
-    try {
-      const { data } = await api.put(`/api/purchase-requests/${id}`, { status: newStatus });
-      setRequests(reqs => reqs.map(r => r._id === id ? data : r));
-    } catch {
-      setError('Status update failed.');
-    }
-  };
-
-  // Skeleton loaders
-  const CardSkeleton = () =>
-    Array.from({ length: itemsPerPage }).map((_, i) => (
-      <Skeleton key={i} height={140} className="mb-4 rounded-lg" />
-    ));
   const TableSkeleton = () => (
-    <table className="w-full bg-white rounded-lg shadow overflow-hidden">
+    <table className="w-full bg-white rounded-lg shadow">
       <tbody>
         {Array.from({ length: itemsPerPage }).map((_, i) => (
-          <tr key={i} className="divide-x">
-            {Array(7).fill(0).map((__, j) => (
-              <td key={j} className="p-2"><Skeleton /></td>
-            ))}
+          <tr key={i}>
+            {Array(9)
+              .fill(0)
+              .map((__, j) => (
+                <td key={j} className="p-2">
+                  <Skeleton />
+                </td>
+              ))}
           </tr>
         ))}
       </tbody>
     </table>
   );
+  const CardSkeleton = () =>
+    Array.from({ length: itemsPerPage }).map((_, i) => (
+      <Skeleton key={i} height={140} className="mb-4 rounded-lg" />
+    ));
 
-  // Status badge
-  const StatusBadge = ({ status }) => {
-    const map = {
-      pending: 'bg-yellow-200 text-yellow-800',
-      received: 'bg-green-200 text-green-800',
-      'not-submitted': 'bg-gray-200 text-gray-800'
-    };
-    return (
-      <span className={`px-2 py-1 rounded text-xs font-semibold ${map[status]}`}>
-        {status.replace('-', ' ').toUpperCase()}
-      </span>
-    );
-  };
-
-  // Mobile card
-  const Card = r => (
+  /* card (mobile) */
+  const Card = (r) => (
     <div key={r._id} className="bg-white rounded-lg shadow p-4 mb-4">
       <div className="flex justify-between mb-2">
         <h3
-          onClick={()=>setSelectedRequest(r)}
-          className="text-red-600 font-bold text-lg cursor-pointer"
+          onClick={() => setSelected(r)}
+          className="text-red-600 font-bold text-xs tracking-wide cursor-pointer"
         >
           {r._id.slice(-6).toUpperCase()}
         </h3>
@@ -173,31 +227,28 @@ export default function PurchaseRequestList() {
           {new Date(r.requestDate).toLocaleDateString()}
         </span>
       </div>
-      <p className="text-sm"><strong>From:</strong> {r.requestFrom.name}</p>
-      <p className="text-sm"><strong>To:</strong> {r.requestTo.name}</p>
-      <p className="text-sm"><strong>Items:</strong> {r.items.length}</p>
-      <div className="flex items-center">
-        <strong className="text-sm mr-1">Status:</strong>
-        <select
-          value={r.status}
-          onChange={e=>changeStatus(r._id, e.target.value)}
-          className="text-xs border border-gray-300 rounded px-2 py-1"
-        >
-          <option value="pending">PENDING</option>
-          <option value="received">RECEIVED</option>
-          <option value="not-submitted">NOT SUBMITTED</option>
-        </select>
+      <p className="text-xs">
+        <strong>From :</strong> {r.requestFrom.name}
+      </p>
+      <p className="text-xs">
+        <strong>To :</strong> {r.requestTo.name}
+      </p>
+      <p className="text-xs">
+        <strong>Items :</strong> {r.items.length}
+      </p>
+      <div className="my-2">
+        <StatusPill r={r} />
       </div>
-      <div className="mt-3 flex gap-2">
+      <div className="flex gap-2">
         <button
-          onClick={()=>setSelectedRequest(r)}
-          className="bg-red-600 text-white px-3 py-1 rounded text-xs flex-1"
+          onClick={() => setSelected(r)}
+          className="flex-1 bg-red-600 text-white text-xs py-2 rounded"
         >
           View
         </button>
         <button
-          onClick={()=>handlePrint(r)}
-          className="bg-red-600 text-white px-3 py-1 rounded text-xs flex-1"
+          onClick={() => handlePrint(r)}
+          className="flex-1 bg-red-600 text-white text-xs py-2 rounded"
         >
           Print
         </button>
@@ -205,176 +256,153 @@ export default function PurchaseRequestList() {
     </div>
   );
 
+  /* ───────── render ───────── */
   return (
     <>
-      {/* Generating overlay */}
       {htmlLoading && (
         <div className="fixed inset-0 bg-black/50 z-50 flex flex-col items-center justify-center">
           <i className="fa fa-spinner fa-spin text-white text-3xl mb-2" />
-          <p className="text-white">Preparing letter…</p>
+          <p className="text-white text-xs">Preparing letter…</p>
         </div>
       )}
 
-      {/* Top controls */}
+      {/* top */}
       <div className="flex flex-wrap items-center justify-between mb-4 gap-4">
         <button
-          onClick={()=>navigate('/purchase/create-purchase-request')}
-          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm flex items-center gap-2"
+          onClick={() => navigate('/purchase/create-purchase-request')}
+          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-xs flex items-center gap-2"
         >
-          <FaPlus /> Add Purchase Request
+          <FaPlus /> New Request
         </button>
         <div className="flex flex-wrap gap-2">
-          {['all','pending','received','not-submitted'].map(sf => (
+          {['all', 'pending', 'received', 'not-submitted'].map((s) => (
             <button
-              key={sf}
-              onClick={()=>{ setStatusFilter(sf); setCurrentPage(1); }}
+              key={s}
+              onClick={() => {
+                setStatusFilter(s);
+                setCurrentPage(1);
+              }}
               className={`px-3 py-1 rounded text-xs font-semibold ${
-                statusFilter===sf ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700'
+                statusFilter === s
+                  ? 'bg-red-600 text-white'
+                  : 'bg-gray-100 text-gray-700'
               }`}
             >
-              {sf==='all' ? 'ALL' : sf.replace('-', ' ').toUpperCase()}
+              {s === 'all' ? 'ALL' : s.replace('-', ' ').toUpperCase()}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-6">
+      {/* stats */}
+      <div className="grid grid-cols-2 xs:grid-cols-3 md:grid-cols-5 gap-4 mb-6">
         {[
           ['Total Req', stats.total],
           ['Total Items', stats.items],
           ['Pending', stats.pending],
           ['Received', stats.received],
           ['Not-Sub', stats.notSub],
-        ].map(([label,val]) => (
-          <div key={label} className="bg-white shadow rounded-lg p-4 text-center">
-            <p className="text-xs text-gray-500">{label}</p>
-            <p className="text-xl font-bold text-gray-800">{val}</p>
+        ].map(([l, v]) => (
+          <div key={l} className="bg-white shadow rounded-lg p-4 text-center">
+            <p className="text-xs text-gray-500">{l}</p>
+            <p className="text-lg font-bold text-gray-800">{v}</p>
           </div>
         ))}
       </div>
 
-      {/* Desktop filters */}
+      {/* desktop filter box */}
       <div className="hidden md:flex flex-wrap bg-white shadow rounded-lg p-4 mb-6 gap-4">
         <div className="flex-1 min-w-[180px]">
           <label className="block text-xs font-semibold mb-1">Search</label>
           <input
             value={searchTerm}
-            onChange={e=>setSearchTerm(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="From / To / ID…"
-            className="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:ring-red-500 focus:border-red-500"
+            className="w-full border border-gray-300 rounded px-3 py-2 text-xs"
           />
         </div>
         <div>
-          <label className="block text-xs font-semibold mb-1">Start Date</label>
+          <label className="block text-xs font-semibold mb-1">Start</label>
           <input
             type="date"
             value={startDate}
-            onChange={e=>setStartDate(e.target.value)}
-            className="border border-gray-300 rounded px-3 py-2 text-xs focus:ring-red-500 focus:border-red-500"
+            onChange={(e) => setStartDate(e.target.value)}
+            className="border border-gray-300 rounded px-3 py-2 text-xs"
           />
         </div>
         <div>
-          <label className="block text-xs font-semibold mb-1">End Date</label>
+          <label className="block text-xs font-semibold mb-1">End</label>
           <input
             type="date"
             value={endDate}
-            onChange={e=>setEndDate(e.target.value)}
-            className="border border-gray-300 rounded px-3 py-2 text-xs focus:ring-red-500 focus:border-red-500"
+            onChange={(e) => setEndDate(e.target.value)}
+            className="border border-gray-300 rounded px-3 py-2 text-xs"
           />
-        </div>
-        <div>
-          <label className="block text-xs font-semibold mb-1">Status</label>
-          <select
-            value={statusFilter}
-            onChange={e=>setStatusFilter(e.target.value)}
-            className="border border-gray-300 rounded px-3 py-2 text-xs focus:ring-red-500 focus:border-red-500"
-          >
-            <option value="all">All</option>
-            <option value="pending">Pending</option>
-            <option value="received">Received</option>
-            <option value="not-submitted">Not Submitted</option>
-          </select>
         </div>
         <button
           onClick={resetFilters}
-          className="bg-red-600 text-white px-4 py-2 rounded text-xs font-semibold hover:bg-red-700 self-end"
+          className="bg-red-600 text-white px-4 py-2 rounded text-xs"
         >
           Reset
         </button>
       </div>
 
-      {/* Error message */}
-      {error && <div className="text-red-600 text-center mb-4">{error}</div>}
+      {error && <p className="text-red-600 text-center text-xs mb-4">{error}</p>}
 
-      {/* List */}
       {loading ? (
         <>
-          <div className="hidden md:block"><TableSkeleton /></div>
+          <div className="hidden md:block">
+            <TableSkeleton />
+          </div>
           <div className="md:hidden">{CardSkeleton()}</div>
         </>
       ) : filtered.length === 0 ? (
-        <div className="text-center text-gray-500">No requests found.</div>
+        <p className="text-center text-gray-500 text-xs">No requests found.</p>
       ) : (
         <>
-          {/* Desktop table */}
+          {/* desktop table */}
           <div className="hidden md:block overflow-x-auto">
-            <table className="w-full bg-white shadow rounded-lg text-xs">
-              <thead className="bg-red-600 text-white sticky top-0">
+            <table className="w-full text-xs bg-white shadow rounded-lg">
+              <thead className="bg-red-600 text-white">
                 <tr>
-                  {['ID','Date','From','To','Items','Status','Actions'].map(h => (
-                    <th key={h} className="px-3 py-2">{h}</th>
-                  ))}
+                  {['ID', 'Date', 'Submitted', 'From', 'To', 'Items', 'Status', 'Actions'].map(
+                    (h) => (
+                      <th key={h} className="px-3 py-2">
+                        {h}
+                      </th>
+                    )
+                  )}
                 </tr>
               </thead>
-              <tbody className="text-gray-700">
-                {pageData.map(r => (
-                  <tr key={r._id} className="hover:bg-gray-50">
+              <tbody>
+                {pageData.map((r) => (
+                  <tr key={r._id} className="border-b hover:bg-gray-50">
                     <td
-                      onClick={()=>setSelectedRequest(r)}
-                      className="px-3 py-2 font-semibold text-red-600 cursor-pointer"
+                      onClick={() => setSelected(r)}
+                      className="px-3 py-2 text-red-600 font-semibold cursor-pointer"
                     >
                       {r._id.slice(-6).toUpperCase()}
                     </td>
                     <td className="px-3 py-2">{new Date(r.requestDate).toLocaleDateString()}</td>
+                    <td className="px-3 py-2">{r.submittedBy || '—'}</td>
                     <td className="px-3 py-2">{r.requestFrom.name}</td>
                     <td className="px-3 py-2">{r.requestTo.name}</td>
                     <td className="px-3 py-2 text-center">{r.items.length}</td>
                     <td className="px-3 py-2">
-                    <select
-  value={r.status}
-  onChange={e => changeStatus(r._id, e.target.value)}
-  className={`
-    text-xs
-    font-bold
-    uppercase
-    px-3 py-2
-    rounded
-    border
-    appearance-none
-    transition
-
-    ${
-      r.status === 'pending'
-        ? 'bg-yellow-100 text-yellow-800 border-yellow-300'
-        : r.status === 'received'
-        ? 'bg-green-100 text-green-800 border-green-300'
-        : 'bg-gray-100 text-gray-800 border-gray-300'
-    }
-  `}
->
-  <option value="pending">PENDING</option>
-  <option value="received">RECEIVED</option>
-  <option value="not-submitted">NOT SUBMITTED</option>
-</select>
-
+                      <StatusPill r={r} />
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2 flex gap-2">
                       <button
-                        onClick={()=>handlePrint(r)}
-                        className="bg-red-600 text-white px-2 py-1 rounded text-xs hover:bg-red-700"
+                        className="bg-red-600 text-white px-2 py-1 rounded"
+                        onClick={() => setSelected(r)}
                       >
-                        <FaPrint className="inline-block mr-1" /> Print
+                        <FaEye />
+                      </button>
+                      <button
+                        className="bg-red-600 text-white px-2 py-1 rounded"
+                        onClick={() => handlePrint(r)}
+                      >
+                        <FaPrint />
                       </button>
                     </td>
                   </tr>
@@ -383,32 +411,32 @@ export default function PurchaseRequestList() {
             </table>
           </div>
 
-          {/* Mobile cards */}
+          {/* mobile cards */}
           <div className="md:hidden">{pageData.map(Card)}</div>
 
-          {/* Pagination */}
+          {/* pagination */}
           <div className="mt-4 flex justify-between items-center">
             <button
-              onClick={()=>setCurrentPage(p=>p-1)}
-              disabled={currentPage===1}
+              onClick={() => setCurrentPage((p) => p - 1)}
+              disabled={currentPage === 1}
               className={`px-4 py-2 text-xs font-semibold rounded ${
-                currentPage===1
-                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                  : 'bg-red-600 text-white hover:bg-red-700'
+                currentPage === 1
+                  ? 'bg-gray-200 text-gray-400'
+                  : 'bg-red-600 text-white'
               }`}
             >
-              Previous
+              Prev
             </button>
             <span className="text-xs text-gray-600">
-              Page {currentPage} / {totalPages}
+              {currentPage} / {totalPages}
             </span>
             <button
-              onClick={()=>setCurrentPage(p=>p+1)}
-              disabled={currentPage===totalPages}
+              onClick={() => setCurrentPage((p) => p + 1)}
+              disabled={currentPage === totalPages}
               className={`px-4 py-2 text-xs font-semibold rounded ${
-                currentPage===totalPages
-                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                  : 'bg-red-600 text-white hover:bg-red-700'
+                currentPage === totalPages
+                  ? 'bg-gray-200 text-gray-400'
+                  : 'bg-red-600 text-white'
               }`}
             >
               Next
@@ -417,90 +445,77 @@ export default function PurchaseRequestList() {
         </>
       )}
 
-      {/* Detail Modal */}
-      {selectedRequest && (
-        <Dialog
-          open fullScreen
-          onClose={()=>setSelectedRequest(null)}
-          TransitionComponent={Transition}
-        >
-          <DialogContent className="relative p-6 lg:p-12 overflow-auto">
+      {/* modal */}
+      {selected && (
+        <Dialog open fullScreen TransitionComponent={Transition} onClose={() => setSelected(null)}>
+          <DialogContent className="relative p-6">
             <IconButton
-              onClick={()=>setSelectedRequest(null)}
-              sx={{ position:'absolute', top:16, right:16, color:'gray' }}
+              onClick={() => setSelected(null)}
+              sx={{ position: 'absolute', top: 8, right: 8, color: 'gray' }}
             >
-              <CloseIcon fontSize="large"/>
+              <CloseIcon fontSize="large" />
             </IconButton>
 
-            {/* Modal Header */}
-            <h2 className="text-2xl font-bold text-red-600 mb-4">
-              Purchase Request Details
+            <h2 className="text-xs font-bold text-red-600 mb-4 flex items-center gap-2">
+              <FaUser /> Purchase Request • {selected._id.slice(-6).toUpperCase()}
             </h2>
 
-            {/* Meta info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-6">
+            {/* meta */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs mb-6">
               <div>
-                <p><strong>ID:</strong> {selectedRequest._id}</p>
-                <p><strong>Date:</strong> {new Date(selectedRequest.requestDate).toLocaleString()}</p>
-                <p><strong>From:</strong> {selectedRequest.requestFrom.name}</p>
-                <p className="text-gray-500 text-xs">{selectedRequest.requestFrom.address}</p>
+                <p>
+                  <strong>From :</strong> {selected.requestFrom.name}
+                </p>
+                <p className="text-gray-500 text-xs">{selected.requestFrom.address}</p>
+                <p>
+                  <strong>Date :</strong> {new Date(selected.requestDate).toLocaleString()}
+                </p>
+                <p>
+                  <strong>Submitted :</strong> {selected.submittedBy || '—'}
+                </p>
               </div>
               <div>
-                <p><strong>To:</strong> {selectedRequest.requestTo.name}</p>
-                <p className="text-gray-500 text-xs">{selectedRequest.requestTo.address}</p>
-                <p className="flex items-center"><strong>Status:</strong>
-                <select
-  value={selectedRequest.status}
-  onChange={e => changeStatus(selectedRequest._id, e.target.value)}
-  className={`ml-2 text-xs font-bold uppercase px-2 py-1 rounded focus:outline-none transition
-    ${
-      selectedRequest.status === 'pending'
-        ? 'bg-yellow-100 text-yellow-800 border border-yellow-300'
-        : selectedRequest.status === 'received'
-        ? 'bg-green-100 text-green-800 border border-green-300'
-        : 'bg-gray-100 text-gray-800 border border-gray-300'
-    }`
-  }
->
-  <option value="pending">Pending</option>
-  <option value="received">Received</option>
-  <option value="not-submitted">Not Submitted</option>
-</select>
-
+                <p>
+                  <strong>To :</strong> {selected.requestTo.name}
                 </p>
+                <p className="text-gray-500 text-xs">{selected.requestTo.address}</p>
+                <div className="mt-1">
+                  <StatusPill r={selected} />
+                </div>
               </div>
             </div>
 
-            {/* Items table */}
-            <h3 className="text-lg font-semibold mb-2">Items ({selectedRequest.items.length})</h3>
-            <div className="overflow-x-auto mb-8">
-              <table className="w-full text-sm text-gray-700">
+            {/* items */}
+            <h3 className="text-xs font-bold text-red-600 mb-2">
+              Items ({selected.items.length})
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
                 <thead className="bg-gray-100">
                   <tr>
-                    <th className="px-3 py-2">#</th>
-                    <th className="px-3 py-2">ID</th>
-                    <th className="px-3 py-2">Name</th>
-                    <th className="px-3 py-2 text-center">Qty</th>
-                    <th className="px-3 py-2 text-center">Unit</th>
+                    <th className="px-2 py-1">#</th>
+                    <th className="px-2 py-1">ID</th>
+                    <th className="px-2 py-1">Name</th>
+                    <th className="px-2 py-1">Qty</th>
+                    <th className="px-2 py-1">Unit</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {selectedRequest.items.map((it, i) => (
-                    <tr key={i} className="hover:bg-gray-50">
-                      <td className="px-3 py-2">{i+1}</td>
-                      <td className="px-3 py-2">{it.itemId}</td>
-                      <td className="px-3 py-2">{it.name}</td>
-                      <td className="px-3 py-2 text-center">{it.quantity}</td>
-                      <td className="px-3 py-2 text-center">{it.pUnit}</td>
+                  {selected.items.map((it, i) => (
+                    <tr key={i} className="border-b">
+                      <td className="px-2 py-1">{i + 1}</td>
+                      <td className="px-2 py-1">{it.itemId || '—'}</td>
+                      <td className="px-2 py-1">{it.name}</td>
+                      <td className="px-2 py-1 text-center">{it.quantity}</td>
+                      <td className="px-2 py-1 text-center">{it.pUnit}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
 
-            {/* Authorized Signature */}
-            <div className="mt-12 text-right">
-              <p className="inline-block border-t border-gray-400 pt-2 text-sm">
+            <div className="mt-10 text-right">
+              <p className="inline-block border-t border-gray-400 pt-2 text-xs">
                 Authorized Signature
               </p>
             </div>
@@ -508,13 +523,52 @@ export default function PurchaseRequestList() {
         </Dialog>
       )}
 
-      {/* Mobile Filter Button */}
+      {/* mobile filter FAB */}
       <button
-        onClick={()=>setShowSidebar(true)}
+        onClick={() => setShowSidebar(true)}
         className="md:hidden fixed bottom-6 right-6 bg-red-600 p-3 rounded-full shadow-lg text-white"
       >
         <FaFilter />
       </button>
+
+      {/* sidebar */}
+      <div
+        className={`fixed inset-0 bg-black/50 z-40 ${showSidebar ? 'block' : 'hidden'} md:hidden`}
+        onClick={() => setShowSidebar(false)}
+      />
+      <div
+        className={`fixed top-0 right-0 h-full bg-white shadow-md p-4 w-64 z-50 transform ${
+          showSidebar ? 'translate-x-0' : 'translate-x-full'
+        } transition-transform md:hidden`}
+      >
+        <h2 className="text-xs font-bold text-red-600 mb-4">Filters</h2>
+        <label className="block text-xs font-bold mb-1">Search</label>
+        <input
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full border border-gray-300 rounded px-3 py-2 text-xs mb-3"
+        />
+        <label className="block text-xs font-bold mb-1">Start Date</label>
+        <input
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          className="w-full border border-gray-300 rounded px-3 py-2 text-xs mb-3"
+        />
+        <label className="block text-xs font-bold mb-1">End Date</label>
+        <input
+          type="date"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+          className="w-full border border-gray-300 rounded px-3 py-2 text-xs mb-3"
+        />
+        <button
+          onClick={resetFilters}
+          className="bg-red-600 text-white w-full py-2 rounded text-xs"
+        >
+          Reset
+        </button>
+      </div>
     </>
   );
 }

@@ -647,6 +647,7 @@ export default function PurchasePage() {
       billingDate,
       invoiceDate,
       otherExpenses,
+      submittedBy: userInfo.name,
       items: items.map((item) => ({
           itemId: item.itemId || itemId,
           name: item.name,

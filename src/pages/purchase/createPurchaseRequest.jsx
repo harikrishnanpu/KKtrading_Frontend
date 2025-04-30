@@ -5,46 +5,52 @@ import ItemSuggestionsSidebar from 'components/products/itemSuggestionSidebar';
 import ErrorModal from 'components/ErrorModal';
 import PurchaseRequestPreview from './purchaseReuestForm';
 import { useNavigate } from 'react-router-dom';
+import useAuth from 'hooks/useAuth';
 
 export default function PurchaseRequestPage() {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
+
   /* ───────────────────────────── header fields ───────────────────────────── */
-  const [requestFrom, setRequestFrom] = useState('KK Trading');
-  const [requestFromAddr, setRequestFromAddr] = useState('Moncompu Champoakulam Road, Kerala, India');
-  const [requestTo, setRequestTo] = useState('');
-  const [requestToAddr, setRequestToAddr] = useState('');
-  const [requestDate, setRequestDate] = useState(
+  const [requestFrom, setRequestFrom]       = useState('KK Trading');
+  const [requestFromAddr, setRequestFromAddr] = useState(
+    'Moncompu Chambakulam Road, Kerala, India'
+  );
+  const [requestTo, setRequestTo]           = useState('');
+  const [requestToAddr, setRequestToAddr]   = useState('');
+  const [requestDate, setRequestDate]       = useState(
     new Date().toISOString().substring(0, 10)
   );
 
+  const {user} = useAuth();
+
   /* ─────────────────────────────── items ─────────────────────────────────── */
-  const [items, setItems] = useState([]);
-  const [itemId, setItemId] = useState('');
-  const [itemName, setItemName] = useState('');
-  const [itemBrand, setItemBrand] = useState('');
+  const [items, setItems]           = useState([]);
+  const [itemId, setItemId]         = useState('');
+  const [itemName, setItemName]     = useState('');
+  const [itemBrand, setItemBrand]   = useState('');
   const [itemCategory, setItemCategory] = useState('');
-  const [itemQuantity, setItemQuantity] = useState('');
-  const [itemUnit, setItemUnit] = useState('');
-  const [sUnit, setSUnit] = useState('NOS');
-  const [psRatio, setPsRatio] = useState('');
-  const [length, setLength] = useState('');
-  const [breadth, setBreadth] = useState('');
-  const [actLength, setActLength] = useState('');
+  const [itemQuantity, setItemQuantity]   = useState('');
+  const [itemUnit, setItemUnit]     = useState('');
+  const [sUnit, setSUnit]           = useState('NOS');
+  const [psRatio, setPsRatio]       = useState('');
+  const [length, setLength]         = useState('');
+  const [breadth, setBreadth]       = useState('');
+  const [actLength, setActLength]   = useState('');
   const [actBreadth, setActBreadth] = useState('');
-  const [size, setSize] = useState('');
+  const [size, setSize]             = useState('');          // NEW visible input
 
   /* ───────────────────────────── suggestions UI ──────────────────────────── */
-  const [suggestions, setSuggestions] = useState([]);
+  const [suggestions, setSuggestions]                 = useState([]);
   const [showSuggestionsSidebar, setShowSuggestionsSidebar] = useState(false);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
 
   /* ───────────────────────────── misc state ──────────────────────────────── */
-  const [error, setError] = useState('');
+  const [error, setError]               = useState('');
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [savedRequest, setSavedRequest] = useState(null);
 
   /* ───────────────────────────── refs ────────────────────────────────────── */
-  const itemIdRef = useRef();
+  const itemIdRef   = useRef();
   const itemNameRef = useRef();
 
   /* ───────────────────────────── helpers ─────────────────────────────────── */
@@ -68,28 +74,27 @@ export default function PurchaseRequestPage() {
   /* ───────────────────────────── add / remove item ───────────────────────── */
   const addItem = () => {
     if (
-      !itemId ||
-      !itemName ||
+      !itemName ||                       // itemId now optional
       !itemCategory ||
       itemQuantity === '' ||
       !itemUnit
     ) {
-      setError('Please fill Item ID, Name, Category, Quantity & Unit');
+      setError('Please fill Name, Category, Quantity & Unit');
       setShowErrorModal(true);
       return;
     }
 
-    const q = parseFloat(itemQuantity);
-    const ratio = parseFloat(psRatio) || 1;
-    const area = safeMultiply(parseFloat(length), parseFloat(breadth)) || 1;
+    const q      = parseFloat(itemQuantity);
+    const ratio  = parseFloat(psRatio) || 1;
+    const area   = safeMultiply(parseFloat(length), parseFloat(breadth)) || 1;
 
     let quantityInUnits = q;
-    if (itemUnit === 'BOX') quantityInUnits = q * ratio;
+    if (itemUnit === 'BOX')  quantityInUnits = q * ratio;
     else if (itemUnit === 'SQFT') quantityInUnits = q / area;
 
     setItems([
       {
-        itemId,
+        itemId,                       // may be empty for custom item
         name: itemName,
         brand: itemBrand,
         category: itemCategory,
@@ -137,7 +142,6 @@ export default function PurchaseRequestPage() {
 
   const handleItemIdKeyDown = (e) => {
     if (!showSuggestionsSidebar) return;
-
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setSelectedSuggestionIndex((prev) =>
@@ -149,8 +153,7 @@ export default function PurchaseRequestPage() {
     } else if (e.key === 'Enter') {
       e.preventDefault();
       if (selectedSuggestionIndex >= 0) {
-        const sel = suggestions[selectedSuggestionIndex];
-        selectSuggestion(sel);
+        selectSuggestion(suggestions[selectedSuggestionIndex]);
       }
     }
   };
@@ -182,9 +185,10 @@ export default function PurchaseRequestPage() {
     try {
       const { data } = await api.post('/api/purchase-requests', {
         requestFrom: { name: requestFrom, address: requestFromAddr },
-        requestTo: { name: requestTo, address: requestToAddr },
+        requestTo:   { name: requestTo,   address: requestToAddr },
         requestDate,
         items,
+        submittedBy: user.name
       });
       setSavedRequest(data);
       clearAll();
@@ -217,18 +221,20 @@ export default function PurchaseRequestPage() {
         <ErrorModal message={error} onClose={() => setShowErrorModal(false)} />
       )}
 
-      {/* ╭──────────────── Header fields ────────────────╮ */}
-      <div className='flex text-xs justify-between align-items-center mb-5'>
-      <button
+      {/* Header  */}
+      <div className="flex text-xs justify-between items-center mb-5">
+        <button
           className="py-2 px-6 bg-red-600 text-white rounded-md text-xs font-bold hover:bg-red-700"
-          onClick={()=> navigate('/purchase/list-purchase-request')}
+          onClick={() => navigate('/purchase/list-purchase-request')}
         >
           Back
         </button>
-      <h2 className="text-base font-bold mb-6 text-gray-900">
-        Create Purchase Request
-      </h2>
+        <h2 className="text-base font-bold text-gray-900">
+          Create Purchase Request
+        </h2>
       </div>
+
+      {/* Header fields */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
         <div className="flex flex-col">
           <label className="text-xs mb-1 text-gray-700">Request FROM</label>
@@ -277,11 +283,14 @@ export default function PurchaseRequestPage() {
         </div>
       </div>
 
-      {/* ╭──────────────── Item add inputs ───────────────╮ */}
+      {/* Items section */}
       <h3 className="text-sm font-bold text-gray-900 mb-2">Items</h3>
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-3">
+      <div className="grid grid-cols-2 md:grid-cols-7 gap-4 mb-3">
+        {/* Item ID (optional) */}
         <div className="flex flex-col">
-          <label className="text-xs mb-1 text-gray-700">Item ID</label>
+          <label className="text-xs mb-1 text-gray-700">
+            Item ID <span className="text-gray-400">(optional)</span>
+          </label>
           <input
             ref={itemIdRef}
             className="border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
@@ -291,6 +300,8 @@ export default function PurchaseRequestPage() {
             onKeyDown={handleItemIdKeyDown}
           />
         </div>
+
+        {/* Name */}
         <div className="flex flex-col">
           <label className="text-xs mb-1 text-gray-700">Name</label>
           <input
@@ -300,6 +311,8 @@ export default function PurchaseRequestPage() {
             onChange={(e) => setItemName(e.target.value)}
           />
         </div>
+
+        {/* Brand */}
         <div className="flex flex-col">
           <label className="text-xs mb-1 text-gray-700">Brand</label>
           <input
@@ -308,6 +321,8 @@ export default function PurchaseRequestPage() {
             onChange={(e) => setItemBrand(e.target.value)}
           />
         </div>
+
+        {/* Category */}
         <div className="flex flex-col">
           <label className="text-xs mb-1 text-gray-700">Category</label>
           <input
@@ -316,6 +331,8 @@ export default function PurchaseRequestPage() {
             onChange={(e) => setItemCategory(e.target.value)}
           />
         </div>
+
+        {/* Quantity */}
         <div className="flex flex-col">
           <label className="text-xs mb-1 text-gray-700">Quantity</label>
           <input
@@ -325,6 +342,8 @@ export default function PurchaseRequestPage() {
             onChange={(e) => setItemQuantity(e.target.value)}
           />
         </div>
+
+        {/* P-Unit */}
         <div className="flex flex-col">
           <label className="text-xs mb-1 text-gray-700">P-Unit</label>
           <select
@@ -332,15 +351,25 @@ export default function PurchaseRequestPage() {
             value={itemUnit}
             onChange={(e) => setItemUnit(e.target.value)}
           >
-            <option value="" disabled>
-              Select
-            </option>
+            <option value="" disabled>Select</option>
             <option value="NOS">NOS</option>
             <option value="BOX">BOX</option>
             <option value="SQFT">SQFT</option>
           </select>
         </div>
+
+        {/* NEW Size */}
+        <div className="flex flex-col">
+          <label className="text-xs mb-1 text-gray-700">Size</label>
+          <input
+            className="border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
+            placeholder="e.g. 600×600"
+            value={size}
+            onChange={(e) => setSize(e.target.value)}
+          />
+        </div>
       </div>
+
       <button
         className="py-2 px-4 bg-red-600 text-white text-xs font-bold rounded-md hover:bg-red-700 mb-6"
         onClick={addItem}
@@ -348,7 +377,7 @@ export default function PurchaseRequestPage() {
         Add Item
       </button>
 
-      {/* ╭──────────────── Items table ────────────────╮ */}
+      {/* Items table */}
       {items.length > 0 && (
         <div className="overflow-x-auto mb-8">
           <table className="min-w-full table-auto bg-white shadow-md rounded-md">
@@ -366,11 +395,9 @@ export default function PurchaseRequestPage() {
               {items.map((it, idx) => (
                 <tr
                   key={idx}
-                  className={`border-b ${
-                    idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'
-                  }`}
+                  className={`border-b ${idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}`}
                 >
-                  <td className="px-3 py-2">{it.itemId}</td>
+                  <td className="px-3 py-2">{it.itemId || '—'}</td>
                   <td className="px-3 py-2">{it.name}</td>
                   <td className="text-center">{it.quantity}</td>
                   <td className="text-center">{it.pUnit}</td>
@@ -390,18 +417,17 @@ export default function PurchaseRequestPage() {
         </div>
       )}
 
-      {/* ╭──────────────── submit ────────────────╮ */}
+      {/* Submit */}
       <div className="flex justify-end">
-
         <button
           className="py-2 px-6 bg-red-600 text-white rounded-md text-sm font-bold hover:bg-red-700"
-          onClick={()=> submitHandler()}
+          onClick={submitHandler}
         >
           Submit Request
         </button>
       </div>
 
-      {/* ╭──────────────── suggestion sidebar ─────╮ */}
+      {/* Suggestions sidebar */}
       {showSuggestionsSidebar && (
         <ItemSuggestionsSidebar
           open={showSuggestionsSidebar}

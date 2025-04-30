@@ -5,10 +5,12 @@ import { useNavigate, useParams } from "react-router-dom";
 import api from "../api";
 import { useGetMenuMaster } from "api/menu";
 import ItemSuggestionsSidebar from "components/products/itemSuggestionSidebar";
+import useAuth from "hooks/useAuth";
 
 export default function EditPurchaseScreen() {
   const { id } = useParams(); // Purchase ID from URL
   const navigate = useNavigate();
+  const {user} = useAuth();
 
   // ----------------------------
   // State Variables
@@ -748,6 +750,7 @@ export default function EditPurchaseScreen() {
       billingDate,
       invoiceDate,
       otherExpenses,
+      submittedBy: user.name || '',
       items: items.map((item) => ({
           itemId: item.itemId || itemId,
           name: item.name,
