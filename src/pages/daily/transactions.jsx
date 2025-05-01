@@ -600,15 +600,26 @@ const DailyTransactions = () => {
   // -------------------------------
   // Delete Transaction (only from 'daily')
   // -------------------------------
-  const handleDeleteTransaction = async (id) => {
-    try {
-      await api.delete(`/api/daily/transactions/${id}`);
-      fetchTransactions();
-    } catch (err) {
-      setError('Failed to delete transaction.');
-      console.error(err);
-    }
-  };
+// DailyTransactions.js
+const handleDeleteTransaction = async (id) => {
+  // 1️⃣ ask the user first
+  if (!window.confirm('Are you sure you want to delete this transaction?')) return;
+
+  try {
+    await api.delete(`/api/daily/transactions/${id}`);
+
+    // 2️⃣ reuse the SuccessModal you already have
+    setSuccessMessage('Transaction deleted successfully!');
+    setIsSuccessOpen(true);
+
+    // 3️⃣ refresh the list
+    fetchTransactions();
+  } catch (err) {
+    setError('Failed to delete transaction.');
+    console.error(err);
+  }
+};
+
 
   // -------------------------------
   // Merge & Filter & Sort All Transactions
