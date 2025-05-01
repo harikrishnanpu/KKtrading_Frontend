@@ -37,7 +37,7 @@ const purchase = {
           type: 'item',
           url: '/purchase/list/',
           target: false,
-          breadcrumbs: true
+          breadcrumbs: false
         },
         {
           id: 'Purchase Request',
@@ -45,7 +45,7 @@ const purchase = {
           type: 'item',
           url: '/purchase/list-purchase-request',
           target: false,
-          breadcrumbs: true
+          breadcrumbs: false
         }
       ],
 }

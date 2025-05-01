@@ -25,14 +25,16 @@ const stocks = {
       title: <FormattedMessage id="Stock Update" />,
       type: 'item',
       url: '/stock/update',
-      icon: icons.update
+      icon: icons.update,
+      breadcrumbs: false
     },
     {
         id: 'Stock Registry',
         title: <FormattedMessage id="Stock Registry" />,
         type: 'item',
         url: '/stock/registry',
-        icon: icons.registry
+        icon: icons.registry,
+        breadcrumbs: false
       }
     
   ]

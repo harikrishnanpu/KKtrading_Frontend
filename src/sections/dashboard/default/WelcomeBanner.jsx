@@ -175,7 +175,7 @@ export default function WelcomeBanner() {
               color={theme.palette.background.paper}
               sx={{ mt: 2 }}
             >
-              KK Trading 1.0.3
+              KK Trading 1.0.4
             </Typography>
             </Stack>
           </Grid>
@@ -397,7 +397,7 @@ export default function WelcomeBanner() {
               color={theme.palette.background.paper}
               sx={{ mt: 2 }}
             >
-              KK Trading 1.0.2
+              KK Trading 1.0.4
             </Typography>
           </Stack>
         </Grid>

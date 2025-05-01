@@ -26,21 +26,24 @@ const reports = {
       title: <FormattedMessage id="Sales Report" />,
       type: 'item',
       url: '/invoice/report',
-      icon: icons.sales
+      icon: icons.sales,
+      breadcrumbs: false
     },
     {
         id: 'Purchase',
         title: <FormattedMessage id="Purchase Report" />,
         type: 'item',
         url: '/purchase/report',
-        icon: icons.purchase
+        icon: icons.purchase,
+        breadcrumbs: false
       },
       {
         id: 'Daily',
         title: <FormattedMessage id="Daily Report" />,
         type: 'item',
         url: '/daily/report',
-        icon: icons.daily
+        icon: icons.daily,
+        breadcrumbs: false
       },
     
   ]

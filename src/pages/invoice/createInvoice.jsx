@@ -176,6 +176,7 @@ const [printOptions, setPrintOptions] = useState({
   showSgst: true,
   showDiscount: true,
   showNetAmount: true,
+  showPaymentDetails: true
 });
 
 
@@ -2637,6 +2638,8 @@ const netTotal = rateWithoutGST + gstAmount;
 
   <DialogContent dividers>
     <div className="grid grid-cols-2 gap-2 text-sm text-gray-700 mb-4">
+
+
       <FormControlLabel
         control={
           <Checkbox
@@ -2816,6 +2819,22 @@ const netTotal = rateWithoutGST + gstAmount;
         }
         label="Net Amount"
       />
+
+<FormControlLabel
+        control={
+          <Checkbox
+            checked={printOptions.showPaymentDetails}
+            onChange={() =>
+              setPrintOptions((prev) => ({
+                ...prev,
+                showPaymentDetails: !prev.showPaymentDetails
+              }))
+            }
+          />
+        }
+        label="Payment Details"
+      />
+
     </div>
   </DialogContent>
 

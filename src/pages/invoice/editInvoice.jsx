@@ -129,6 +129,7 @@ const [printOptions, setPrintOptions] = useState({
   showSgst: true,
   showDiscount: true,
   showNetAmount: true,
+  showPaymentDetails: true
 });
 
 
@@ -2723,6 +2724,22 @@ const netTotal = rateWithoutGST + gstAmount;
         }
         label="Net Amount"
       />
+
+
+      <FormControlLabel
+              control={
+                <Checkbox
+                  checked={printOptions.showPaymentDetails}
+                  onChange={() =>
+                    setPrintOptions((prev) => ({
+                      ...prev,
+                      showPaymentDetails: !prev.showPaymentDetails
+                    }))
+                  }
+                />
+              }
+              label="Payment Details"
+            />
     </div>
   </DialogContent>
 
