@@ -991,7 +991,7 @@ const handleDeleteTransaction = async (id) => {
                                 : trans.type === 'out'
                                 ? `To: ${trans.paymentTo}`
                                 : trans.type === 'transfer'
-                                ? `Transfer: ${trans.paymentFrom} ➜ ${trans.paymentTo}`
+                                ? `Transfer: ${ accounts.find(acc => acc.accountId == trans.paymentFrom).accountName} ➜ ${accounts.find(acc => acc.accountId == trans.paymentTo).accountName}`
                                 : ''}
                             </p>
                             {/* Remark */}
