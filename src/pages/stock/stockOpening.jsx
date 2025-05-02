@@ -383,6 +383,7 @@ const StockRegistry = () => {
                       <th className="px-2 py-1">Brand</th>
                       <th className="px-2 py-1">Category</th>
                       <th className="px-2 py-1">Change Type</th>
+                      <th className="px-2 py-1">Updated By</th>
                       <th className="px-2 py-1">Invoice No</th>
                       <th className="px-2 py-1">Qty Change</th>
                       <th className="px-2 py-1">Final Stock</th>
@@ -402,6 +403,7 @@ const StockRegistry = () => {
                         <td className="px-2 py-1">{log.brand}</td>
                         <td className="px-2 py-1">{log.category}</td>
                         <td className="px-2 py-1">{log.changeType}</td>
+                        <td className="px-2 py-1">{log.updatedBy}</td>
                         <td className="px-2 py-1">{log.invoiceNo || ''}</td>
                         <td className="px-2 py-1">{log.quantityChange}</td>
                         <td className="px-2 py-1">{log.finalStock}</td>

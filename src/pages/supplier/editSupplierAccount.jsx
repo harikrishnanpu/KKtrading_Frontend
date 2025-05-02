@@ -204,7 +204,7 @@ const SupplierAccountEdit = () => {
       supplierAddress: sellerAddress.trim(),
       bills: bills.map((bill) => ({
         invoiceNo: bill.invoiceNo.trim(),
-        billAmount: parseFloat(bill.billAmount),
+        billAmount: parseFloat(bill.billAmount.toFixed(2)),
         cashPart: parseFloat(bill.cashPart),
         invoiceDate: bill.invoiceDate ? new Date(bill.invoiceDate) : new Date(),
         remark: bill.remark,

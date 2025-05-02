@@ -354,8 +354,8 @@ const [printOptions, setPrintOptions] = useState({
 
   // Fetch Last Bill ID on Mount
   useEffect(() => {
+    setIsLoading(true);
     const fetchLastBill = async () => {
-      setIsLoading(true);
       try {
         const { data } = await api.get('/api/billing/lastOrder/id');
         console.log(data);
@@ -1395,10 +1395,6 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
                 className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
                 placeholder="Enter Customer Name"
               />
-              <button className='p-2 bg-red-500 rounded-md text-white font-bold' 
-              onClick={()=>{
-                generatecustomerid();
-              }}>Id</button>
               </div>
               {customerSuggestions.length > 0 && (
                 <div className="mt-2 bg-white border rounded-md max-h-60 divide-y overflow-y-auto">

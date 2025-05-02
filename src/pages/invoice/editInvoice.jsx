@@ -861,10 +861,17 @@ const netTotal = rateWithoutGST + gstAmount;
       }, 2000);
     } catch (error) {
       console.error('Error submitting billing data:', error?.message);
+      const backendMessage =
+      error?.response?.data?.message ||        // custom message from backend
+      error?.response?.data ||                 // raw body if it’s already text
+      error?.message ||                        // generic axios / network error
+      'There was an error submitting the billing data. Please try again.'; // fallback
+
+    console.error('Error submitting billing data:', backendMessage);
       setError(
         'There was an error submitting the billing data. Please try again.'
       );
-      alert('There was an error submitting the billing data. Please try again.');
+      alert(`There was an error submitting the billing data. Please try again. ${backendMessage}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -1278,10 +1285,6 @@ const netTotal = rateWithoutGST + gstAmount;
                 className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
                 placeholder="Enter Customer Name"
               />
-                            <button className='p-2 bg-red-500 rounded-md text-white font-bold' 
-              onClick={()=>{
-                generatecustomerid();
-              }}>Id</button>
               </div>
               {customerSuggestions.length > 0 && (
                 <div className="absolute z-10 mt-1 w-full bg-white border rounded-md max-h-60 overflow-y-auto">

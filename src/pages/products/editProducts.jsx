@@ -549,7 +549,7 @@ export default function ProductEditScreen() {
                     id="countInStock"
                     value={countInStock}
                     onChange={(e) => setCountInStock(e.target.value)}
-                    disabled={!canEditAll}
+                    disabled={!user?.isSuper}
                   />
                 </Stack>
               </Grid>

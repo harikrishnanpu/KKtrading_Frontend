@@ -34,14 +34,9 @@ import {
 // MUI Icons (or iconsax-react if you prefer)
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import VisibilityIcon from '@mui/icons-material/Visibility';
 
 // Extended Components (as per your structure)
 import MainCard from 'components/MainCard';
-import Avatar from 'components/@extended/Avatar';
-
-// Assets (if you need a default product image)
-import defaultImages from 'assets/images/users/default.png';
 
 function ProductScreenSkeleton() {
   // A simple skeleton layout to mimic the final structure.
@@ -247,7 +242,7 @@ export default function ProductScreen() {
             />
             <CardMedia
               component="img"
-              image={product.image || defaultImages}
+              image={product.image}
               alt={product.name}
               onLoad={() => setIsImageLoaded(true)}
               onError={() => {
