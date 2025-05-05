@@ -114,12 +114,34 @@ const PaymentAccountsList = () => {
     (acc, account) => acc + account.balanceAmount,
     0
   );
-  const totalIn = filteredAccounts.reduce((total, account) => {
-    return total + account.paymentsIn.reduce((sum, p) => sum + p.amount, 0);
-  }, 0);
-  const totalOut = filteredAccounts.reduce((total, account) => {
-    return total + account.paymentsOut.reduce((sum, p) => sum + p.amount, 0);
-  }, 0);
+// Totals calculation  ───────────────────────────────────────────────
+const totalIn = filteredAccounts.reduce((total, account) => {
+  return (
+    total +
+    account.paymentsIn
+      .filter((p) => p.method !== 'Internal Transfer')   // ← exclude
+      .reduce((sum, p) => sum + p.amount, 0)
+  );
+}, 0);
+
+const totalOut = filteredAccounts.reduce((total, account) => {
+  return (
+    total +
+    account.paymentsOut
+      .filter((p) => p.method !== 'Internal Transfer')   // ← exclude
+      .reduce((sum, p) => sum + p.amount, 0)
+  );
+}, 0);
+
+// new total: both directions whose method === "Internal Transfer"
+const totalInternalTransfer = filteredAccounts.reduce((total, account) => {
+  const ins  = account.paymentsIn .filter((p) => p.method === 'Internal Transfer');
+  const outs = account.paymentsOut.filter((p) => p.method === 'Internal Transfer');
+  return (
+    total +
+    ins.reduce((sum, p) => sum + p.amount, 0)   );
+}, 0);
+
 
   // Paginate accounts for main table
   const paginateAccounts = () => {
@@ -598,20 +620,38 @@ const PaymentAccountsList = () => {
       {/* Main Content */}
       <div className="flex-1 p-4 md:p-6 lg:p-8 text-center">
         {/* Totals Section */}
-        <div className="flex flex-col sm:flex-row justify-between items-center shadow-md rounded-lg p-4 mb-4 space-y-4 sm:space-y-0">
-          <div className="bg-white p-4 rounded shadow w-full sm:w-auto">
-            <h3 className="text-sm font-bold text-gray-600">Total Payment In</h3>
-            <p className="text-sm sm:text-xs font-extrabold text-green-600">₹{totalIn.toFixed(2)}</p>
-          </div>
-          <div className="bg-white p-4 rounded shadow w-full sm:w-auto">
-            <h3 className="text-sm font-bold text-gray-600">Total Payment Out</h3>
-            <p className="text-sm sm:text-xs font-extrabold text-red-600">₹{totalOut.toFixed(2)}</p>
-          </div>
-          <div className="bg-white p-4 rounded shadow w-full sm:w-auto">
-            <h3 className="text-sm font-bold text-gray-600">Total Balance</h3>
-            <p className="text-sm sm:text-xs font-extrabold text-gray-900">₹{totalBalance.toFixed(2)}</p>
-          </div>
-        </div>
+{/* Totals Section */}
+<div className="flex flex-col sm:flex-row justify-between items-center shadow-md rounded-lg p-4 mb-4 space-y-4 sm:space-y-0">
+  <div className="bg-white p-4 rounded shadow w-full sm:w-auto">
+    <h3 className="text-sm font-bold text-gray-600">Total Payment In</h3>
+    <p className="text-sm sm:text-xs font-extrabold text-green-600">
+      ₹{totalIn.toFixed(2)}
+    </p>
+  </div>
+
+  <div className="bg-white p-4 rounded shadow w-full sm:w-auto">
+    <h3 className="text-sm font-bold text-gray-600">Total Payment Out</h3>
+    <p className="text-sm sm:text-xs font-extrabold text-red-600">
+      ₹{totalOut.toFixed(2)}
+    </p>
+  </div>
+
+  {/* NEW CARD – Internal Transfers */}
+  <div className="bg-white p-4 rounded shadow w-full sm:w-auto">
+    <h3 className="text-sm font-bold text-gray-600">Total Internal Transfer</h3>
+    <p className="text-sm sm:text-xs font-extrabold text-blue-600">
+      ₹{totalInternalTransfer.toFixed(2)}
+    </p>
+  </div>
+
+  <div className="bg-white p-4 rounded shadow w-full sm:w-auto">
+    <h3 className="text-sm font-bold text-gray-600">Total Balance</h3>
+    <p className="text-sm sm:text-xs font-extrabold text-gray-900">
+      ₹{totalBalance.toFixed(2)}
+    </p>
+  </div>
+</div>
+
 
         {/* PDF Loading Spinner */}
         {pdfLoading && (
@@ -827,6 +867,17 @@ const PaymentAccountsList = () => {
                 >
                   Payments Out
                 </button>
+                <button
+  onClick={() => setTab('internal')}
+  className={`px-3 py-1 text-xs font-bold rounded ${
+    tab === 'internal'
+      ? 'bg-blue-500 text-white'
+      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+  }`}
+>
+  Internal Transfers
+</button>
+
               </div>
             </div>
             {/* Filters and Search within Modal */}
@@ -886,18 +937,39 @@ const PaymentAccountsList = () => {
             </div>
             {/* Payments List */}
             <div className="mt-4">
-              {tab === 'in' ? (
-                <>
-                  <h3 className="text-md font-semibold text-green-600 mb-2">Payments In</h3>
-                  {renderPayments(selectedAccount?.paymentsIn, 'in')}
-                </>
-              ) : (
-                <>
-                  <h3 className="text-md font-semibold text-red-600 mb-2">Payments Out</h3>
-                  {renderPayments(selectedAccount?.paymentsOut, 'out')}
-                </>
-              )}
-            </div>
+  {(() => {
+    switch (tab) {
+      case 'in':
+        return (
+          <>
+            <h3 className="text-md font-semibold text-green-600 mb-2">Payments In</h3>
+            {renderPayments(selectedAccount?.paymentsIn, 'in')}
+          </>
+        );
+      case 'out':
+        return (
+          <>
+            <h3 className="text-md font-semibold text-red-600 mb-2">Payments Out</h3>
+            {renderPayments(selectedAccount?.paymentsOut, 'out')}
+          </>
+        );
+      case 'internal':
+        const internal = [
+          ...(selectedAccount?.paymentsIn  || []),
+          ...(selectedAccount?.paymentsOut || []),
+        ].filter((p) => p.method === 'Internal Transfer');
+        return (
+          <>
+            <h3 className="text-md font-semibold text-blue-600 mb-2">Internal Transfers</h3>
+            {renderPayments(internal, 'internal')}
+          </>
+        );
+      default:
+        return null;
+    }
+  })()}
+</div>
+
           </div>
         </DialogContent>
       </Dialog>

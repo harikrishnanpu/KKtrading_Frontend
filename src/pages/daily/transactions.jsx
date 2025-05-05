@@ -363,6 +363,7 @@ const DailyTransactions = () => {
     }
   };
 
+
   // -------------------------------
   // Calculate Totals
   // -------------------------------
@@ -1289,7 +1290,7 @@ const handleDeleteTransaction = async (id) => {
               required
             >
               <MenuItem value="">Select Method</MenuItem>
-              {accounts.map((account, index) => (
+              {modalType === 'transfer' ? <MenuItem value="Internal Transfer">Transfer</MenuItem> : accounts.map((account, index) => (
                 <MenuItem key={index} value={account.accountId}>
                   {account.accountName}
                 </MenuItem>
