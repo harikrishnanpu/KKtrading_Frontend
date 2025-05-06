@@ -94,6 +94,8 @@ export default function EditBillScreen() {
   const [showSuggestionsSidebar, setShowSuggestionsSidebar] = useState(false);
   const [neededToPurchase, setNeededToPurchase] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
+  const [roundOffMode, setRoundOffMode] = useState('add'); // 'add' | 'sub'
+  
     
   
 
@@ -372,6 +374,7 @@ const [printOptions, setPrintOptions] = useState({
         setRemark(data.remark);
         setIsApproved(data.isApproved);
         setNeededToPurchase(data.isneededToPurchase);
+        setRoundOffMode(data.roundoffMode)
 
         console.log(data.products);
         // Convert product numeric fields
@@ -740,10 +743,11 @@ const itemDiscount = itemBase * discountRatio;
   const discountedSubTotal = newSubTotal; // Subtotal after discount
   const netWithoutOtherCharges = discountedSubTotal; // Net total before additional charges
   const finalGrandTotal =
-    netWithoutOtherCharges +
-    parsedTransportation +
-    parsedUnloading +
-    parsedHandling - roundOff;
+  netWithoutOtherCharges +
+  parsedTransportation +
+  parsedUnloading +
+  parsedHandling +
+  (roundOffMode === "add" ? +roundOff : -roundOff);
 
   // Set calculated values
   setAmountWithoutGST(amtWithGst.toFixed(2)); // Total base amount
@@ -799,6 +803,7 @@ const billingData = {
   customerContactNumber,
   customerId,
   roundOff,
+  roundOffMode,
   salesmanPhoneNumber,
   marketedBy,
   unloading,
@@ -974,6 +979,7 @@ const netTotal = rateWithoutGST + gstAmount;
       customerContactNumber,
       marketedBy,
       perItemDiscount,
+      roundOff,
       subTotal: amountWithoutGST,
       grandTotal,
       transportation,
@@ -2501,6 +2507,8 @@ const netTotal = rateWithoutGST + gstAmount;
           onSubmit={submitBillingData}
           isSubmitting={isSubmitting}
           totalProducts={products.length}
+          roundOffMode={roundOffMode}
+          setRoundOffMode={setRoundOffMode}
         />
       )}
 

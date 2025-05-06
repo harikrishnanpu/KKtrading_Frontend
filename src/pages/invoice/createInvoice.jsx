@@ -99,6 +99,8 @@ export default function BillingScreen() {
   const [neededToPurchase, setNeededToPurchase] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
   const [fetchInvoiceNo, setFetchInvoiceNo] = useState(false);
+  const [roundOffMode, setRoundOffMode] = useState('add'); // 'add' | 'sub'
+  
 
 
 
@@ -802,10 +804,12 @@ const itemDiscount = itemBase * discountRatio;
   const discountedSubTotal = newSubTotal; // Subtotal after discount
   const netWithoutOtherCharges = discountedSubTotal; // Net total before additional charges
   const finalGrandTotal =
-    netWithoutOtherCharges +
-    parsedTransportation +
-    parsedUnloading +
-    parsedHandling - roundOff;
+  netWithoutOtherCharges +
+  parsedTransportation +
+  parsedUnloading +
+  parsedHandling +
+  (roundOffMode === "add" ? +roundOff : -roundOff);
+
 
   // Set calculated values
   setAmountWithoutGST(amtWithGst.toFixed(2)); // Total base amount
@@ -876,6 +880,7 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
       customerContactNumber,
       customerId,
       roundOff,
+      roundOffMode,
       salesmanPhoneNumber,
       marketedBy,
       unloading,
@@ -953,6 +958,7 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
           handleLocalClear();
           setIsApproved(false);
           setNeededToPurchase(false);
+          setRoundOffMode('add');
           
             setSuccess(true);
           // navigate('/'); // Example navigation
@@ -1048,6 +1054,7 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
       marketedBy,
       perItemDiscount,
       subTotal: amountWithoutGST,
+      roundOff,
       grandTotal,
       transportation,
       unloading,
@@ -2616,6 +2623,8 @@ const netTotal = rateWithoutGST + gstAmount;
           isSubmitting={isSubmitting}
           totalProducts={products.length}
           handleLocalSave={handleLocalSave}
+          roundOffMode={roundOffMode}
+          setRoundOffMode={setRoundOffMode}
         />
       )}
 

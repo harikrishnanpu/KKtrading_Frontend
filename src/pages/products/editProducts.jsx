@@ -168,14 +168,19 @@ export default function ProductEditScreen() {
 
     const deleteHandler = async () => {
       if (!productId) return;
-      if (window.confirm('Are you sure you want to delete this product?')) {
-        try {
-          await api.delete(`/api/products/${productId}`);
-          navigate('/products/all');
-        } catch (err) {
-          console.error('Delete error:', err);
-          alert('Error deleting product.');
+      if(user.isSuper){
+
+        if (window.confirm('Are you sure you want to delete this product?')) {
+          try {
+            await api.delete(`/api/products/${productId}`);
+            navigate('/products/all');
+          } catch (err) {
+            console.error('Delete error:', err);
+            alert('Error deleting product.');
+          }
         }
+      }else{
+        alert("You ust Be An Admin to Delete This Product")
       }
     };
 

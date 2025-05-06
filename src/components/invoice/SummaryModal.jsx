@@ -14,6 +14,8 @@ import {
   Box,
   FormControlLabel,
   Checkbox,
+  Card,
+  CardContent,
 } from '@mui/material';
 import { CloseCircle } from 'iconsax-react'; // Importing CloseCircle from iconsax-react
 import SubmitButton from 'components/submitButton';
@@ -70,12 +72,15 @@ export default function SummaryModal({
   setNeededToPurchase,
   isApproved,
   setIsApproved,
+  roundOffMode,
+  setRoundOffMode
 }) {
   const remainingAmount = (parseFloat(parseFloat(grandTotal)) - parseFloat(receivedAmount)).toFixed(2);
 
   const { user: userInfo } = useAuth(); // Get the logged-in user info
   const [fetchedReceivedAmount, setFetchedReceivedAmount] = useState(0);
   const [fetchedRemainingAmount, setFetchedRemainingAmount] = useState(0);
+  
 
   useEffect(() => {
     if (discountRef.current) {
@@ -128,20 +133,69 @@ export default function SummaryModal({
         </Grid>
       </DialogTitle>
       <DialogContent dividers sx={{ overflowY: 'auto' }}>
-        <Box mb={2}>
-          <Typography variant="body2" color="textSecondary">
-            <strong>Discount:</strong> {(discount).toFixed(2)}
-          </Typography>
-          <Typography variant="body2" color="textSecondary">
-            <strong>Bill Amount:</strong> ₹{parseFloat(totalAmount).toFixed(2)}
-          </Typography>
-          <Typography variant="h6" color="textSecondary">
-            <strong>Total Amount:</strong> ₹{(parseFloat(grandTotal)).toFixed(2)}
-          </Typography>
-        </Box>
+{/* --- Summary cards -------------------------------------------------- */}
+<Grid container spacing={2} mb={2}>
+  {/* 1 ─ Discount */}
+  <Grid item xs={6} sm={3}>
+    <Card sx={{ p: 1.5, borderRadius: 2, boxShadow: 1 }}>
+      <CardContent sx={{ p: 0 }}>
+        <Typography className='font-bold' variant="caption" color="text.secondary">
+          Discount
+        </Typography>
+        <Typography variant="h6" fontWeight="bold">
+          ₹{discount.toFixed(2)}
+        </Typography>
+      </CardContent>
+    </Card>
+  </Grid>
+
+  {/* 2 ─ Bill Amount */}
+  <Grid item xs={6} sm={3}>
+    <Card sx={{ p: 1.5, borderRadius: 2, boxShadow: 1 }}>
+      <CardContent sx={{ p: 0 }}>
+        <Typography className='font-bold' variant="caption" color="text.secondary">
+          Bill Amount
+        </Typography>
+        <Typography variant="h6" fontWeight="bold">
+          ₹{parseFloat(totalAmount).toFixed(2)}
+        </Typography>
+      </CardContent>
+    </Card>
+  </Grid>
+
+  {/* 3 ─ Total Amount */}
+  <Grid item xs={6} sm={3}>
+    <Card sx={{ p: 1.5, borderRadius: 2, boxShadow: 1 }}>
+      <CardContent sx={{ p: 0 }}>
+        <Typography className='font-bold' variant="caption" color="text.secondary">
+          Total Amount
+        </Typography>
+        <Typography variant="h6" fontWeight="bold">
+          ₹{parseFloat(grandTotal).toFixed(2)}
+        </Typography>
+      </CardContent>
+    </Card>
+  </Grid>
+
+  {/* 4 ─ Remaining Amount */}
+  <Grid item xs={6} sm={3}>
+    <Card sx={{ p: 1.5, borderRadius: 2, boxShadow: 1 }}>
+      <CardContent sx={{ p: 0 }}>
+        <Typography className='font-bold' variant="caption" color="text.secondary">
+          Remaining
+        </Typography>
+        <Typography variant="h6" fontWeight="bold">
+          ₹{remainingAmount}
+        </Typography>
+      </CardContent>
+    </Card>
+  </Grid>
+</Grid>
+
 
         {/* Payment Details */}
         {userInfo?.isAdmin && 
+        <div>
          
          <div className="mt-4 grid grid-cols-2 gap-2">
           <div>
@@ -258,23 +312,53 @@ export default function SummaryModal({
 </div>
 
 <div>
+  <div className='flex items-center justify-between space-x-2'>
 
-<label className="block text-xs">Round Off</label>
-<input
-  type="number"
-  ref={roundOffRef}
-  min={0}
-  placeholder="Enter Round Off"
-  value={roundOff}
-  onChange={(e) =>
-    setRoundOff(parseFloat(e.target.value || 0))
-  }
-  onKeyDown={(e)=> changeRef(e, remarkRef)}
-  className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
-/>
+  <label className="block text-xs mb-1">Round Off</label>
+  <div className='flex justify-between space-x-4'>
+  <label className="flex items-center text-xs space-x-1">
+      <input
+        type="radio"
+        name="roundOffMode"
+        value="add"
+        checked={roundOffMode === 'add'}
+        onChange={(e)=> setRoundOffMode(e.target.value)}
+        className="text-red-500"
+      />
+      <span>+</span>
+    </label>
+    <label className="flex items-center text-xs space-x-1">
+      <input
+        type="radio"
+        name="roundOffMode"
+        value="sub"
+        checked={roundOffMode === 'sub'}
+        onChange={(e)=> setRoundOffMode(e.target.value)}        
+        className="text-red-500"
+      />
+      <span>−</span>
+    </label>
+    </div>
+  </div>
+  <div className="flex items-center space-x-2">
+    {/* +/- radio buttons */}
+
+    {/* numeric input */}
+    <input
+      type="number"
+      ref={roundOffRef}
+      min={0}
+      placeholder="Enter Round Off"
+      value={Math.abs(roundOff)}
+      onChange={(e)=> setRoundOff(e.target.value)}
+      onKeyDown={(e) => changeRef(e, remarkRef)}
+      className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
+    />
+  </div>
 </div>
 
-<div>
+
+<div className='w-100'>
 
 <label className="block text-xs">Bill Remark</label>
 <input
@@ -295,7 +379,7 @@ export default function SummaryModal({
   className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
 />
 </div>
-
+</div>
 <Box mt={2}>
           <FormControlLabel
             control={
@@ -304,7 +388,7 @@ export default function SummaryModal({
                 onChange={(e) => setNeededToPurchase(e.target.checked)}
               />
             }
-            label="Needed to Purchase Items"
+            label="Needed to Purchase Items ( If Any Items Required To Purchase )"
           />
         </Box>
 
@@ -316,7 +400,7 @@ export default function SummaryModal({
                 onChange={(e) => setIsApproved(e.target.checked)}
               />
             }
-            label="Is Approved"
+            label="Is Approved ( If The Bill Is Approved By Customer and Admin)"
           />
         </Box>
 
