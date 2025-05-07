@@ -78,6 +78,8 @@ export default function PurchasePage() {
   const [itemstock, setItemStock] = useState("0");
   const [showSuggestionsSidebar, setShowSuggestionsSidebar] = useState(false);
 
+  const [brands,setBrands] = useState([]);
+
 
   // Other States
   const [loading, setLoading] = useState(false);
@@ -177,12 +179,16 @@ export default function PurchasePage() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const { data } = await api.get("/api/billing/purchases/categories");
-        setCategories(data.categories);
+        const categoryRes = await api.get("/api/billing/purchases/categories");
+        const brandRes = await api.get("/api/products/allbrands");
+    
+        setCategories(categoryRes.data.categories); // assuming response shape: { categories: [...] }
+        setBrands(brandRes.data); // assuming response is just: [ "Brand1", "Brand2", ... ]
       } catch (error) {
-        console.error("Error fetching categories:", error);
+        console.error("Error fetching categories or brands:", error);
       }
     };
+    
 
     const fetchTransportCompanies = async () => {
       try {
@@ -1504,16 +1510,34 @@ export default function PurchasePage() {
                             <label className="text-xs text-gray-700 mb-1">
                               Item Brand
                             </label>
-                            <input
-                              type="text"
-                              placeholder="Enter Item Brand"
-                              ref={itemBrandRef}
-                              value={itemBrand}
-                              onChange={(e) => setItemBrand(e.target.value)}
-                              onKeyDown={(e) => changeRef(e, itemCategoryRef)}
-                              className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
-                              required
-                            />
+                            <select
+  value={itemBrand}
+  ref={itemBrandRef}
+  onChange={(e) => {
+    const value = e.target.value;
+    if (value === '__add_new__') {
+      const newBrand = prompt('Enter new brand:');
+      if (newBrand && !brands.includes(newBrand)) {
+        setBrands(prev => [...prev, newBrand]);
+        setItemBrand(newBrand);
+      }
+    } else {
+      setItemBrand(value);
+    }
+  }}
+  onKeyDown={(e) => changeRef(e, itemCategoryRef)}
+  className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
+  required
+>
+  <option value="" disabled>Select Brand</option>
+  {brands?.map((brand, index) => (
+    <option key={index} value={brand}>
+      {brand}
+    </option>
+  ))}
+  <option value="__add_new__">+ Add another brand</option>
+</select>
+
                           </div>
 
                           <div className="flex flex-col">
@@ -1521,22 +1545,33 @@ export default function PurchasePage() {
                               Item Category
                             </label>
                             <select
-                              value={itemCategory}
-                              ref={itemCategoryRef}
-                              onChange={(e) => setItemCategory(e.target.value)}
-                              onKeyDown={(e) => changeRef(e, itemSunitRef)}
-                              className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
-                              required
-                            >
-                              <option value="" disabled>
-                                Select Category
-                              </option>
-                              {categories.map((category, index) => (
-                                <option key={index} value={category}>
-                                  {category}
-                                </option>
-                              ))}
-                            </select>
+  value={itemCategory}
+  ref={itemCategoryRef}
+  onChange={(e) => {
+    const value = e.target.value;
+    if (value === '__add_new__') {
+      const newCategory = prompt('Enter new category:');
+      if (newCategory && !categories.includes(newCategory)) {
+        setCategories(prev => [...prev, newCategory]);
+        setItemCategory(newCategory);
+      }
+    } else {
+      setItemCategory(value);
+    }
+  }}
+  onKeyDown={(e) => changeRef(e, itemSunitRef)}
+  className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
+  required
+>
+  <option value="" disabled>Select Category</option>
+  {categories.map((category, index) => (
+    <option key={index} value={category}>
+      {category}
+    </option>
+  ))}
+  <option value="__add_new__">+ Add another category</option>
+</select>
+
                           </div>
 
                           <div className="flex flex-col">

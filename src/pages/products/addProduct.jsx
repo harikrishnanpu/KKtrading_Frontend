@@ -16,7 +16,9 @@ import {
   Divider,
   FormLabel,
   Alert,
-  Skeleton
+  Skeleton,
+  MenuItem,
+  Select
 } from '@mui/material';
 import { Camera } from 'iconsax-react';
 
@@ -100,6 +102,9 @@ const canEditBasic = user.isEmployee && !canEditAll;
   const [hsnCode, setHsnCode] = useState('');
   const [gstPercent, setGstPercent] = useState('');
   const [imageError, setImageError] = useState(false);
+  const [categoryOptions, setCategoryOptions] = useState([]);
+const [brandOptions, setBrandOptions] = useState([]);
+
 
   // ------------------- Loading / Error States -------------------
   const [loading, setLoading] = useState(false);
@@ -115,7 +120,23 @@ const canEditBasic = user.isEmployee && !canEditAll;
   const [errorUpload, setErrorUpload] = useState('');
 
   // ------------------- Fetch product on mount -------------------
-
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        const [catRes, brandRes] = await Promise.all([
+          api.get('/api/products/categories'),
+          api.get('/api/products/allbrands'),
+        ]);
+        setCategoryOptions(catRes.data || []);
+        setBrandOptions(brandRes.data || []);
+      } catch (error) {
+        console.error("Failed to fetch brand/category:", error);
+      }
+    };
+  
+    fetchOptions();
+  }, []);
+  
 
   useEffect(() => {
     async function fetchId() {
@@ -409,31 +430,77 @@ const canEditBasic = user.isEmployee && !canEditAll;
 
               {/* Brand */}
               <Grid item xs={12}>
-                <Stack spacing={1}>
-                  <InputLabel htmlFor="brand">Brand</InputLabel>
-                  <TextField
-                    fullWidth
-                    id="brand"
-                    value={brand}
-                    onChange={(e) => setBrand(e.target.value)}
-                    disabled={!(canEditAll || canEditBasic)}
-                  />
-                </Stack>
+              <Stack spacing={1}>
+  <InputLabel htmlFor="brand">Brand</InputLabel>
+  <Box display="flex" gap={1}>
+    <Select
+      fullWidth
+      id="brand"
+      value={brand}
+      onChange={(e) => setBrand(e.target.value)}
+      disabled={!(canEditAll || canEditBasic)}
+      displayEmpty
+    >
+      <MenuItem value="" disabled>Select Brand</MenuItem>
+      {brandOptions.map((b, idx) => (
+        <MenuItem key={idx} value={b}>{b}</MenuItem>
+      ))}
+    </Select>
+    <Button
+      variant="outlined"
+      size="small"
+      onClick={() => {
+        const newBrand = prompt('Enter new brand:');
+        if (newBrand && !brandOptions.includes(newBrand)) {
+          setBrandOptions((prev) => [...prev, newBrand]);
+        }
+        if (newBrand) setBrand(newBrand);
+      }}
+      disabled={!(canEditAll || canEditBasic)}
+    >
+      + Add
+    </Button>
+  </Box>
+</Stack>
+
               </Grid>
 
               {/* Category */}
-              <Grid item xs={12}>
-                <Stack spacing={1}>
-                  <InputLabel htmlFor="category">Category</InputLabel>
-                  <TextField
-                    fullWidth
-                    id="category"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    disabled={!(canEditAll || canEditBasic)}
-                  />
-                </Stack>
-              </Grid>
+<Grid item xs={12}>
+<Stack spacing={1}>
+  <InputLabel htmlFor="category">Category</InputLabel>
+  <Box display="flex" gap={1}>
+    <Select
+      fullWidth
+      id="category"
+      value={category}
+      onChange={(e) => setCategory(e.target.value)}
+      disabled={!(canEditAll || canEditBasic)}
+      displayEmpty
+    >
+      <MenuItem value="" disabled>Select Category</MenuItem>
+      {categoryOptions.map((cat, idx) => (
+        <MenuItem key={idx} value={cat}>{cat}</MenuItem>
+      ))}
+    </Select>
+    <Button
+      variant="outlined"
+      size="small"
+      onClick={() => {
+        const newCategory = prompt('Enter new category:');
+        if (newCategory && !categoryOptions.includes(newCategory)) {
+          setCategoryOptions((prev) => [...prev, newCategory]);
+        }
+        if (newCategory) setCategory(newCategory);
+      }}
+      disabled={!(canEditAll || canEditBasic)}
+    >
+      + Add
+    </Button>
+  </Box>
+</Stack>
+
+</Grid>
 
               {/* Seller (Admins only) */}
               <Grid item xs={12}>
