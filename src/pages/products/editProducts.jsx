@@ -114,7 +114,54 @@ const canEditBasic = user.isEmployee && !canEditAll;
   const [errorUpload, setErrorUpload] = useState('');
 
   // ------------------- Fetch product on mount -------------------
+  useEffect(() => {
+    const fetchProduct = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const { data } = await api.get(`/api/products/${productId}`);
+        setName(data.name || '');
+        setItemId(data.item_id || '');
+        setSeller(data.seller || '');
+        setSellerAddress(data.sellerAddress || '');
+        setImage(data.image || '');
+        setBrand(data.brand || '');
+        setCategory(data.category || '');
+        setDescription(data.description || '');
+        setPUnit(data.pUnit || '');
+        setSUnit(data.sUnit || '');
+        setPsRatio(data.psRatio || '');
+        setLength(data.length || '');
+        setBreadth(data.breadth || '');
+        setActLength(data.actLength || '');
+        setActBreadth(data.actBreadth || '');
+        setSize(data.size || '');
+        setUnit(data.unit || '');
+        setPrice(data.price || '');
+        setBillPartPrice(data.billPartPrice || '');
+        setCashPartPrice(data.cashPartPrice || '');
+        setType(data.type || '');
+        setCountInStock(data.countInStock || '');
+        setRating(data.rating || '');
+        setNumReviews(data.numReviews || '');
+        setHsnCode(data.hsnCode || '');
+        setGstPercent(data.gstPercent || '');
+      } catch (err) {
+        setError(
+          err.response?.data?.message
+            ? err.response.data.message
+            : err.message
+        );
+      }
+      setLoading(false);
+    };
 
+    if (successUpdate) {
+      navigate('/products/all');
+    } else {
+      fetchProduct();
+    }
+  }, [productId, successUpdate, navigate]);
 
 
     const deleteHandler = async () => {
@@ -138,70 +185,51 @@ const canEditBasic = user.isEmployee && !canEditAll;
   // ------------------- Form Submit Handler -------------------
   const submitHandler = async (e) => {
     e.preventDefault();
-  
-    // 1) Only admins / supers allowed
-    if (!canEditAll && !canEditBasic) return;   // or whatever logic you use
-  
-    // 2) Quick client‑side validation
-    if (!name.trim()) {
-      setErrorUpdate('Product name is required');
-      return;
-    }
-    if (!category.trim()) {
-      setErrorUpdate('Category is required');
-      return;
-    }
-  
     setLoadingUpdate(true);
     setErrorUpdate(null);
-  
-    // 3) Build payload
-    const payload = {
-      name: name.trim(),
-      seller: seller.trim(),
-      sellerAddress: sellerAddress.trim(),
-      image,
-      brand: brand.trim(),
-      category: category.trim(),
-      description: description.trim(),
-      pUnit,
-      sUnit,
-      psRatio: psRatio || '0',
-      length,
-      breadth,
-      actLength,
-      actBreadth,
-      size,
-      unit,
-      price: price || 0,
-      billPartPrice: +billPartPrice || 0,
-      cashPartPrice: +cashPartPrice || 0,
-      type,
-      countInStock: +countInStock || 0,
-      rating: +rating || 0,
-      numReviews: numReviews || 0,
-      gstPercent: gstPercent || 0,
-      hsnCode: hsnCode.trim()
-    };
-  
-    // Send item_id only if the user typed something; otherwise let the
-    // backend autogenerate K‑numbers.
-    if (itemId.trim()) payload.item_id = itemId.trim();
-  
     try {
-      // always POST → create
-      await api.post('/api/products', payload);
+      // Build updated product object
+      const updatedProduct = {
+        name,
+        item_id: itemId,
+        seller,
+        sellerAddress,
+        image,
+        brand,
+        category,
+        description,
+        pUnit,
+        sUnit,
+        psRatio,
+        length,
+        breadth,
+        actLength,
+        actBreadth,
+        size,
+        unit,
+        price,
+        billPartPrice: billPartPrice ? Number(billPartPrice) : 0,
+        cashPartPrice: cashPartPrice ? Number(cashPartPrice) : 0,
+        type,
+        countInStock: countInStock ? Number(countInStock) : 0,
+        rating: rating ? Number(rating) : 0,
+        numReviews: numReviews ? Number(numReviews) : 0,
+        gstPercent: gstPercent ? Number(gstPercent) : 0,
+        hsnCode
+      };
+
+      await api.put(`/api/products/${productId}`, updatedProduct);
       setSuccessUpdate(true);
-      navigate('/products/all');           // ⇦ redirect after success
     } catch (err) {
       setErrorUpdate(
-        err?.response?.data?.message || err.message || 'Server error'
+        err.response?.data?.message
+          ? err.response.data.message
+          : err.message
       );
-    } finally {
-      setLoadingUpdate(false);
     }
+    setLoadingUpdate(false);
   };
-  
+
   // ------------------- Image Upload Handler -------------------
   const uploadFileHandler = async (e) => {
     const file = e.target.files?.[0];
