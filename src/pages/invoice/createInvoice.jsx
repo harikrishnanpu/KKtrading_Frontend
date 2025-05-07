@@ -22,6 +22,7 @@ import {
 } from '@mui/material';
 import ItemSuggestionsSidebar from 'components/products/itemSuggestionSidebar';
 import { isMobile } from 'react-device-detect';
+import BottomLoader from './components/bottomLoader';
 
 
 
@@ -38,6 +39,7 @@ export default function BillingScreen() {
   const [invoiceDate, setInvoiceDate] = useState(
     new Date().toISOString().substring(0, 10)
   );
+  
   const [salesmanName, setSalesmanName] = useState('');
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState('');
   const [deliveryStatus, setDeliveryStatus] = useState('Pending');
@@ -468,7 +470,7 @@ const [printOptions, setPrintOptions] = useState({
     }
   
     try {
-      const { data } = await api.get(`/api/products/searchform/search?q=${newValue}&limit=20`);
+      const { data } = await api.get(`/api/products/searchform/search?q=${newValue}&limit=50`);
       setSuggestions(data);
       setError('');
       if (data && data.length > 0) {
@@ -497,6 +499,7 @@ const [printOptions, setPrintOptions] = useState({
         setItemName(data.name);
         setItemBrand(data.brand);
         setItemCategory(data.category);
+        setUnit(data.sUnit);
         setSuggestions([]);
       } else {
         alert('Error Occured In Updating the Stock');
@@ -526,6 +529,7 @@ const [printOptions, setPrintOptions] = useState({
       setItemId(data.item_id);
       setGstRateInput(parseFloat(data.gstPercent) || 18);
       setFetchItemPrice(data.price);
+      setUnit(data.sUnit);
       const parsedActLenght = parseFloat(data.actLength);
       const parsedActBreadth = parseFloat(data.actBreadth);
       const parsedArea = parsedActLenght * parsedActBreadth;
@@ -2074,16 +2078,16 @@ const netTotal = rateWithoutGST + gstAmount;
                     {/* Total Amount Display */}
                     <div className="bg-gray-100 ml-2 w-60 items-center text-center rounded-lg shadow-inner p-4">
   <div className="mt-2 text-xs font-bold text-gray-700">
-    <p>Amount (Without GST): {parseFloat(amountWithoutGST).toFixed(2)}</p>
+    <p>Sub Total: {parseFloat(amountWithoutGST).toFixed(2)}</p>
   </div>
   <div className="mt-2 text-xs font-bold text-gray-700">
-    <p>Total GST: {parseFloat(gstAmount).toFixed(2)}</p>
-  </div>
-  <div className="mt-2 text-xs font-bold text-gray-700">
-    <p>Bill Amount: {parseFloat(grandTotal).toFixed(2)}</p>
+    <p>GST: {parseFloat(gstAmount).toFixed(2)}</p>
   </div>
   <div className="mt-2 text-xs font-bold text-gray-700">
     <p>Discount: {parseFloat(discount || 0).toFixed(2)}</p>
+  </div>
+  <div className="mt-2  text-lg font-bold text-gray-700">
+    <p>Bill Amount: {parseFloat(grandTotal).toFixed(2)}</p>
   </div>
 </div>
 
@@ -2911,6 +2915,13 @@ const netTotal = rateWithoutGST + gstAmount;
                         close: true
   })
       )}
+
+
+<BottomLoader
+      open={isLoading || isSubmitting}
+      text={isSubmitting ? 'Saving bill…' : 'Loading…'}
+      width="50%"
+    />
     </div>
   );
 }

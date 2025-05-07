@@ -74,10 +74,11 @@ export const TabsProvider = ({ children }) => {
       return;
     }
   
-    const hasQuery = path.includes('?');
-    const newPath = hasQuery
-      ? `${path}&_ts=${Date.now()}`
-      : `${path}?_ts=${Date.now()}`;
+    const cleanPath = stripTimestamp(path); // Removes any existing _ts
+    const newPath = cleanPath.includes('?')
+      ? `${cleanPath}&_ts=${Date.now()}`
+      : `${cleanPath}?_ts=${Date.now()}`;
+    
   
     setTabs((prevTabs) => [
       ...prevTabs,

@@ -18,6 +18,7 @@ const initialState = {
     color: 'primary',
     variant: 'filled'
   },
+  autoHideDuration: 6000,
   transition: 'Fade',
   close: false,
   actionButton: false,
@@ -39,30 +40,29 @@ export function useGetSnackbar() {
 }
 
 export function openSnackbar(snackbar) {
-  // to update local state based on key
-
-  const { action, open, message, anchorOrigin, variant, alert, transition, close, actionButton, autoHideDuration } = snackbar;
+  const {
+    action, open, message, anchorOrigin, variant,
+    alert, transition, close, actionButton, autoHideDuration
+  } = snackbar;
 
   mutate(
     endpoints.key,
-    (currentSnackbar) => {
-      return {
-        ...currentSnackbar,
-        action: action || initialState.action,
-        open: open || initialState.open,
-        message: message || initialState.message,
-        anchorOrigin: anchorOrigin || initialState.anchorOrigin,
-        variant: variant || initialState.variant,
-        alert: {
-          color: alert?.color || initialState.alert.color,
-          variant: alert?.variant || initialState.alert.variant
-        },
-        transition: transition || initialState.transition,
-        close: close || initialState.close,
-        actionButton: actionButton || initialState.actionButton,
-        autoHideDuration: autoHideDuration || 4000
-      };
-    },
+    (currentSnackbar) => ({
+      ...currentSnackbar,
+      action: action ?? initialState.action,
+      open: open ?? initialState.open,
+      message: message ?? initialState.message,
+      anchorOrigin: anchorOrigin ?? initialState.anchorOrigin,
+      variant: variant ?? initialState.variant,
+      alert: {
+        color: alert?.color ?? initialState.alert.color,
+        variant: alert?.variant ?? initialState.alert.variant
+      },
+      transition: transition ?? initialState.transition,
+      close: close ?? initialState.close,
+      actionButton: actionButton ?? initialState.actionButton,
+      autoHideDuration: autoHideDuration ?? initialState.autoHideDuration
+    }),
     false
   );
 }

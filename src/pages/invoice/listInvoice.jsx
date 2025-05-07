@@ -24,6 +24,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import MainCard from 'components/MainCard';
 import BillingCard from './components/mobileviewCard';
 import NeededToPurchaseDialog from './components/neededtoPurchase';
+import { openSnackbar } from 'api/snackbar';
 
 // =============================================================================
 // Transition Component for Dialog (Slide Up Animation)
@@ -708,7 +709,19 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
           Error Message Display
       ------------------------------------------------------------------------- */}
       {error && (
-        <p className="text-red-500 text-center mb-4 text-xs">{error}</p>
+  openSnackbar({
+    open: true,
+    message: error || 'There was an error. Please try again.',
+    variant: 'alert',
+    anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
+
+                        alert: {
+                          color: 'error'
+                        },
+
+                        actionButton: true,
+                        close: true
+  })
       )}
 
       {/* -------------------------------------------------------------------------

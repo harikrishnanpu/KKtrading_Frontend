@@ -17,7 +17,7 @@ import {
   Card,
   CardContent,
 } from '@mui/material';
-import { CloseCircle } from 'iconsax-react'; // Importing CloseCircle from iconsax-react
+import { CloseCircle } from 'iconsax-react'; 
 import SubmitButton from 'components/submitButton';
 
 // Transition component for Slide animation from bottom
@@ -75,7 +75,6 @@ export default function SummaryModal({
   roundOffMode,
   setRoundOffMode
 }) {
-  const remainingAmount = (parseFloat(parseFloat(grandTotal)) - parseFloat(receivedAmount)).toFixed(2);
 
   const { user: userInfo } = useAuth(); // Get the logged-in user info
   const [fetchedReceivedAmount, setFetchedReceivedAmount] = useState(0);
@@ -185,7 +184,7 @@ export default function SummaryModal({
           Remaining
         </Typography>
         <Typography variant="h6" fontWeight="bold">
-          ₹{remainingAmount}
+          ₹{fetchedRemainingAmount}
         </Typography>
       </CardContent>
     </Card>

@@ -20,7 +20,9 @@ import {
   Button
 } from '@mui/material';
 import ItemSuggestionsSidebar from 'components/products/itemSuggestionSidebar';
+import BottomLoader from './components/bottomLoader';
 import { isMobile } from 'react-device-detect';
+
 
 
 const Transition = forwardRef(function Transition(props, ref) {
@@ -59,6 +61,8 @@ export default function EditBillScreen() {
       .toISOString()
       .slice(0, 16);
   });
+
+
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [unloading, setUnloading] = useState(0);
   const [transportation, setTransportation] = useState(0);
@@ -133,6 +137,9 @@ const [printOptions, setPrintOptions] = useState({
   showNetAmount: true,
   showPaymentDetails: true
 });
+
+
+
 
 
   // Refs for Input Navigation
@@ -424,7 +431,7 @@ const [printOptions, setPrintOptions] = useState({
     }
   
     try {
-      const { data } = await api.get(`/api/products/searchform/search?q=${newValue}`);
+      const { data } = await api.get(`/api/products/searchform/search?q=${newValue}&limit=50`);
       setSuggestions(data);
       setError('');
       if (data && data.length > 0) {
@@ -821,9 +828,6 @@ const billingData = {
     const itemDiscount = itemBase * discountRatio;
 
     const rateWithoutGST = itemBase / (1 + p.gstRate / 100) - itemDiscount;
-
-// After discount
-const netBase = itemBase - itemDiscount;
 
 // GST on discounted base
 const gstAmount = rateWithoutGST * (1 + p.gstRate / 100) - rateWithoutGST;
@@ -1973,16 +1977,16 @@ const netTotal = rateWithoutGST + gstAmount;
                       {/* Total Amount Display */}
                       <div className="bg-gray-100 ml-2 w-60 items-center text-center rounded-lg shadow-inner p-4">
   <div className="mt-2 text-xs font-bold text-gray-700">
-    <p>Amount (Without GST): {parseFloat(amountWithoutGST).toFixed(2)}</p>
+    <p>Sub Total: {parseFloat(amountWithoutGST).toFixed(2)}</p>
   </div>
   <div className="mt-2 font-bold text-xs text-gray-700">
-    <p>Total GST: {parseFloat(gstAmount).toFixed(2)}</p>
-  </div>
-  <div className="mt-2 font-bold text-xs text-gray-700">
-    <p>Bill Amount: {parseFloat(grandTotal).toFixed(2)}</p>
+    <p>GST: {parseFloat(gstAmount).toFixed(2)}</p>
   </div>
   <div className="mt-2 text-xs font-bold text-gray-700">
     <p>Discount: {parseFloat(discount || 0).toFixed(2)}</p>
+  </div>
+  <div className="mt-2  text-lg font-bold text-gray-700">
+    <p>Bill Amount: {parseFloat(grandTotal).toFixed(2)}</p>
   </div>
 </div>
 
@@ -2799,6 +2803,12 @@ const netTotal = rateWithoutGST + gstAmount;
           <p className="text-xs animate-pulse font-bold">{error}</p>
         </div>
       )}
+
+      <BottomLoader
+            open={isLoading || isSubmitting}
+            text={isSubmitting ? 'Saving bill…' : 'Loading…'}
+            width="50%"
+          />
     </div>
   );
 }

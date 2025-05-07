@@ -26,16 +26,10 @@ import MainCard from 'components/MainCard';
 import api from '../api';
 import defaultImages from 'assets/images/upload/upload.svg';
 import DeleteIcon from '@mui/icons-material/Delete';
+import useAuth from 'hooks/useAuth';
 
 
-// Example role logic: (replace with your real auth hook / context)
-const user = {
-  isEmployee: false,
-  isAdmin: true,
-  isSuper: false
-};
-const canEditAll = user.isAdmin || user.isSuper;
-const canEditBasic = user.isEmployee && !canEditAll;
+
 
 // Skeleton for loading state
 function ProductEditSkeleton() {
@@ -72,6 +66,10 @@ export default function ProductEditScreen() {
   const { id: productId } = useParams();
   const navigate = useNavigate();
   const theme = useTheme();
+  const {user} = useAuth();
+
+  const canEditAll = user.isAdmin || user.isSuper;
+const canEditBasic = user.isEmployee && !canEditAll;
 
   // ------------------- State for product fields -------------------
   const [name, setName] = useState('');
@@ -168,7 +166,7 @@ export default function ProductEditScreen() {
 
     const deleteHandler = async () => {
       if (!productId) return;
-      if(user.isSuper){
+      if(userInfo.isSuper){
 
         if (window.confirm('Are you sure you want to delete this product?')) {
           try {

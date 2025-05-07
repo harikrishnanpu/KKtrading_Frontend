@@ -154,9 +154,6 @@ export default function OutOfStockModal({
               </Typography>
             </Grid>
           </Grid>
-          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1 }}>
-            <strong>Current Updating In Sqft:</strong> {sqqty}
-          </Typography>
         </Box>
 
         <Box mb={2}>
