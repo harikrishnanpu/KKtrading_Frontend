@@ -1588,7 +1588,7 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
         {/* Step 4: Add Products */}
         {step === 4 && (
           <div>
-            <div className="flex flex-col pb-40">
+            <div className="flex flex-col pb-60">
               {/* Desktop Layout */}
               <div className="hidden md:flex flex-col flex-1">
                 {/* Top Section: Total and Added Products */}

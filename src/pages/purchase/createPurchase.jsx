@@ -1120,7 +1120,7 @@ export default function PurchasePage() {
                   </p>
                 )}
                 {/* Items Table */}
-                <div className="flex-1 overflow-auto p-4">
+                <div className="flex-1 overflow-auto p-4 pb-60">
                   {items.length > 0 && (
                     <>
                       {/* Desktop Table */}
