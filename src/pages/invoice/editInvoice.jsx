@@ -279,38 +279,7 @@ const [printOptions, setPrintOptions] = useState({
     fetchAccounts();
   }, []);
 
-  // Rerun to ensure we have updated salesmen & accounts
-  useEffect(() => {
-    const fetchSalesmen = async () => {
-      try {
-        const { data } = await api.get('/api/users/salesmen/all');
-        setSalesmen(data);
-      } catch (error) {
-        console.error('Error fetching salesmen:', error);
-      }
-    };
 
-    const fetchAccounts = async () => {
-      setIsLoading(true);
-      try {
-        const response = await api.get('/api/accounts/allaccounts');
-        setAccounts(response.data);
-        if (response.data.length > 0) {
-          setPaymentMethod(response.data[0].accountId);
-        } else {
-          setPaymentMethod('');
-        }
-      } catch (err) {
-        setError('Failed to fetch payment accounts.');
-        console.error(err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchSalesmen();
-    fetchAccounts();
-  }, []);
 
   // We need to handle the case when the user changes the unit
   useEffect(() => {
@@ -513,10 +482,21 @@ const [printOptions, setPrintOptions] = useState({
       }
 
       const quantityInStock = data.countInStock;
-      const adjustedquantity = (
-        parseFloat(quantityInStock) * parseFloat(data.length * data.breadth)
-      ).toFixed(2);
-      setFetchQuantity(adjustedquantity);
+      let adjustedQuantity = quantityInStock;
+
+      if (data.category === 'TILES') {
+        if (unit === 'SQFT') {
+          const area = data.length * data.breadth;
+          adjustedQuantity = (quantityInStock * area).toFixed(2);
+        } else if (unit === 'BOX') {
+          adjustedQuantity = (quantityInStock / data.psRatio).toFixed(2);
+        }
+      } else if (data.category === 'GRANITE') {
+        const area = data.length * data.breadth;
+        adjustedQuantity = (quantityInStock * area).toFixed(2);
+      }
+      
+      setFetchQuantity(adjustedQuantity);
 
       itemNameRef.current?.focus();
       setItemId(data.item_id);

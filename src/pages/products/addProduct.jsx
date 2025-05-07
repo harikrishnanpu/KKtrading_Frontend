@@ -23,7 +23,7 @@ import { Camera } from 'iconsax-react';
 // Project Imports
 import Avatar from 'components/@extended/Avatar';
 import MainCard from 'components/MainCard';
-import api from '../api';
+import api from 'pages/api';
 import defaultImages from 'assets/images/upload/upload.svg';
 import DeleteIcon from '@mui/icons-material/Delete';
 import useAuth from 'hooks/useAuth';
@@ -74,6 +74,7 @@ const canEditBasic = user.isEmployee && !canEditAll;
   // ------------------- State for product fields -------------------
   const [name, setName] = useState('');
   const [itemId, setItemId] = useState('');
+  const [lastId, setLastId] = useState('');
   const [seller, setSeller] = useState('');
   const [sellerAddress, setSellerAddress] = useState('');
   const [image, setImage] = useState('');
@@ -116,6 +117,36 @@ const canEditBasic = user.isEmployee && !canEditAll;
   // ------------------- Fetch product on mount -------------------
 
 
+  useEffect(() => {
+    async function fetchId() {
+      try {
+        const { data } = await api.get('/api/products/lastadded/id'); // e.g. "K3"
+        setLastId(data);                                              // keep original if you need it
+  
+        // ────────── increment the numeric tail ──────────
+        // accepts K3, k12, K0007, etc.
+        const match = /^K(\d+)$/i.exec(data);
+        let nextId = 'K1'; // default if pattern fails
+  
+        if (match) {
+          const digits = match[1];              // "3", "0007" …
+          const width  = digits.length;         // preserve leading‑zero width
+          const num    = parseInt(digits, 10) + 1;
+          nextId       = `K${String(num).padStart(width, '0')}`;
+          // ► K3   → K4
+          // ► K009 → K010
+        }
+  
+        setItemId(nextId);
+      } catch (err) {
+        console.error('Failed to fetch last id:', err);
+        setItemId('K1'); // sensible fallback
+      }
+    }
+  
+    fetchId();
+  }, []);
+  
 
     const deleteHandler = async () => {
       if (!productId) return;
@@ -138,70 +169,53 @@ const canEditBasic = user.isEmployee && !canEditAll;
   // ------------------- Form Submit Handler -------------------
   const submitHandler = async (e) => {
     e.preventDefault();
-  
-    // 1) Only admins / supers allowed
-    if (!canEditAll && !canEditBasic) return;   // or whatever logic you use
-  
-    // 2) Quick client‑side validation
-    if (!name.trim()) {
-      setErrorUpdate('Product name is required');
-      return;
-    }
-    if (!category.trim()) {
-      setErrorUpdate('Category is required');
-      return;
-    }
-  
     setLoadingUpdate(true);
     setErrorUpdate(null);
-  
-    // 3) Build payload
-    const payload = {
-      name: name.trim(),
-      seller: seller.trim(),
-      sellerAddress: sellerAddress.trim(),
-      image,
-      brand: brand.trim(),
-      category: category.trim(),
-      description: description.trim(),
-      pUnit,
-      sUnit,
-      psRatio: psRatio || '0',
-      length,
-      breadth,
-      actLength,
-      actBreadth,
-      size,
-      unit,
-      price: price || 0,
-      billPartPrice: +billPartPrice || 0,
-      cashPartPrice: +cashPartPrice || 0,
-      type,
-      countInStock: +countInStock || 0,
-      rating: +rating || 0,
-      numReviews: numReviews || 0,
-      gstPercent: gstPercent || 0,
-      hsnCode: hsnCode.trim()
-    };
-  
-    // Send item_id only if the user typed something; otherwise let the
-    // backend autogenerate K‑numbers.
-    if (itemId.trim()) payload.item_id = itemId.trim();
-  
     try {
-      // always POST → create
-      await api.post('/api/products', payload);
+      // Build updated product object
+      const updatedProduct = {
+        name,
+        item_id: itemId,
+        seller,
+        sellerAddress,
+        image,
+        brand,
+        category,
+        description,
+        pUnit,
+        sUnit,
+        psRatio,
+        length,
+        breadth,
+        actLength,
+        actBreadth,
+        size,
+        unit,
+        price,
+        billPartPrice: billPartPrice ? Number(billPartPrice) : 0,
+        cashPartPrice: cashPartPrice ? Number(cashPartPrice) : 0,
+        type,
+        countInStock: countInStock ? Number(countInStock) : 0,
+        rating: rating ? Number(rating) : 0,
+        numReviews: numReviews ? Number(numReviews) : 0,
+        gstPercent: gstPercent ? Number(gstPercent) : 0,
+        hsnCode
+      };
+
+      await api.post(`/api/products/`, updatedProduct);
       setSuccessUpdate(true);
-      navigate('/products/all');           // ⇦ redirect after success
+      navigate('/products/all')
     } catch (err) {
       setErrorUpdate(
-        err?.response?.data?.message || err.message || 'Server error'
+        err.response?.data?.message
+          ? err.response.data.message
+          : err.message
       );
-    } finally {
-      setLoadingUpdate(false);
+      alert('Error Occured: '+err.response.data.message)
     }
+    setLoadingUpdate(false);
   };
-  
+
   // ------------------- Image Upload Handler -------------------
   const uploadFileHandler = async (e) => {
     const file = e.target.files?.[0];
@@ -379,7 +393,10 @@ const canEditBasic = user.isEmployee && !canEditAll;
               {/* Item ID (Admins only) */}
               <Grid item xs={12}>
                 <Stack spacing={1}>
+                    <div className='flex justify-between'>
                   <InputLabel htmlFor="item-id">Item ID</InputLabel>
+                  <InputLabel htmlFor="item-id">Last Id: {lastId}</InputLabel>
+                    </div>
                   <TextField
                     fullWidth
                     id="item-id"

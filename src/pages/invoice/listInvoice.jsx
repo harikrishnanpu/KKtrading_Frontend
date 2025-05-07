@@ -11,7 +11,6 @@ import { FaUser } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import useAuth from 'hooks/useAuth';
-import { useGetMenuMaster } from 'api/menu';
 
 // =============================================================================
 // MUI Imports
@@ -21,10 +20,9 @@ import Slide from '@mui/material/Slide';
 import DialogContent from '@mui/material/DialogContent';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
-import MainCard from 'components/MainCard';
 import BillingCard from './components/mobileviewCard';
 import NeededToPurchaseDialog from './components/neededtoPurchase';
-import { openSnackbar } from 'api/snackbar';
+import ErrorModal from './components/errorModel';
 
 // =============================================================================
 // Transition Component for Dialog (Slide Up Animation)
@@ -99,7 +97,7 @@ const handleNeedPurchase = (billing) => {
   const [selectedBilling, setSelectedBilling] = useState(null);
   const [loading, setLoading] = useState(true);
   const [pdfLoading, setPdfLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null);
   const [products, setProducts] = useState([]);
 
   // Pagination & Filtering State
@@ -518,7 +516,7 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
         );
       }
     } catch (error) {
-      setError('Error occurred while approving the billing.');
+      setError(error?.response?.data?.message || error?.message || 'Something went wrong');
       console.error(error);
     }
   };
@@ -708,21 +706,11 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
       {/* -------------------------------------------------------------------------
           Error Message Display
       ------------------------------------------------------------------------- */}
-      {error && (
-  openSnackbar({
-    open: true,
-    message: error || 'There was an error. Please try again.',
-    variant: 'alert',
-    anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
-
-                        alert: {
-                          color: 'error'
-                        },
-
-                        actionButton: true,
-                        close: true
-  })
-      )}
+<ErrorModal
+   open={Boolean(error)}
+   message={error}
+   onClose={() => setError(null)}
+ />
 
       {/* -------------------------------------------------------------------------
           Desktop Header and Stats (For Admin Users)

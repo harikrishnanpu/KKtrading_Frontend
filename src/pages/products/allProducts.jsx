@@ -233,7 +233,7 @@ export default function SearchScreen() {
           </button>
           {/* Add Product Button */}
          {userInfo.isAdmin && <button
-            onClick={handleAddProduct}
+            onClick={()=> navigate('/products/add')}
             className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
           >
             Add Product

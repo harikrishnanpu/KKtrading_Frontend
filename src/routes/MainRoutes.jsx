@@ -77,6 +77,7 @@ const DeliveryTracking = Loadable(lazy(() => import('pages/driver/allDeliveries'
 const Allproducts = Loadable(lazy(() => import('pages/products/allProducts')));
 const ProductScreen = Loadable(lazy(() => import('pages/products/product')));
 const EditProduct = Loadable(lazy(() => import('pages/products/editProducts')));
+const AddProduct = Loadable(lazy(() => import('pages/products/addProduct') ));
 const PreviewProduct = Loadable(lazy(() => import('pages/products/productPreview')));
 const UpcommingDeliveries = Loadable(lazy(() => import('pages/products/lowStockandDelivery')));
 
@@ -495,6 +496,10 @@ const MainRoutes = {
               element: <EditProduct />
             }
           ]
+        },
+        {
+          path: 'add',
+          element: <AddProduct />
         }
       ]
     },
