@@ -391,18 +391,6 @@ export default function SummaryModal({
           />
         </Box>
 
-        <Box mt={2}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={isApproved}
-                onChange={(e) => setIsApproved(e.target.checked)}
-              />
-            }
-            label="Is Approved ( If The Bill Is Approved By Customer and Admin)"
-          />
-        </Box>
-
           </div> }
 
         {/* Additional Information (if any) can be added here */}

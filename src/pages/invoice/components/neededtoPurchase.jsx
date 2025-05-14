@@ -59,7 +59,7 @@ const NeededToPurchaseDialog = ({ open, onClose, billingId, onSubmitSuccess }) =
             return {
               item_id: product.item_id,
               name: product.name,
-              quantityOrdered: product.quantity,
+              quantityOrdered: needed?.quantityOrdered || 0,
               quantityNeeded: needed ? needed.quantityNeeded : 0,
               selected: needed ? true : false,
               purchased: needed ? needed.purchased : false,

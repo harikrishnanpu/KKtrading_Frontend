@@ -7,7 +7,6 @@ import api from '../api';
 import OutOfStockModal from 'components/invoice/itemAddingModal';
 import BillingSuccess from 'components/invoice/billingsuccess';
 import useAuth from 'hooks/useAuth';
-import { openSnackbar } from 'api/snackbar';
 import { 
   Dialog,
   DialogTitle,
@@ -23,6 +22,7 @@ import {
 import ItemSuggestionsSidebar from 'components/products/itemSuggestionSidebar';
 import { isMobile } from 'react-device-detect';
 import BottomLoader from './components/bottomLoader';
+import ErrorModal from './components/errorModel';
 
 
 
@@ -66,6 +66,9 @@ export default function BillingScreen() {
         .toISOString()
         .slice(0, 16);
     });
+const [showErrorModal, setShowErrorModal] = useState(false);
+const [errorMessage, setErrorMessage] = useState('');
+
   const [paymentMethod, setPaymentMethod] = useState('');
   const [lastBillId, setLastBillId] = useState(null);
   const [itemName, setItemName] = useState('');
@@ -201,12 +204,16 @@ const [printOptions, setPrintOptions] = useState({
       try {
         const { data } = await api.get('/api/users/salesmen/all'); // Adjust the API endpoint as needed
         setSalesmen(data);
-      } catch (error) {
-        console.error('Error fetching salesmen:', error);
+      } catch (err) {
+  console.error(err);
+  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
+  setShowErrorModal(false);        // reset so modal can reopen on same error
+  setShowErrorModal(true);
       }
     };
 
     const fetchAccounts = async () => {
+      setIsLoading(false);
       setIsLoading(true); // Set loading state
       try {
         const response = await api.get('/api/accounts/allaccounts');
@@ -222,8 +229,11 @@ const [printOptions, setPrintOptions] = useState({
 
         setAccounts(response.data); // Set the accounts in state
       } catch (err) {
-        setError('Failed to fetch payment accounts.'); // Set error message
-        console.error(err);
+  console.error(err);
+  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
+  setShowErrorModal(false);        // reset so modal can reopen on same error
+  setShowErrorModal(true);
+
       } finally {
         setIsLoading(false); // Stop loading
       }
@@ -358,11 +368,11 @@ const [printOptions, setPrintOptions] = useState({
 
   // Fetch Last Bill ID on Mount
   useEffect(() => {
-    setIsLoading(true);
     const fetchLastBill = async () => {
+      setIsLoading(false);
+      setIsLoading(true);
       try {
         const { data } = await api.get('/api/billing/lastOrder/id');
-        console.log(data);
 
         // Generate the next invoice number
         const lastInvoiceNumber = parseInt(data.lastInvoice.slice(2), 10) || 0; // Extract the number part after "KK"
@@ -375,14 +385,15 @@ const [printOptions, setPrintOptions] = useState({
         const nextCustomer =
           'CUS' + (lastCustomerNumber + 1).toString().padStart(3, '0') + Date.now().toString().slice(5,10); // Ensures at least three digits
 
-        console.log({ nextInvoiceNo, nextCustomer });
-
         setLastBillId(data.lastInvoice);
         setCustomerId(nextCustomer);
         setInvoiceNo(nextInvoiceNo);
-      } catch (error) {
-        console.error('Error fetching last bill:', error);
-        setError('Failed to fetch last billing information.');
+      } catch (err) {
+  console.error(err);
+  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
+  setShowErrorModal(false);        // reset so modal can reopen on same error
+  setShowErrorModal(true);
+
       } finally {
         setIsLoading(false);
       }
@@ -479,50 +490,61 @@ const [printOptions, setPrintOptions] = useState({
         setShowSuggestionsSidebar(false);
       }
     } catch (err) {
-      console.error('Error fetching suggestions:', err);
+  console.error(err);
+  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
+  setShowErrorModal(false);        // reset so modal can reopen on same error
+  setShowErrorModal(true);
+
       setSuggestions([]);
-      // setError('Error fetching product suggestions.');
+      setError('Error fetching product suggestions.');
       setShowSuggestionsSidebar(false);
     }
   };
   
 
-  const handleproductUpdate = async (newQ, product) => {
-    if (newQ) {
-      const { data } = await api.get(`/api/products/itemId/${product.item_id}`);
-      if (newQ && data.countInStock) {
-        setSelectedProduct(data);
-        setQuantity(1);
-        setSellingPrice(data.price);
-        setFetchQuantity(data.countInStock);
-        setItemId(data.item_id);
-        setItemName(data.name);
-        setItemBrand(data.brand);
-        setItemCategory(data.category);
-        setUnit(data.sUnit);
-        setSuggestions([]);
-      } else {
-        alert('Error Occured In Updating the Stock');
-      }
-    }
-  };
+// ─────────────────────────────────────────────────────────
+//  Put this in BillingScreen.jsx
+// ─────────────────────────────────────────────────────────
+const handleproductUpdate = async (
+  qty,                    
+  product,                 
+  needToPurchaseFlag,             
+) => {
+  try {
+    setIsLoading(true);
+
+    /* 1️⃣  hit the unified update route */
+    const res = await api.put(`/api/products/update-stock/${product._id}`, {
+      newQty: qty,
+      userName:     userInfo.name,
+      needToPurchase: needToPurchaseFlag,
+      billingId: invoiceNo,                      
+    });
+
+    alert(
+      needToPurchaseFlag
+        ? "Recorded as need-to-purchase ✅"
+        : "Stock updated successfully ✅"
+    );
+  } catch (err) {
+    console.error(err);
+    setErrorMessage(
+      err.response?.data?.message || err.message || "Unexpected error"
+    );
+    setShowErrorModal(true);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   // Add Product by Selecting from Suggestions
   const addProductByItemId = async (product) => {
+    setIsLoading(false);
     setIsLoading(true);
     setError('');
     try {
       const { data } = await api.get(`/api/products/itemId/${product.item_id}`);
-
-      if (data.countInStock <= 0) {
-        setOutofstockProduct(data);
-        setQuantity(1);
-        setItemId(data.item_id);
-        setSuggestions([]);
-        setShowOutOfStockModal(true);
-        outofStockRef.current?.focus();
-        return;
-      }
 
       setSelectedProduct(data);
       setQuantity(1);
@@ -565,8 +587,10 @@ const [printOptions, setPrintOptions] = useState({
       setSuggestions([]);
       itemNameRef.current?.focus();
     } catch (err) {
-      console.error('Error adding product:', err);
-      setError('Product not found or server error.');
+  console.error(err);
+  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
+  setShowErrorModal(false);        // reset so modal can reopen on same error
+  setShowErrorModal(true);
     } finally {
       setIsLoading(false);
     }
@@ -680,7 +704,7 @@ const [printOptions, setPrintOptions] = useState({
 
   // Delete a Product from the List
   const deleteProduct = (indexToDelete) => {
-    setProducts(products.filter((_, index) => index !== indexToDelete));
+    setProducts(p => p.filter((_, i) => i !== indexToDelete));
   };
 
   // Edit Product Details (including new GST%)
@@ -746,91 +770,86 @@ const [printOptions, setPrintOptions] = useState({
   const [perItemDiscount, setPerItemDiscount] = useState(0);
   const [grandTotal, setGrandTotal] = useState(0);
 
+
+/* ------------------------------------------------------------------
+   Totals & Grand-total
+   – keeps your original math, just eliminates reference / NaN issues
+-------------------------------------------------------------------*/
 useEffect(() => {
-  const parsedDiscount = parseFloat(discount) || 0;
-  const parsedTransportation = parseFloat(transportation) || 0;
-  const parsedUnloading = parseFloat(unloading) || 0;
-  const parsedHandling = parseFloat(handlingcharge) || 0;
+  /* ---------- parse once ---------- */
+  const disc          = +discount        || 0;
+  const trans         = +transportation  || 0;
+  const unload        = +unloading       || 0;
+  const handling      = +handlingcharge  || 0;
+  const rOff          = +roundOff        || 0;
 
-  let newSubTotal = 0; // Base subtotal (sum of all product amounts without GST)
-  let newTotalGST = 0; // Total GST for all products
-  let amtWithGst = 0;
-  let TotalGstAmt = 0;
-
-  products.forEach((product) => {
-    const productQty = parseFloat(product.quantity) || 0;
-    const productPricePerUnit = parseFloat(product.sellingPriceinQty) || 0;
-    const productGSTRate = parseFloat(product.gstRate) || 0;
-    // const perItemDis = parsedDiscount / (products.length || 1);
-
-    // Calculate base amount for the product
-    const baseAmount = productQty * productPricePerUnit;
-
-
-    const itemBase = productQty * productPricePerUnit;
-
-// This row's discount portion: "itemBase / sumOfBase * discount"
-let sumOfBase = 0;
-products.forEach((p) => {
-  sumOfBase += (parseFloat(p.quantity) || 0) * (parseFloat(p.sellingPriceinQty) || 0);
-});
-const discountRatio = sumOfBase > 0 ? (parseFloat(discount) || 0) / sumOfBase : 0;
-const itemDiscount = itemBase * discountRatio;
-
-  const productDiscount = itemBase * discountRatio;
-
-  const gstRate = parseFloat(product.gstRate) || 0; // e.g., 18 means 18%
-  const rateWithoutGST = ( baseAmount / (1 + gstRate / 100) ) - productDiscount; // Derive rate without GST
-
-  const rateAfterDiscount = rateWithoutGST;
-  const gstAmount = rateWithoutGST * (gstRate / 100); // GST component of the base total
-
-  // Split GST equally between CGST and SGST
-  const cgst = gstAmount / 2;
-  const sgst = gstAmount / 2;
-
-
-    // Calculate GST for the product
-    const gstForProduct = baseAmount * (productGSTRate / 100);
-
-    const netAmount = rateAfterDiscount + gstAmount;
-    const rate = rateWithoutGST * (1 + gstRate / 100);
-    const totalGstAmt = rate - rateWithoutGST;
-
-    // Accumulate totals
-    newSubTotal += netAmount;
-    amtWithGst += rateWithoutGST;
-    TotalGstAmt +=  totalGstAmt;
-    newTotalGST += gstForProduct;
-  });
-
-  // Calculate totals
-  const discountedSubTotal = newSubTotal; // Subtotal after discount
-  const netWithoutOtherCharges = discountedSubTotal; // Net total before additional charges
-  const finalGrandTotal =
-  netWithoutOtherCharges +
-  parsedTransportation +
-  parsedUnloading +
-  parsedHandling +
-  (roundOffMode === "add" ? +roundOff : -roundOff);
-
-
-  // Set calculated values
-  setAmountWithoutGST(amtWithGst.toFixed(2)); // Total base amount
-  setGSTAmount(TotalGstAmt.toFixed(2)); // Total GST
-  setTotalAmount(netWithoutOtherCharges.toFixed(2)); // Net total (Subtotal + GST - Discount)
-  setGrandTotal(finalGrandTotal.toFixed(2)); // Final grand total (including charges)
-  // setPerItemDiscount(parsedDiscount / (products.length || 1)); // Discount per item
-
-  // Reset values if no products
+  /* ---------- quick exit ---------- */
   if (products.length === 0) {
     setAmountWithoutGST(0);
     setGSTAmount(0);
     setTotalAmount(0);
     setGrandTotal(0);
-    setPerItemDiscount(0);
+    // setPerItemDiscount(0);               // ← un-comment if you still use it
+    return;
   }
-}, [discount, products, unloading, transportation, handlingcharge, roundOff]);
+
+  /* ---------- helpers ---------- */
+  let baseSumWithoutGST = 0;   // sum of item bases, NET of GST & discount
+  let totalGST           = 0;
+  let subTotal           = 0;  // base + GST (still before extra charges)
+
+  /* pre-compute overall “base” used for proportional discount -------------- */
+  const grossBase = products.reduce(
+    (sum, p) => sum + (+p.quantity || 0) * (+p.sellingPriceinQty || 0),
+    0
+  );
+  const discountRatio = grossBase ? disc / grossBase : 0;
+
+  /* main per-product loop --------------------------------------------------- */
+  products.forEach(p => {
+    const qty          = +p.quantity           || 0;
+    const priceInQty   = +p.sellingPriceinQty  || 0;
+    const gstRate      = +p.gstRate            || 0;  // e.g. 18
+
+    const itemBase     = qty * priceInQty;
+    const itemDiscount = itemBase * discountRatio;
+
+    const baseExclGST  = itemBase / (1 + gstRate / 100) - itemDiscount; // net base
+    const gstAmt       = baseExclGST * gstRate / 100;                   // its GST
+
+    baseSumWithoutGST += baseExclGST;
+    totalGST          += gstAmt;
+    subTotal          += baseExclGST + gstAmt;                          // running total
+  });
+
+  /* ---------- grand total ---------- */
+  const grandTotal =
+    subTotal +
+    trans +
+    unload +
+    handling +
+    (roundOffMode === 'add' ?  rOff : -rOff);
+
+  /* ---------- state updates ---------- */
+  setAmountWithoutGST(baseSumWithoutGST.toFixed(2));
+  setGSTAmount(totalGST.toFixed(2));
+  setTotalAmount(subTotal.toFixed(2));
+  setGrandTotal(grandTotal.toFixed(2));
+
+  // setPerItemDiscount(disc / products.length);   // ← keep if still required
+}, [
+  discount,
+  transportation,
+  unloading,
+  handlingcharge,
+  roundOff,
+  roundOffMode,
+  products             // always keep this **last** to avoid extra renders
+]);
+
+
+
+
 
   // Handle Billing Submission
   const handleBillingSubmit = async () => {
@@ -846,7 +865,9 @@ const itemDiscount = itemBase * discountRatio;
       !showroom ||
       products.length === 0
     ) {
-      setError('Please fill all required fields and add at least one product.');
+      setErrorMessage('Please fill all required fields and add at least one product.');
+      setShowErrorModal(false);
+      setShowErrorModal(true);
       return;
     }
 
@@ -901,8 +922,7 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
         const itemBase = quantity * sellingPriceInQty;
         const itemDiscount = itemBase * discountRatio;
     
-        const rateWithoutGST = itemBase / (1 + p.gstRate / 100) - itemDiscount;
-    
+const rateWithoutGST = (itemBase - itemDiscount) / (1 + gstRate / 100);    
     // After discount
     const netBase = itemBase - itemDiscount;
     
@@ -926,7 +946,7 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
           breadth: p.breadth || 0,
           size: p.size || 0,
           psRatio: p.psRatio || 0,
-          selledPrice: netTotal / quantity.toFixed(2),
+          selledPrice: netTotal / parseFloat(quantity.toFixed(2)),
           // product-level GST
           gstRate: parseFloat(p.gstRate) || 0,
           itemRemark: p.itemRemark,
@@ -936,7 +956,6 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
 
     try {
       const response = await api.post('/api/billing/create', billingData);
-      console.log('Billing Response:', response.data);
       setReturnInvoice(response.data.billingData.invoiceNo);
 
           // If the user checked the needed-to-purchase option, navigate to that page:
@@ -966,18 +985,19 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
           
             setSuccess(true);
           // navigate('/'); // Example navigation
-    } catch (error) {
-      console.error('Error submitting billing data:', error);
-      setError(
-        'There was an error submitting the billing data. Please try again.'
-      );
-      alert('There was an error submitting the billing data. Please try again.');
+    } catch (err) {
+  console.error(err);
+  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
+  setShowErrorModal(false);        // reset so modal can reopen on same error
+  setShowErrorModal(true);
+
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const generatePDF = async () => {
+    setIsLoading(false);
     setIsLoading(true);
 
     const formData = {
@@ -1032,8 +1052,12 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
       link.href = URL.createObjectURL(blob);
       link.download = `Invoice_${formData.invoiceNo}.pdf`;
       link.click();
-    } catch (error) {
-      console.error('Error generating invoice:', error);
+    } catch (err) {
+  console.error(err);
+  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
+  setShowErrorModal(false);        // reset so modal can reopen on same error
+  setShowErrorModal(true);
+
     } finally {
       setIsLoading(false);
     }
@@ -1094,8 +1118,12 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
         printWindow.document.write(htmlContent);
         printWindow.document.close();
       })
-      .catch((error) => {
-        console.error('Error:', error);
+      .catch((err) => {
+  console.error(err);
+  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
+  setShowErrorModal(false);        // reset so modal can reopen on same error
+  setShowErrorModal(true);
+
       });
   }
   
@@ -1195,8 +1223,11 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
       );
       setCustomerSuggestions(data.suggestions);
     } catch (err) {
-      console.error('Error fetching customer suggestions:', err);
-      setError('Error fetching customer suggestions');
+  console.error(err);
+  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
+  setShowErrorModal(false);        // reset so modal can reopen on same error
+  setShowErrorModal(true);
+
     }
   };
 
@@ -1217,8 +1248,11 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
       );
       setCustomerSuggestions(data.suggestions);
     } catch (err) {
-      console.error('Error fetching customer suggestions:', err);
-      setError('Error fetching customer suggestions');
+  console.error(err);
+  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
+  setShowErrorModal(false);        // reset so modal can reopen on same error
+  setShowErrorModal(true);
+
     }
   };
 
@@ -1355,7 +1389,7 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
                 onKeyDown={(e) => changeRef(e, customerNameRef)}
                 className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
                 placeholder="Enter Invoice No"
-                readOnly={!userInfo.isAdmin}
+                readOnly={!userInfo.isSuper}
               />
             </div>
             <div className="mb-4">
@@ -1672,8 +1706,7 @@ products.forEach((p) => {
 const discountRatio = sumOfBase > 0 ? (parseFloat(discount) || 0) / sumOfBase : 0;
 const itemDiscount = itemBase * discountRatio;
 
-const rateWithoutGST = itemBase / (1 + gstRate / 100) - itemDiscount;
-
+const rateWithoutGST = (itemBase - itemDiscount) / (1 + gstRate / 100);
 // After discount
 const netBase = itemBase - itemDiscount;
 
@@ -1947,11 +1980,10 @@ const netTotal = rateWithoutGST + gstAmount;
                           <input
                             type="number"
                             ref={itemQuantityRef}
-                            max={fetchQuantity}
                             value={quantity}
                             onChange={(e) =>
                               setQuantity(
-                                Math.min(parseFloat(e.target.value), fetchQuantity)
+                                parseFloat(e.target.value)
                               )
                             }
                             onKeyDown={(e) => changeRef(e, sellingPriceRef)}
@@ -2221,11 +2253,10 @@ const netTotal = rateWithoutGST + gstAmount;
                         <input
                           type="number"
                           ref={itemQuantityMobileRef}
-                          max={fetchQuantity}
                           value={quantity}
                           onChange={(e) =>
                             setQuantity(
-                              Math.min(parseFloat(e.target.value), fetchQuantity)
+                              parseFloat(e.target.value)
                             )
                           }
                           onKeyDown={(e) => changeRef(e, sellingPriceMobileRef)}
@@ -2370,8 +2401,7 @@ const netTotal = rateWithoutGST + gstAmount;
                         const discountRatio = sumOfBase > 0 ? (parseFloat(discount) || 0) / sumOfBase : 0;
                         const itemDiscount = itemBase * discountRatio;
                         
-                        const rateWithoutGST = itemBase / (1 + gstRate / 100) - itemDiscount;
-                        
+const rateWithoutGST = (itemBase - itemDiscount) / (1 + gstRate / 100);                        
                         // After discount
                         const baseTotal = rateWithoutGST;
                         
@@ -2899,22 +2929,14 @@ const netTotal = rateWithoutGST + gstAmount;
         />
       )}
 
-      {/* Error Message */}
-      {error && (
-  openSnackbar({
-    open: true,
-    message: 'There was an error submitting the billing data. Please try again.',
-    variant: 'alert',
-    anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
 
-                        alert: {
-                          color: 'error'
-                        },
 
-                        actionButton: true,
-                        close: true
-  })
-      )}
+      <ErrorModal
+  open={showErrorModal}
+  message={errorMessage}
+  onClose={() => setShowErrorModal(false)}
+/>
+
 
 
 <BottomLoader

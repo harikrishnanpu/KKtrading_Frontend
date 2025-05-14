@@ -22,6 +22,7 @@ import {
 import ItemSuggestionsSidebar from 'components/products/itemSuggestionSidebar';
 import BottomLoader from './components/bottomLoader';
 import { isMobile } from 'react-device-detect';
+import ErrorModal from './components/errorModel';
 
 
 
@@ -63,6 +64,9 @@ export default function EditBillScreen() {
   });
 
 
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [unloading, setUnloading] = useState(0);
   const [transportation, setTransportation] = useState(0);
@@ -83,7 +87,6 @@ export default function EditBillScreen() {
   const [filterText, setFilterText] = useState('');
   const [fetchQuantity, setFetchQuantity] = useState(0);
   const [showOutOfStockModal, setShowOutOfStockModal] = useState(false);
-  const [outOfStockProduct, setOutOfStockProduct] = useState(null);
   const [imageError, setImageError] = useState(false);
   const [salesmanPhoneNumber, setSalesmanPhoneNumber] = useState('');
   const [salesmen, setSalesmen] = useState([]);
@@ -193,8 +196,11 @@ const [printOptions, setPrintOptions] = useState({
             `/api/billing/billing/suggestions?search=${invoiceNo}`
             );
             setBillingSuggestions(response.data);
-          } catch (error) {
-            console.error('Error fetching suggestions:', error);
+          } catch (err) {
+             console.error(err);
+  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
+  setShowErrorModal(false);        // reset so modal can reopen on same error
+  setShowErrorModal(true);
           }
         } else {
           setBillingSuggestions([]);
@@ -252,12 +258,16 @@ const [printOptions, setPrintOptions] = useState({
       try {
         const { data } = await api.get('/api/users/salesmen/all');
         setSalesmen(data);
-      } catch (error) {
-        console.error('Error fetching salesmen:', error);
+      } catch (err) {
+         console.error(err);
+  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
+  setShowErrorModal(false);        // reset so modal can reopen on same error
+  setShowErrorModal(true);
       }
     };
 
     const fetchAccounts = async () => {
+      setIsLoading(false);
       setIsLoading(true);
       try {
         const response = await api.get('/api/accounts/allaccounts');
@@ -268,8 +278,10 @@ const [printOptions, setPrintOptions] = useState({
           setPaymentMethod('');
         }
       } catch (err) {
-        setError('Failed to fetch payment accounts.');
-        console.error(err);
+       console.error(err);
+  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
+  setShowErrorModal(false);        // reset so modal can reopen on same error
+  setShowErrorModal(true);
       } finally {
         setIsLoading(false);
       }
@@ -319,6 +331,7 @@ const [printOptions, setPrintOptions] = useState({
   // Fetch Billing Details by ID
   useEffect(() => {
     const fetchBillingDetails = async () => {
+      setIsLoading(false);
       setIsLoading(true);
       try {
         const { data } = await api.get(`/api/billing/${id}`);
@@ -374,9 +387,11 @@ const [printOptions, setPrintOptions] = useState({
         } else {
           setSalesmanPhoneNumber('');
         }
-      } catch (error) {
-        console.error('Error fetching billing details:', error);
-        setError('Failed to fetch billing information.');
+      } catch (err) {
+  console.error(err);
+  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
+  setShowErrorModal(false);        // reset so modal can reopen on same error
+  setShowErrorModal(true);
       } finally {
         setIsLoading(false);
       }
@@ -409,8 +424,11 @@ const [printOptions, setPrintOptions] = useState({
         setShowSuggestionsSidebar(false);
       }
     } catch (err) {
-      console.error('Error fetching suggestions:', err);
-      setSuggestions([]);
+  console.error(err);
+  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
+  setShowErrorModal(false);        // reset so modal can reopen on same error
+  setShowErrorModal(true);
+        setSuggestions([]);
       // setError('Error fetching product suggestions.');
       setShowSuggestionsSidebar(false);
     }
@@ -431,20 +449,11 @@ const [printOptions, setPrintOptions] = useState({
 
   // Add Product by Selecting from Suggestions
   const addProductByItemId = async (product) => {
+    setIsLoading(false);
     setIsLoading(true);
     setError('');
     try {
       const { data } = await api.get(`/api/products/itemId/${product.item_id}`);
-
-      if (data.countInStock <= 0) {
-        setOutOfStockProduct(data);
-        setQuantity(1);
-        setItemId(data.item_id);
-        setSuggestions([]);
-        setShowOutOfStockModal(true);
-        outOfStockRef.current?.focus();
-        return;
-      }
       
       setSelectedProduct(data);
       setQuantity(1);
@@ -502,8 +511,44 @@ const [printOptions, setPrintOptions] = useState({
       setItemId(data.item_id);
       setSuggestions([]);
     } catch (err) {
-      console.error('Error adding product:', err);
-      setError('Product not found or server error.');
+   console.error(err);
+  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
+  setShowErrorModal(false);        // reset so modal can reopen on same error
+  setShowErrorModal(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
+
+  const handleproductUpdate = async (
+    qty,                    
+    product,                 
+    needToPurchaseFlag,             
+  ) => {
+    try {
+      setIsLoading(true);
+  
+      /* 1️⃣  hit the unified update route */
+      const res = await api.put(`/api/products/update-stock/${product._id}`, {
+        newQty: qty,
+        userName:     userInfo.name,
+        needToPurchase: needToPurchaseFlag,
+        invoiceNo: invoiceNo,                      
+      });
+  
+      alert(
+        needToPurchaseFlag
+          ? "Recorded as need-to-purchase ✅"
+          : "Stock updated successfully ✅"
+      );
+    } catch (err) {
+      console.error(err);
+      setErrorMessage(
+        err.response?.data?.message || err.message || "Unexpected error"
+      );
+      setShowErrorModal(true);
     } finally {
       setIsLoading(false);
     }
@@ -664,94 +709,83 @@ const [sgst, setSGST] = useState(0); // Optional, if SGST needs to be tracked se
 const [perItemDiscount, setPerItemDiscount] = useState(0); // Discount per item
 // const [grandTotal, setGrandTotal] = useState(0); // Final Grand Total
 
+/* ------------------------------------------------------------------
+   Totals & Grand-total
+   – keeps your original math, just eliminates reference / NaN issues
+-------------------------------------------------------------------*/
 useEffect(() => {
-  const parsedDiscount = parseFloat(discount) || 0;
-  const parsedTransportation = parseFloat(transportation) || 0;
-  const parsedUnloading = parseFloat(unloading) || 0;
-  const parsedHandling = parseFloat(handlingCharge) || 0;
+  /* ---------- parse once ---------- */
+  const disc          = +discount        || 0;
+  const trans         = +transportation  || 0;
+  const unload        = +unloading       || 0;
+  const handling      = +handlingCharge  || 0;
+  const rOff          = +roundOff        || 0;
 
-  let newSubTotal = 0; // Base subtotal (sum of all product amounts without GST)
-  let newTotalGST = 0; // Total GST for all products
-  let amtWithGst = 0;
-  let TotalGstAmt = 0;
-
-
-
-  products.forEach((product) => {
-    const productQty = parseFloat(product.quantity) || 0;
-    const productPricePerUnit = parseFloat(product.sellingPriceinQty) || 0;
-    const productGSTRate = parseFloat(product.gstRate) || 0;
-    // const perItemDis = parsedDiscount / (products.length || 1);
-
-    // Calculate base amount for the product
-    const baseAmount = productQty * productPricePerUnit;
-
-
-    const itemBase = productQty * productPricePerUnit;
-
-// This row's discount portion: "itemBase / sumOfBase * discount"
-let sumOfBase = 0;
-products.forEach((p) => {
-  sumOfBase += (parseFloat(p.quantity) || 0) * (parseFloat(p.sellingPriceinQty) || 0);
-});
-const discountRatio = sumOfBase > 0 ? (parseFloat(discount) || 0) / sumOfBase : 0;
-const itemDiscount = itemBase * discountRatio;
-
-  const productDiscount = itemBase * discountRatio;
-
-  const gstRate = parseFloat(product.gstRate) || 0; // e.g., 18 means 18%
-  const rateWithoutGST = ( baseAmount / (1 + gstRate / 100) ) - productDiscount; // Derive rate without GST
-
-  const rateAfterDiscount = rateWithoutGST;
-  const gstAmount = rateWithoutGST * (gstRate / 100); // GST component of the base total
-
-
-  // Split GST equally between CGST and SGST
-  const cgst = gstAmount / 2;
-  const sgst = gstAmount / 2;
-
-
-    // Calculate GST for the product
-    const gstForProduct = baseAmount * (productGSTRate / 100);
-
-    const netAmount = rateAfterDiscount + gstAmount;
-    const rate = rateWithoutGST * (1 + gstRate / 100);
-    const totalGstAmt = rate - rateWithoutGST;
-
-
-    // Accumulate totals
-    newSubTotal += netAmount;
-    amtWithGst += rateWithoutGST;
-    TotalGstAmt +=  totalGstAmt;
-    newTotalGST += gstForProduct;
-  });
-
-  // Calculate totals
-  const discountedSubTotal = newSubTotal; // Subtotal after discount
-  const netWithoutOtherCharges = discountedSubTotal; // Net total before additional charges
-  const finalGrandTotal =
-  netWithoutOtherCharges +
-  parsedTransportation +
-  parsedUnloading +
-  parsedHandling +
-  (roundOffMode === "add" ? +roundOff : -roundOff);
-
-  // Set calculated values
-  setAmountWithoutGST(amtWithGst.toFixed(2)); // Total base amount
-  setGSTAmount(TotalGstAmt.toFixed(2)); // Total GST
-  setTotalAmount(netWithoutOtherCharges.toFixed(2)); // Net total (Subtotal + GST - Discount)
-  setGrandTotal(finalGrandTotal.toFixed(2)); // Final grand total (including charges)
-  // setPerItemDiscount(parsedDiscount / (products.length || 1)); // Discount per item
-
-  // Reset values if no products
+  /* ---------- quick exit ---------- */
   if (products.length === 0) {
     setAmountWithoutGST(0);
     setGSTAmount(0);
     setTotalAmount(0);
     setGrandTotal(0);
-    setPerItemDiscount(0);
+    // setPerItemDiscount(0);               // ← un-comment if you still use it
+    return;
   }
-}, [discount, products, unloading, transportation, handlingCharge, roundOff]);
+
+  /* ---------- helpers ---------- */
+  let baseSumWithoutGST = 0;   // sum of item bases, NET of GST & discount
+  let totalGST           = 0;
+  let subTotal           = 0;  // base + GST (still before extra charges)
+
+  /* pre-compute overall “base” used for proportional discount -------------- */
+  const grossBase = products.reduce(
+    (sum, p) => sum + (+p.quantity || 0) * (+p.sellingPriceinQty || 0),
+    0
+  );
+  const discountRatio = grossBase ? disc / grossBase : 0;
+
+  /* main per-product loop --------------------------------------------------- */
+  products.forEach(p => {
+    const qty          = +p.quantity           || 0;
+    const priceInQty   = +p.sellingPriceinQty  || 0;
+    const gstRate      = +p.gstRate            || 0;  // e.g. 18
+
+    const itemBase     = qty * priceInQty;
+    const itemDiscount = itemBase * discountRatio;
+
+    const baseExclGST  = itemBase / (1 + gstRate / 100) - itemDiscount; // net base
+    const gstAmt       = baseExclGST * gstRate / 100;                   // its GST
+
+    baseSumWithoutGST += baseExclGST;
+    totalGST          += gstAmt;
+    subTotal          += baseExclGST + gstAmt;                          // running total
+  });
+
+  /* ---------- grand total ---------- */
+  const grandTotal =
+    subTotal +
+    trans +
+    unload +
+    handling +
+    (roundOffMode === 'add' ?  rOff : -rOff);
+
+  /* ---------- state updates ---------- */
+  setAmountWithoutGST(baseSumWithoutGST.toFixed(2));
+  setGSTAmount(totalGST.toFixed(2));
+  setTotalAmount(subTotal.toFixed(2));
+  setGrandTotal(grandTotal.toFixed(2));
+
+  // setPerItemDiscount(disc / products.length);   // ← keep if still required
+}, [
+  discount,
+  transportation,
+  unloading,
+  handlingCharge,
+  roundOff,
+  roundOffMode,
+  products             // always keep this **last** to avoid extra renders
+]);
+
+
 
   // Submit Billing Data
   const submitBillingData = async () => {
@@ -829,7 +863,7 @@ const netTotal = rateWithoutGST + gstAmount;
       breadth: p.breadth || 0,
       size: p.size || 0,
       psRatio: p.psRatio || 0,
-      selledPrice: netTotal / quantity.toFixed(2),
+      selledPrice: netTotal / parseFloat(quantity.toFixed(2)),
       // product-level GST
       gstRate: parseFloat(p.gstRate) || 0,
       itemRemark: p.itemRemark,
@@ -848,19 +882,11 @@ const netTotal = rateWithoutGST + gstAmount;
           setShowSuccessModal(false);
           navigate('/invoice/list/');
       }, 2000);
-    } catch (error) {
-      console.error('Error submitting billing data:', error?.message);
-      const backendMessage =
-      error?.response?.data?.message ||        // custom message from backend
-      error?.response?.data ||                 // raw body if it’s already text
-      error?.message ||                        // generic axios / network error
-      'There was an error submitting the billing data. Please try again.'; // fallback
-
-    console.error('Error submitting billing data:', backendMessage);
-      setError(
-        'There was an error submitting the billing data. Please try again.'
-      );
-      alert(`There was an error submitting the billing data. Please try again. ${backendMessage}`);
+    } catch (err) {
+  console.error(err);
+  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
+  setShowErrorModal(false);        // reset so modal can reopen on same error
+  setShowErrorModal(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -884,6 +910,7 @@ const netTotal = rateWithoutGST + gstAmount;
 
   // Generate PDF Invoice
   const generatePDF = async () => {
+    setIsLoading(false);
     setIsLoading(true);
 
     const formData = {
@@ -936,9 +963,11 @@ const netTotal = rateWithoutGST + gstAmount;
       link.href = URL.createObjectURL(blob);
       link.download = `Invoice_${formData.invoiceNo}.pdf`;
       link.click();
-    } catch (error) {
-      console.error('Error generating invoice:', error);
-      setError('Failed to generate PDF invoice.');
+    } catch (err) {
+  console.error(err);
+  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
+  setShowErrorModal(false);        // reset so modal can reopen on same error
+  setShowErrorModal(true);
     } finally {
       setIsLoading(false);
     }
@@ -1000,8 +1029,11 @@ const netTotal = rateWithoutGST + gstAmount;
         printWindow.document.write(htmlContent);
         printWindow.document.close();
       })
-      .catch((error) => {
-        console.error('Error:', error);
+      .catch((err) => {
+        console.error(err);
+  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
+  setShowErrorModal(false);        // reset so modal can reopen on same error
+  setShowErrorModal(true);
       });
   }
   
@@ -1064,8 +1096,10 @@ const netTotal = rateWithoutGST + gstAmount;
       );
       setCustomerSuggestions(data.suggestions);
     } catch (err) {
-      console.error('Error fetching customer suggestions:', err);
-      setError('Error fetching customer suggestions.');
+    console.error(err);
+  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
+  setShowErrorModal(false);        // reset so modal can reopen on same error
+  setShowErrorModal(true);
     }
   };
 
@@ -1086,8 +1120,10 @@ const netTotal = rateWithoutGST + gstAmount;
       );
       setCustomerSuggestions(data.suggestions);
     } catch (err) {
-      console.error('Error fetching customer suggestions:', err);
-      setError('Error fetching customer suggestions.');
+  console.error(err);
+  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
+  setShowErrorModal(false);        // reset so modal can reopen on same error
+  setShowErrorModal(true);
     }
   };
 
@@ -1111,17 +1147,6 @@ const netTotal = rateWithoutGST + gstAmount;
 
   return (
     <div className="container mx-auto p-2">
-
-      {/* Loading Indicator */}
-      {isLoading && (
-        <>
-        </>
-        // <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
-        //   <div className="font-bold bg-white px-4 py-2 rounded-lg text-gray-600 text-xs animate-pulse">
-        //     Loading...
-        //   </div>
-        // </div>
-      )}
 
       {/* Main Form */}
       <div
@@ -2497,33 +2522,18 @@ const netTotal = rateWithoutGST + gstAmount;
       )}
 
       {/* Out of Stock Modal */}
-      {showOutOfStockModal && outOfStockProduct && (
-        <OutOfStockModal
-          product={outOfStockProduct}
-          onUpdate={async (newQ, product) => {
-            if (newQ) {
-              const { data } = await api.get(
-                `/api/products/itemId/${product.item_id}`
-              );
-              if (newQ && data.countInStock) {
-                setSelectedProduct(data);
-                setQuantity(1);
-                setSellingPrice(data.price);
-                setFetchQuantity(data.countInStock);
-                setItemId('');
-                setSuggestions([]);
-              } else {
-                alert('Error Occured In Updating the Stock');
-              }
-            }
-          }}
-          onClose={() => {
-            setOutOfStockProduct(null);
-            setShowOutOfStockModal(false);
-          }}
-          stockRef={outOfStockRef}
-        />
-      )}
+{showOutOfStockModal && outofStockProduct && (
+  <OutOfStockModal
+    product={outofStockProduct}
+    onUpdate={handleproductUpdate}
+    onClose={() => {
+      setOutofstockProduct(null);
+      setShowOutOfStockModal(false);
+    }}
+    stockRef={outOfStockRef}
+  />
+)}
+
 
 
 
@@ -2783,6 +2793,12 @@ const netTotal = rateWithoutGST + gstAmount;
           <p className="text-xs animate-pulse font-bold">{error}</p>
         </div>
       )}
+
+            <ErrorModal
+        open={showErrorModal}
+        message={errorMessage}
+        onClose={() => setShowErrorModal(false)}
+      />
 
       <BottomLoader
             open={isLoading || isSubmitting}

@@ -1,5 +1,5 @@
 // src/components/OutOfStockModal.js
-import React, { useEffect, useRef, useState, forwardRef } from 'react';
+import React, { useEffect, useState, forwardRef } from 'react';
 import PropTypes from 'prop-types';
 import api from '../../pages/api';
 import useAuth from 'hooks/useAuth';
@@ -15,10 +15,12 @@ import {
   Grid,
   Slide,
   Box,
+  FormControlLabel,
+  Checkbox,
 } from '@mui/material';
-import { CloseCircle } from 'iconsax-react'; // Importing CloseCircle from iconsax-react
+import { CloseCircle } from 'iconsax-react'; // iconsax-react
 
-// Transition component for Slide animation from bottom
+/* ---------- slide-up transition ---------- */
 const Transition = forwardRef(function Transition(props, ref) {
   return <Slide direction="up" ref={ref} {...props} />;
 });
@@ -26,58 +28,36 @@ const Transition = forwardRef(function Transition(props, ref) {
 export default function OutOfStockModal({
   product,
   onClose,
-  onStockChange,
   onUpdate,
   stockRef,
 }) {
-  const [newQuantity, setNewQuantity] = useState('');
-  const [sqqty, setSqty] = useState(0);
+  /* -------- guards -------- */
+  if (!product) return null; // defensive – avoids render crash while prop is null
 
-  const { user: userInfo } = useAuth(); // Get the logged-in user info
+  /* -------- local state -------- */
+  const [newQuantity, setNewQuantity]     = useState('');
+  const [needToPurchase, setNeedToPurchase] = useState(true);   // <-- new checkbox
+  const [ invoiceNo, setInvoiceNo ] = useState(null);
+  const { user: userInfo } = useAuth();
 
-  const mainRef = useRef(); // Reference to the dialog for animations (optional with MUI)
-
+  /* reset fields when a new product comes in or modal re-opens */
   useEffect(() => {
-    if (newQuantity === 0 || newQuantity === undefined || newQuantity === '') {
-      setSqty(0);
+    setNewQuantity('');
+    setNeedToPurchase(true);
+  }, [product]);
+
+  /* -------- handlers -------- */
+const handleUpdate = () => {
+   const qty = parseFloat(newQuantity);
+   if (Number.isNaN(qty) || qty <= 0) {
+      alert('Please enter a valid positive number');
       return;
-    } else if (newQuantity && product.length && product.breadth) {
-      let adjqty =
-        parseFloat(newQuantity) /
-        (parseFloat(product.length) * parseFloat(product.breadth));
-      setSqty(adjqty.toFixed(2));
-    }
-  }, [newQuantity, product.length, product.breadth]);
-
-  const handleUpdate = async () => {
-    // Check if newQuantity is a valid number before making the API request
-    if (isNaN(newQuantity) || newQuantity === '') {
-      alert('Please enter a valid number');
-      return;
-    }
-
-    try {
-      // Convert newQuantity to a number to ensure it's passed as the correct type
-      const quantityToUpdate = parseFloat(newQuantity);
-
-      const response = await api.put(`/api/products/update-stock/${product._id}`, {
-        countInStock: quantityToUpdate,
-        userName: userInfo.name,
-      });
-
-      if (response.status === 200) {
-        // Call onUpdate with the new quantity and the product
-        onUpdate(quantityToUpdate, product);
-
-        // Reset the input and close the modal
-        setNewQuantity('');
-        onClose();
-      }
-    } catch (error) {
-      alert(`Error updating stock: ${error.response?.data?.message || error.message}`);
-    }
+   }
+   onUpdate(qty, product, needToPurchase);   
+   onClose();
   };
 
+  /* -------- render -------- */
   return (
     <Dialog
       open
@@ -89,51 +69,48 @@ export default function OutOfStockModal({
         sx: {
           borderBottomLeftRadius: 2,
           borderBottomRightRadius: 2,
-          padding: 2,
+          p: 2,
           position: 'fixed',
           bottom: 0,
-          margin: 0,
+          m: 0,
           height: 'auto',
         },
       }}
     >
+      {/* -------- header -------- */}
       <DialogTitle sx={{ m: 0, p: 2 }}>
         <Grid container justifyContent="space-between" alignItems="center">
           <Grid item>
-            <Typography variant="h6" component="div" color="textPrimary">
-              Update Product Quantity
+            <Typography variant="h6" component="div">
+              Need To Purchase and Update Stock
             </Typography>
           </Grid>
           <Grid item>
-            <IconButton
-              aria-label="close"
-              onClick={onClose}
-              sx={{
-                color: (theme) => theme.palette.grey[500],
-              }}
-            >
+            <IconButton aria-label="close" onClick={onClose}>
               <CloseCircle size="24" color="#9e9e9e" variant="Outline" />
             </IconButton>
           </Grid>
         </Grid>
       </DialogTitle>
+
+      {/* -------- body -------- */}
       <DialogContent dividers sx={{ overflowY: 'auto' }}>
         {product.countInStock === 0 && (
           <Typography
             variant="body2"
             sx={{ fontStyle: 'italic', mb: 2, textAlign: 'center', color: 'text.secondary' }}
           >
-            The item you entered is currently out of stock. Update the stock to add the product to the bill.
+            The item you entered is currently out of stock. 
           </Typography>
         )}
 
         <Box mb={2}>
-          <Typography variant="body2" sx={{ truncate: 'ellipsis', color: 'text.primary' }}>
+          <Typography variant="body2">
             <strong>Product:</strong> {product.name}
           </Typography>
-          <Grid container justifyContent="space-between" alignItems="center">
+          <Grid container justifyContent="space-between">
             <Grid item xs={6}>
-              <Typography variant="body2" sx={{ truncate: 'ellipsis', color: 'text.primary' }}>
+              <Typography variant="body2">
                 <strong>Product ID:</strong> {product.item_id}
               </Typography>
             </Grid>
@@ -156,55 +133,60 @@ export default function OutOfStockModal({
           </Grid>
         </Box>
 
-        <Box mb={2}>
+        {/* ---- quantity ---- */}
+        <Box mb={3}>
           <TextField
             label="New Quantity"
             type="number"
             inputRef={stockRef}
             value={newQuantity}
             onChange={(e) => setNewQuantity(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleUpdate();
-            }}
+            onKeyDown={(e) => e.key === 'Enter' && handleUpdate()}
             fullWidth
             variant="outlined"
             size="small"
-            InputProps={{
-              inputProps: { min: 1, step: 1 },
-            }}
+            InputProps={{ inputProps: { min: 1, step: 1 } }}
           />
         </Box>
+
+        {/* ---- need-to-purchase checkbox ---- */}
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={needToPurchase}
+              onChange={() => setNeedToPurchase((c) => !c)}
+              color="primary"
+            />
+          }
+          label="Need to purchase (without reducing the stock)"
+          sx={{ mb: 2 }}
+        />
       </DialogContent>
-      <DialogActions sx={{ padding: 2 }}>
-        <Grid container justifyContent="flex-end" spacing={2}>
-          <Grid item>
-            <Button
-              variant="outlined"
-              color="error"
-              size="small"
-              onClick={handleUpdate}
-            >
-              Update Product
-            </Button>
-          </Grid>
-        </Grid>
+
+      {/* -------- footer -------- */}
+      <DialogActions sx={{ p: 2 }}>
+        <Button
+          variant="outlined"
+          color="error"
+          size="small"
+          onClick={handleUpdate}
+        >
+          Update Product
+        </Button>
       </DialogActions>
     </Dialog>
   );
 }
 
-// PropTypes for type checking
+/* ---------- prop types ---------- */
 OutOfStockModal.propTypes = {
   product: PropTypes.shape({
     _id: PropTypes.string.isRequired,
     name: PropTypes.string.isRequired,
     item_id: PropTypes.string.isRequired,
     countInStock: PropTypes.number.isRequired,
-    length: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
-    breadth: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   }).isRequired,
   onClose: PropTypes.func.isRequired,
-  onStockChange: PropTypes.func,
   onUpdate: PropTypes.func.isRequired,
   stockRef: PropTypes.object.isRequired,
 };
