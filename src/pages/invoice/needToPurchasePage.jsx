@@ -47,24 +47,25 @@ export default function NeedToPurchaseList() {
   const drawerOpen            = Boolean(editing);
 
   /* ---------- fetch ---------- */
-  useEffect(() => {
-    (async () => {
-      setBusy(true);
-      try {
-        const [needRes, prodRes] = await Promise.all([
-          api.get('/api/needtopurchase'),
-          api.get('/api/products/product/all'),
-        ]);
-        setItems(needRes.data);
-        setProducts(prodRes.data);
-      } catch (err) {
-        console.error(err);
-        setError(err.response?.data?.message || err.message || 'Failed to fetch data');
-      } finally {
-        setBusy(false);
-      }
-    })();
-  }, []);
+useEffect(() => {
+  (async () => {
+    setBusy(true);
+    try {
+      const [needRes, prodRes] = await Promise.all([
+        api.get('/api/needtopurchase'),
+        api.get('/api/products/product/all'),
+      ]);
+      setItems(Array.isArray(needRes.data) ? needRes.data : []);
+      setProducts(Array.isArray(prodRes.data) ? prodRes.data : []);
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.message || err.message || 'Failed to fetch data');
+    } finally {
+      setBusy(false);
+    }
+  })();
+}, []);
+
 
   /* ---------- product map ---------- */
   const productMap = useMemo(() => {
