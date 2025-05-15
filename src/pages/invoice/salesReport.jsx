@@ -1,4 +1,3 @@
-// src/screens/SalesReport.jsx
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -12,7 +11,7 @@ import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaUser } from 'react-icons/fa';
 
-// ─── MUI ─────────────────────────────────────────────────────────────
+// ─── MUI ───────────────────────────────────────────────────────────
 import {
   Dialog,
   DialogContent,
@@ -21,15 +20,15 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 
-// ─── Dialog slide-up transition ─────────────────────────────────────
+// ─── Transition for full-screen dialog ────────────────────────────
 const Transition = React.forwardRef(function Transition(props, ref) {
   return <Slide direction="up" ref={ref} {...props} />;
 });
 
-// ─── Tiny badge component for profit % ──────────────────────────────
+// ─── Tiny badge for % profit ───────────────────────────────────────
 const ProfitBadge = ({ value }) => (
   <span
-    className={`px-2 py-1 rounded-full text-xs font-semibold ${
+    className={`px-2 py-3 rounded-full text-xs font-semibold ${
       value >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
     }`}
   >
@@ -38,19 +37,24 @@ const ProfitBadge = ({ value }) => (
   </span>
 );
 
-// ─── Main component ────────────────────────────────────────────────
+/* ────────────────────────────────────────────────────────── */
+/*                       MAIN COMPONENT                      */
+/* ────────────────────────────────────────────────────────── */
 const SalesReport = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigate();           // reserved for future use
   const { user: userInfo } = useAuth();
 
-  // ── Core data ────────────────────────────────────────────────────
-  const [billings, setBillings]               = useState([]);
-  const [products, setProducts]               = useState([]);   // for cost lookup
-  const [filteredBillings, setFilteredBillings] = useState([]);
-  const [loading, setLoading]                 = useState(true);
-  const [error, setError]                     = useState('');
+  // ── Data pulled from server ─────────────────────────────────────
+  const [billings, setBillings]   = useState([]);
+  const [products, setProducts]   = useState([]);   // for cost lookup / brand-category
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState('');
 
-  // ── Filters & sorting ────────────────────────────────────────────
+  // ── Flattened product rows (one row per product line) ───────────
+  const [flatProducts,     setFlatProducts]     = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
+
+  // ── Filters & sorting ───────────────────────────────────────────
   const [fromDate, setFromDate]           = useState('');
   const [toDate, setToDate]               = useState('');
   const [customerName, setCustomerName]   = useState('');
@@ -63,23 +67,23 @@ const SalesReport = () => {
   const [sortField, setSortField]         = useState('invoiceDate');
   const [sortDirection, setSortDirection] = useState('asc');
 
-  // ── Pagination ───────────────────────────────────────────────────
-  const itemsPerPage   = 15;
+  // ── Pagination ──────────────────────────────────────────────────
+  const itemsPerPage = 15;
   const [currentPage, setCurrentPage] = useState(1);
 
-  // ── Totals ───────────────────────────────────────────────────────
+  // ── Totals ──────────────────────────────────────────────────────
   const [totalAmount, setTotalAmount] = useState(0);
 
-  // ── Suggestions (autocomplete) ───────────────────────────────────
+  // ── Suggestions for datalists ───────────────────────────────────
   const [customerSuggestions, setCustomerSuggestions] = useState([]);
   const [salesmanSuggestions, setSalesmanSuggestions] = useState([]);
   const [invoiceSuggestions, setInvoiceSuggestions]   = useState([]);
   const [itemSuggestions, setItemSuggestions]         = useState([]);
 
-  // ── Modal state ──────────────────────────────────────────────────
+  // ── Modal state (invoice detail) ────────────────────────────────
   const [selectedBilling, setSelectedBilling] = useState(null);
 
-  // ───────────────────── FETCH DATA ────────────────────────────────
+  /* ───────────────────────── FETCH DATA ────────────────────────── */
   useEffect(() => {
     let isMounted = true;
 
@@ -106,61 +110,84 @@ const SalesReport = () => {
     return () => { isMounted = false; };
   }, []);
 
-  // Build fast lookup for cost price
+  /* ───────────────────── COST LOOKUP MAP ───────────────────────── */
   const productMap = useMemo(() => {
     const map = {};
     products.forEach((p) => (map[p.item_id] = p));
     return map;
   }, [products]);
 
-  // ───────────────────── PROFIT CALCULATOR ─────────────────────────
+  /* ─────────────────── FLATTEN BILLINGS → ROWS ─────────────────── */
+  useEffect(() => {
+    const rows = billings.flatMap((b) =>
+      b.products.map((p) => ({
+        ...p,                                      // name, item_id, qty, category, brand, unit
+        invoiceNo:      b.invoiceNo,
+        invoiceDate:    b.invoiceDate,
+        customerName:   b.customerName,
+        salesmanName:   b.salesmanName,
+        paymentStatus:  b.paymentStatus,
+        deliveryStatus: b.deliveryStatus,
+        billingAmount:  b.billingAmount,           // for filters
+      }))
+    );
+    setFlatProducts(rows);
+  }, [billings]);
+
+  /* ──────────────── PROFIT CALC FOR A BILLING ──────────────────── */
   const calcProfit = (billing) => {
-    let totalCost = 0;
-    let totalRevenue = 0;
+    let cost = 0;
+    let revenue = 0;
 
     billing.products.forEach((p) => {
       const prod = productMap[p.item_id];
-      const costUnit = parseFloat(prod?.price || 0);
-      totalCost += costUnit * p.quantity;
-      totalRevenue += parseFloat(p.selledPrice) * p.quantity;
+      cost    += (parseFloat(prod?.price || 0) * p.quantity);
+      revenue += (parseFloat(p.selledPrice)   * p.quantity);
     });
 
     const otherExp = (billing.otherExpenses || []).reduce(
-      (sum, e) => sum + parseFloat(e.amount || 0),
-      0
-    );
-    const fuel     = parseFloat(billing.totalFuelCharge || 0);
+      (s, e) => s + parseFloat(e.amount || 0), 0);
+    const fuel = parseFloat(billing.totalFuelCharge || 0);
 
-    const profit   = totalRevenue - totalCost - otherExp - fuel;
-    const margin   = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
+    const profit = revenue - cost - otherExp - fuel;
+    const pct    = revenue > 0 ? (profit / revenue) * 100 : 0;
 
-    return { totalCost, totalRevenue, totalProfit: profit, profitPercentage: margin, otherExp, fuel };
+    return { totalCost: cost, totalRevenue: revenue,
+             totalProfit: profit, profitPercentage: pct,
+             otherExp, fuel };
   };
 
-  // ───────────────────── FILTER + SORT ─────────────────────────────
+  /* ─────────── FILTER + SORT (on product rows) ─────────────────── */
   useEffect(() => {
-    let data = [...billings];
+    let data = [...flatProducts];
 
     if (fromDate)
-      data = data.filter((b) => new Date(b.invoiceDate).toISOString().split('T')[0] >= fromDate);
+      data = data.filter((r) =>
+        new Date(r.invoiceDate).toISOString().split('T')[0] >= fromDate);
     if (toDate)
-      data = data.filter((b) => new Date(b.invoiceDate).toISOString().split('T')[0] <= toDate);
+      data = data.filter((r) =>
+        new Date(r.invoiceDate).toISOString().split('T')[0] <= toDate);
     if (customerName)
-      data = data.filter((b) => b.customerName.toLowerCase().includes(customerName.toLowerCase()));
+      data = data.filter((r) =>
+        r.customerName.toLowerCase().includes(customerName.toLowerCase()));
     if (salesmanName)
-      data = data.filter((b) => b.salesmanName.toLowerCase().includes(salesmanName.toLowerCase()));
+      data = data.filter((r) =>
+        r.salesmanName.toLowerCase().includes(salesmanName.toLowerCase()));
     if (invoiceNo)
-      data = data.filter((b) => b.invoiceNo.toLowerCase().includes(invoiceNo.toLowerCase()));
+      data = data.filter((r) =>
+        r.invoiceNo.toLowerCase().includes(invoiceNo.toLowerCase()));
     if (paymentStatus)
-      data = data.filter((b) => b.paymentStatus.toLowerCase() === paymentStatus.toLowerCase());
+      data = data.filter((r) =>
+        r.paymentStatus.toLowerCase() === paymentStatus.toLowerCase());
     if (deliveryStatus)
-      data = data.filter((b) => b.deliveryStatus.toLowerCase() === deliveryStatus.toLowerCase());
+      data = data.filter((r) =>
+        r.deliveryStatus.toLowerCase() === deliveryStatus.toLowerCase());
     if (itemName)
-      data = data.filter((b) =>
-        b.products.some((p) => p.name.toLowerCase().includes(itemName.toLowerCase()))
-      );
+      data = data.filter((r) =>
+        r.name.toLowerCase().includes(itemName.toLowerCase()));
     if (amountThreshold)
-      data = data.filter((b) => b.billingAmount >= parseFloat(amountThreshold));
+      data = data.filter((r) =>
+        r.billingAmount >= parseFloat(amountThreshold));
 
     // sort
     data.sort((a, b) => {
@@ -171,43 +198,45 @@ const SalesReport = () => {
       return 0;
     });
 
-    setFilteredBillings(data);
+    setFilteredProducts(data);
+    setCurrentPage(1); // reset page on every filter change
   }, [
-    billings,
-    fromDate, toDate, customerName, salesmanName, invoiceNo,
-    paymentStatus, deliveryStatus, itemName, amountThreshold,
-    sortField, sortDirection
+    flatProducts, fromDate, toDate, customerName, salesmanName,
+    invoiceNo, paymentStatus, deliveryStatus, itemName,
+    amountThreshold, sortField, sortDirection
   ]);
 
-  // update total
+  /* ─────────────── TOTAL (sum of every row's total₹) ───────────── */
   useEffect(() => {
-    const t = filteredBillings.reduce((s, b) => s + (b.billingAmount - b.discount), 0);
-    setTotalAmount(t);
-  }, [filteredBillings]);
+    const grand = filteredProducts.reduce(
+      (s, r) => s + (parseFloat(r.selledPrice) * r.quantity), 0);
+    setTotalAmount(grand);
+  }, [filteredProducts]);
 
-  // suggestions
+  /* ────────────── SUGGESTIONS FOR AUTOCOMPLETE ─────────────────── */
   useEffect(() => {
-    setCustomerSuggestions([...new Set(billings.map((b) => b.customerName))]);
-    setSalesmanSuggestions([...new Set(billings.map((b) => b.salesmanName))]);
-    setInvoiceSuggestions([...new Set(billings.map((b) => b.invoiceNo))]);
+    setCustomerSuggestions([...new Set(billings.map(b => b.customerName))]);
+    setSalesmanSuggestions([...new Set(billings.map(b => b.salesmanName))]);
+    setInvoiceSuggestions([...new Set(billings.map(b => b.invoiceNo))]);
     setItemSuggestions([
-      ...new Set(billings.flatMap((b) => b.products.map((p) => p.name)))
+      ...new Set(billings.flatMap(b => b.products.map(p => p.name)))
     ]);
   }, [billings]);
 
-  // ── pagination helpers ───────────────────────────────────────────
-  const totalPages = Math.ceil(filteredBillings.length / itemsPerPage);
-  const paginatedBillings = () => {
+  /* ───────────────── PAGINATION HELPERS ────────────────────────── */
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  const paginatedRows = () => {
     const start = (currentPage - 1) * itemsPerPage;
-    return filteredBillings.slice(start, start + itemsPerPage);
+    return filteredProducts.slice(start, start + itemsPerPage);
   };
-  const pageChange = (p) => p >= 1 && p <= totalPages && setCurrentPage(p);
+  const pageChange = (p) =>
+    p >= 1 && p <= totalPages && setCurrentPage(p);
 
-  // ── modal helpers ────────────────────────────────────────────────
+  /* ───────────────── MODAL HELPERS ─────────────────────────────── */
   const viewBilling = (b) => setSelectedBilling(b);
   const closeModal  = () => setSelectedBilling(null);
 
-  // ───────────────────── PDF (unchanged) ───────────────────────────
+  /* ────────────── EXPORT PDF (invoice-level) ───────────────────── */
   const generatePDF = () => {
     const doc = new jsPDF();
     doc.text('Sales Report', 14, 15);
@@ -221,7 +250,7 @@ const SalesReport = () => {
       'Billing Amount','Discount','Net Amount',
       'Payment','Delivery'
     ];
-    const rows = filteredBillings.map((b) => [
+    const rows = billings.map(b => [
       b.invoiceNo,
       new Date(b.invoiceDate).toLocaleDateString(),
       b.salesmanName,
@@ -236,27 +265,26 @@ const SalesReport = () => {
     doc.save('sales_report.pdf');
   };
 
-  // ───────────────────── RENDER ────────────────────────────────────
+  /* ───────────────────────── RENDER ────────────────────────────── */
   return (
     <>
-      {/* ─── Total card ───────────────────────────────────────────── */}
+      {/* ─── Grand total card ────────────────────────────────────── */}
       <div className="bg-white p-4 w-60 rounded-lg shadow-md mb-2">
         <p className="text-sm font-bold text-gray-700">
           Total Amount: Rs.&nbsp;{totalAmount.toFixed(2)}
         </p>
       </div>
 
-      {/* ─── Filters box ──────────────────────────────────────────── */}
+      {/* ─── Filters box ────────────────────────────────────────── */}
       <div className="bg-white p-4 rounded-lg shadow-md mb-4">
         <div className="grid grid-cols-1 md:grid-cols-6 gap-2">
-          {/* each filter input exactly as before… */}
           {/* From Date */}
           <div>
             <label className="block text-xs font-bold mb-1">From Date</label>
             <input
               type="date"
               value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
+              onChange={e => setFromDate(e.target.value)}
               className="w-full border border-gray-300 rounded p-1 text-xs"
             />
           </div>
@@ -266,7 +294,7 @@ const SalesReport = () => {
             <input
               type="date"
               value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
+              onChange={e => setToDate(e.target.value)}
               className="w-full border border-gray-300 rounded p-1 text-xs"
             />
           </div>
@@ -276,13 +304,15 @@ const SalesReport = () => {
             <input
               type="text"
               value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
+              onChange={e => setCustomerName(e.target.value)}
               list="customerSuggestions"
               placeholder="Enter Customer Name"
               className="w-full border border-gray-300 rounded p-1 text-xs"
             />
             <datalist id="customerSuggestions">
-              {customerSuggestions.map((n,i)=><option key={i} value={n}/>)}
+              {customerSuggestions.map((n,i)=>(
+                <option key={i} value={n} />
+              ))}
             </datalist>
           </div>
           {/* Salesman */}
@@ -291,13 +321,15 @@ const SalesReport = () => {
             <input
               type="text"
               value={salesmanName}
-              onChange={(e) => setSalesmanName(e.target.value)}
+              onChange={e => setSalesmanName(e.target.value)}
               list="salesmanSuggestions"
               placeholder="Enter Salesman Name"
               className="w-full border border-gray-300 rounded p-1 text-xs"
             />
             <datalist id="salesmanSuggestions">
-              {salesmanSuggestions.map((n,i)=><option key={i} value={n}/>)}
+              {salesmanSuggestions.map((n,i)=>(
+                <option key={i} value={n} />
+              ))}
             </datalist>
           </div>
           {/* Invoice No */}
@@ -306,13 +338,15 @@ const SalesReport = () => {
             <input
               type="text"
               value={invoiceNo}
-              onChange={(e) => setInvoiceNo(e.target.value)}
+              onChange={e => setInvoiceNo(e.target.value)}
               list="invoiceSuggestions"
               placeholder="Enter Invoice No"
               className="w-full border border-gray-300 rounded p-1 text-xs"
             />
             <datalist id="invoiceSuggestions">
-              {invoiceSuggestions.map((n,i)=><option key={i} value={n}/>)}
+              {invoiceSuggestions.map((n,i)=>(
+                <option key={i} value={n} />
+              ))}
             </datalist>
           </div>
           {/* Payment Status */}
@@ -320,7 +354,7 @@ const SalesReport = () => {
             <label className="block text-xs font-bold mb-1">Payment Status</label>
             <select
               value={paymentStatus}
-              onChange={(e) => setPaymentStatus(e.target.value)}
+              onChange={e => setPaymentStatus(e.target.value)}
               className="w-full border border-gray-300 rounded p-1 text-xs"
             >
               <option value="">All</option>
@@ -334,7 +368,7 @@ const SalesReport = () => {
             <label className="block text-xs font-bold mb-1">Delivery Status</label>
             <select
               value={deliveryStatus}
-              onChange={(e) => setDeliveryStatus(e.target.value)}
+              onChange={e => setDeliveryStatus(e.target.value)}
               className="w-full border border-gray-300 rounded p-1 text-xs"
             >
               <option value="">All</option>
@@ -349,13 +383,15 @@ const SalesReport = () => {
             <input
               type="text"
               value={itemName}
-              onChange={(e) => setItemName(e.target.value)}
+              onChange={e => setItemName(e.target.value)}
               list="itemSuggestions"
               placeholder="Enter Item Name"
               className="w-full border border-gray-300 rounded p-1 text-xs"
             />
             <datalist id="itemSuggestions">
-              {itemSuggestions.map((n,i)=><option key={i} value={n}/>)}
+              {itemSuggestions.map((n,i)=>(
+                <option key={i} value={n} />
+              ))}
             </datalist>
           </div>
           {/* Amount ≥ */}
@@ -364,31 +400,34 @@ const SalesReport = () => {
             <input
               type="number"
               value={amountThreshold}
-              onChange={(e) => setAmountThreshold(e.target.value)}
+              onChange={e => setAmountThreshold(e.target.value)}
               placeholder="Enter Amount"
               className="w-full border border-gray-300 rounded p-1 text-xs"
             />
           </div>
-          {/* Sort field */}
+          {/* Sort Field */}
           <div>
             <label className="block text-xs font-bold mb-1">Sort Field</label>
             <select
               value={sortField}
-              onChange={(e) => setSortField(e.target.value)}
+              onChange={e => setSortField(e.target.value)}
               className="w-full border border-gray-300 rounded p-1 text-xs"
             >
               <option value="invoiceDate">Invoice Date</option>
-              <option value="billingAmount">Billing Amount</option>
               <option value="customerName">Customer Name</option>
               <option value="salesmanName">Salesman Name</option>
+              <option value="name">Product Name</option>
+              <option value="billingAmount">Billing Amount</option>
+              <option value="category">Category</option>
+              <option value="brand">Brand</option>
             </select>
           </div>
-          {/* Sort dir */}
+          {/* Sort Direction */}
           <div>
             <label className="block text-xs font-bold mb-1">Sort Direction</label>
             <select
               value={sortDirection}
-              onChange={(e) => setSortDirection(e.target.value)}
+              onChange={e => setSortDirection(e.target.value)}
               className="w-full border border-gray-300 rounded p-1 text-xs"
             >
               <option value="asc">Ascending</option>
@@ -399,7 +438,7 @@ const SalesReport = () => {
           <div className="flex items-end">
             <button
               onClick={generatePDF}
-              className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-1 rounded text-xs"
+              className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded text-xs"
             >
               Generate PDF
             </button>
@@ -407,109 +446,151 @@ const SalesReport = () => {
         </div>
       </div>
 
-      {/* ─── Error / loading ───────────────────────────────────────── */}
-      {error && <p className="text-red-500 text-center text-xs mb-2">{error}</p>}
+      {/* ─── Error / loading states ──────────────────────────────── */}
+      {error && (
+        <p className="text-red-500 text-center text-xs mb-2">{error}</p>
+      )}
 
       {loading ? (
         <p className="text-xs text-center text-gray-500">Loading…</p>
-      ) : filteredBillings.length === 0 ? (
+      ) : filteredProducts.length === 0 ? (
         <p className="text-center text-gray-500 text-xs">
-          No billings found for the selected criteria.
+          No records found for the selected criteria.
         </p>
       ) : (
         <>
-          {/* ─── Desktop table ─────────────────────────────────────── */}
+          {/* ─── Desktop table ────────────────────────────────────── */}
           <div className="hidden md:block">
             <table className="w-full text-xs text-gray-500 bg-white shadow-md rounded-lg overflow-hidden">
               <thead className="bg-red-600 text-white">
-                <tr className="divide-y">
-                  <th className="px-2 py-1 text-left">Invoice No</th>
-                  <th className="px-2 py-1">Invoice Date</th>
-                  <th className="px-2 py-1">Salesman</th>
-                  <th className="px-2 py-1">Customer</th>
-                  <th className="px-2 py-1">Billing Amount</th>
-                  <th className="px-2 py-1">Discount</th>
-                  <th className="px-2 py-1">Net Amount</th>
-                  <th className="px-2 py-1">Payment</th>
-                  <th className="px-2 py-1">Delivery</th>
+                <tr>
+                  <th className="px-2 py-3 text-left">Invoice No</th>
+                  <th className="px-2 py-3">Product</th>
+                  <th className="px-2 py-3">Invoice Date</th>
+                  <th className="px-2 py-3">Category</th>
+                  <th className="px-2 py-3">Brand</th>
+                  <th className="px-2 py-3">Qty</th>
+                  <th className="px-2 py-3">Unit</th>
+                  <th className="px-2 py-3">Sell&nbsp;₹</th>
+                  <th className="px-2 py-3">Total&nbsp;₹</th>
+                  <th className="px-2 py-3">Profit&nbsp;%</th>
+                  <th className="px-2 py-3">Delivery</th>
                 </tr>
               </thead>
               <tbody>
-                {paginatedBillings().map((b) => (
-                  <tr key={b.invoiceNo} className="hover:bg-gray-100 divide-y divide-x">
-                    <td
-                      onClick={() => viewBilling(b)}
-                      className="px-2 py-2 text-center font-bold cursor-pointer text-red-600 hover:underline"
+                {paginatedRows().map(r => {
+                  const cost  = parseFloat(productMap[r.item_id]?.price || 0);
+                  const sell  = parseFloat(r.selledPrice);
+                  const qty   = r.quantity;
+                  const total = sell * qty;
+                  const pct   = sell > 0 ? ((sell - cost) / sell) * 100 : 0;
+
+                  return (
+                    <tr
+                      key={`${r.invoiceNo}-${r.item_id}`}
+                      className="hover:bg-gray-100 divide-x divide-y"
                     >
-                      {b.invoiceNo}
-                    </td>
-                    <td className="px-2 py-1">
-                      {new Date(b.invoiceDate).toLocaleDateString()}
-                    </td>
-                    <td className="px-2 py-1">{b.salesmanName}</td>
-                    <td className="px-2 py-1">{b.customerName}</td>
-                    <td className="px-2 py-1">Rs.&nbsp;{b.grandTotal.toFixed(2)}</td>
-                    <td className="px-2 py-1">Rs.&nbsp;{b.discount.toFixed(2)}</td>
-                    <td className="px-2 py-1">
-                      Rs.&nbsp;{(b.billingAmount).toFixed(2)}
-                    </td>
-                    <td
-                      className={`px-2 py-1 font-bold text-center ${
-                        b.paymentStatus === 'Paid' ? 'text-green-500' : 'text-red-500'
-                      }`}
-                    >
-                      {b.paymentStatus}
-                    </td>
-                    <td
-                      className={`px-2 py-1 font-bold text-center ${
-                        b.deliveryStatus === 'Delivered' ? 'text-green-500' : 'text-red-500'
-                      }`}
-                    >
-                      {b.deliveryStatus}
-                    </td>
-                  </tr>
-                ))}
+                      <td
+                        className="px-2 py-3 font-bold cursor-pointer text-red-600 hover:underline"
+                        onClick={() =>
+                          viewBilling(billings.find(b => b.invoiceNo === r.invoiceNo))
+                        }
+                      >
+                        {r.invoiceNo}
+                      </td>
+                      <td className="px-2 py-3">{r.name}</td>
+                      <td className="px-2 py-3">
+                        {new Date(r.invoiceDate).toLocaleDateString()}
+                      </td>
+                      <td className="px-2 py-3">
+                        {r.category || productMap[r.item_id]?.category || '--'}
+                      </td>
+                      <td className="px-2 py-3">
+                        {r.brand || productMap[r.item_id]?.brand || '--'}
+                      </td>
+                      <td className="px-2 py-3 text-center">{qty}</td>
+                      <td className="px-2 py-3 text-center">{r.unit}</td>
+                      <td className="px-2 py-3 text-right">₹{sell.toFixed(2)}</td>
+                      <td className="px-2 py-3 font-bold text-right">₹{total.toFixed(2)}</td>
+                      <td className="px-2 py-3 text-center">
+                        <ProfitBadge value={pct} />
+                      </td>
+                      <td
+                        className={`px-2 py-3 text-center font-bold ${
+                          r.deliveryStatus === 'Delivered'
+                            ? 'text-green-600'
+                            : 'text-red-600'
+                        }`}
+                      >
+                        {r.deliveryStatus}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
-          {/* ─── Mobile cards ──────────────────────────────────────── */}
+          {/* ─── Mobile cards ─────────────────────────────────────── */}
           <div className="md:hidden">
-            {paginatedBillings().map((b) => (
-              <div key={b.invoiceNo} className="bg-white rounded-lg shadow-md p-2 mb-2">
-                <div className="flex justify-between items-center">
+            {paginatedRows().map(r => {
+              const cost  = parseFloat(productMap[r.item_id]?.price || 0);
+              const sell  = parseFloat(r.selledPrice);
+              const total = sell * r.quantity;
+              const pct   = sell > 0 ? ((sell - cost) / sell) * 100 : 0;
+
+              return (
+                <div
+                  key={`${r.invoiceNo}-${r.item_id}`}
+                  className="bg-white rounded-lg shadow-md p-2 mb-2"
+                >
+                  <div className="flex justify-between items-center">
+                    <p
+                      className="text-sm font-bold text-red-600 cursor-pointer"
+                      onClick={() =>
+                        viewBilling(billings.find(b => b.invoiceNo === r.invoiceNo))
+                      }
+                    >
+                      {r.name}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(r.invoiceDate).toLocaleDateString()}
+                    </p>
+                  </div>
+
+                  <p className="text-gray-600 text-xs mt-1">
+                    Invoice: {r.invoiceNo}
+                  </p>
+                  <p className="text-gray-600 text-xs mt-1">
+                    Category: {r.category || productMap[r.item_id]?.category || '--'}
+                  </p>
+                  <p className="text-gray-600 text-xs mt-1">
+                    Brand: {r.brand || productMap[r.item_id]?.brand || '--'}
+                  </p>
+                  <p className="text-gray-600 text-xs mt-1">
+                    Qty: {r.quantity} {r.unit}
+                  </p>
+                  <p className="text-gray-600 text-xs mt-1">
+                    Sell&nbsp;₹: {sell.toFixed(2)}
+                  </p>
+                  <p className="text-gray-600 text-xs font-bold mt-1">
+                    Total&nbsp;₹: {total.toFixed(2)}
+                  </p>
+                  <p className="text-gray-600 text-xs mt-1 flex items-center">
+                    Profit:&nbsp;<ProfitBadge value={pct} />
+                  </p>
                   <p
-                    className="text-sm font-bold text-red-600 cursor-pointer"
-                    onClick={() => viewBilling(b)}
+                    className={`text-xs font-bold mt-1 ${
+                      r.deliveryStatus === 'Delivered'
+                        ? 'text-green-600'
+                        : 'text-red-600'
+                    }`}
                   >
-                    Invoice No: {b.invoiceNo}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {new Date(b.invoiceDate).toLocaleDateString()}
+                    {r.deliveryStatus}
                   </p>
                 </div>
-                <p className="text-gray-600 text-xs mt-1">
-                  Customer: {b.customerName}
-                </p>
-                <p className="text-gray-600 text-xs mt-1">
-                  Salesman: {b.salesmanName}
-                </p>
-                <p className="text-gray-600 text-xs mt-1">
-                  Payment Status: {b.paymentStatus}
-                </p>
-                <p className="text-gray-600 text-xs mt-1">
-                  Delivery Status: {b.deliveryStatus}
-                </p>
-                <div className="flex justify-between mt-2">
-                  <p className="text-gray-600 text-xs font-bold">
-                    Billing: Rs.&nbsp;{b.grandTotal.toFixed(2)}
-                  </p>
-                  <p className="text-gray-600 text-xs font-bold">
-                    Net: Rs.&nbsp;{(b.billingAmount).toFixed(2)}
-                  </p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* ─── Pagination controls ─────────────────────────────── */}
@@ -517,7 +598,7 @@ const SalesReport = () => {
             <button
               onClick={() => pageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className={`px-2 text-xs font-bold py-1 rounded-lg ${
+              className={`px-2 py-3 text-xs font-bold rounded-lg ${
                 currentPage === 1
                   ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                   : 'bg-red-500 text-white hover:bg-red-600'
@@ -531,7 +612,7 @@ const SalesReport = () => {
             <button
               onClick={() => pageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className={`px-2 text-xs font-bold py-1 rounded-lg ${
+              className={`px-2 py-3 text-xs font-bold rounded-lg ${
                 currentPage === totalPages
                   ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                   : 'bg-red-500 text-white hover:bg-red-600'
@@ -543,7 +624,7 @@ const SalesReport = () => {
         </>
       )}
 
-      {/* ───────────────── View-details Modal ────────────────────── */}
+      {/* ───────────────────────── MODAL ─────────────────────────── */}
       <Dialog
         fullScreen
         open={Boolean(selectedBilling)}
@@ -568,12 +649,12 @@ const SalesReport = () => {
                 transition={{ duration: 0.35 }}
                 className="bg-white rounded-xl p-6 shadow-lg"
               >
-                {/* Header */}
+                {/* ─── Header ─────────────────────────────────────── */}
                 <h2 className="text-2xl font-bold text-red-600 mb-4">
                   Invoice #{selectedBilling.invoiceNo}
                 </h2>
 
-                {/* Basic info grid */}
+                {/* ─── Basic info grid ────────────────────────────── */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-6">
                   <div>
                     <p className="mb-1">
@@ -614,7 +695,7 @@ const SalesReport = () => {
                     <p className="mb-1">
                       <span className="font-bold">Delivery&nbsp;Status:</span>&nbsp;
                       <span
-                        className={`px-2 py-1 rounded text-white text-xs ${
+                        className={`px-2 py-3 rounded text-white text-xs ${
                           selectedBilling.deliveryStatus === 'Delivered'
                             ? 'bg-green-500'
                             : selectedBilling.deliveryStatus === 'Partially Delivered'
@@ -628,7 +709,7 @@ const SalesReport = () => {
                     <p className="mb-1">
                       <span className="font-bold">Payment&nbsp;Status:</span>&nbsp;
                       <span
-                        className={`px-2 py-1 rounded text-white text-xs ${
+                        className={`px-2 py-3 rounded text-white text-xs ${
                           selectedBilling.paymentStatus === 'Paid'
                             ? 'bg-green-500'
                             : selectedBilling.paymentStatus === 'Partial'
@@ -646,7 +727,7 @@ const SalesReport = () => {
                   </div>
                 </div>
 
-                {/* Products table */}
+                {/* ─── Products table inside modal ───────────────── */}
                 <h3 className="text-lg font-bold text-red-600 mb-4">
                   Products ({selectedBilling.products.length})
                 </h3>
@@ -654,15 +735,17 @@ const SalesReport = () => {
                   <table className="w-full text-xs text-gray-500">
                     <thead className="bg-gray-100 text-gray-700">
                       <tr>
-                        <th className="px-4 py-2">Id</th>
-                        <th className="px-4 py-2">Product</th>
-                        {userInfo.isAdmin && <th className="px-4 py-2">Cost&nbsp;₹</th>}
-                        <th className="px-4 py-2">Sell&nbsp;₹</th>
-                        <th className="px-4 py-2">Qty</th>
+                        <th className="px-4 py-3">Id</th>
+                        <th className="px-4 py-3">Product</th>
+                        {userInfo.isAdmin && (
+                          <th className="px-4 py-3">Cost&nbsp;₹</th>
+                        )}
+                        <th className="px-4 py-3">Sell&nbsp;₹</th>
+                        <th className="px-4 py-3">Qty</th>
                         {userInfo.isSuper && (
                           <>
-                            <th className="px-4 py-2">Profit&nbsp;%</th>
-                            <th className="px-4 py-2">Total&nbsp;₹</th>
+                            <th className="px-4 py-3">Profit&nbsp;%</th>
+                            <th className="px-4 py-3">Total&nbsp;₹</th>
                           </>
                         )}
                       </tr>
@@ -672,25 +755,30 @@ const SalesReport = () => {
                         const cost = parseFloat(productMap[p.item_id]?.price || 0);
                         const sell = parseFloat(p.selledPrice);
                         const qty  = p.quantity;
-                        const profitPct = sell > 0 ? ((sell - cost) / sell) * 100 : 0;
-                        const totalProf = (sell - cost) * qty;
+                        const pct  = sell > 0 ? ((sell - cost) / sell) * 100 : 0;
+                        const tot  = (sell - cost) * qty;
 
                         return (
-                          <tr key={idx} className="text-center border-b hover:bg-gray-50">
-                            <td className="px-4 py-2 font-semibold">{p.item_id}</td>
-                            <td className="px-4 py-2">{p.name}</td>
+                          <tr
+                            key={idx}
+                            className="text-center border-b hover:bg-gray-50"
+                          >
+                            <td className="px-4 py-3 font-semibold">
+                              {p.item_id}
+                            </td>
+                            <td className="px-4 py-3">{p.name}</td>
                             {userInfo.isAdmin && (
-                              <td className="px-4 py-2">₹{cost.toFixed(2)}</td>
+                              <td className="px-4 py-3">₹{cost.toFixed(2)}</td>
                             )}
-                            <td className="px-4 py-2">₹{sell.toFixed(2)}</td>
-                            <td className="px-4 py-2">{qty}</td>
+                            <td className="px-4 py-3">₹{sell.toFixed(2)}</td>
+                            <td className="px-4 py-3">{qty}</td>
                             {userInfo.isSuper && (
                               <>
-                                <td className="px-4 py-2">
-                                  <ProfitBadge value={profitPct} />
+                                <td className="px-4 py-3">
+                                  <ProfitBadge value={pct} />
                                 </td>
-                                <td className="px-4 py-2 font-semibold">
-                                  ₹{totalProf.toFixed(2)}
+                                <td className="px-4 py-3 font-semibold">
+                                  ₹{tot.toFixed(2)}
                                 </td>
                               </>
                             )}
@@ -701,7 +789,7 @@ const SalesReport = () => {
                   </table>
                 </div>
 
-                {/* Summary cards (super only) */}
+                {/* ─── Summary cards for super users ─────────────── */}
                 {userInfo.isSuper && (() => {
                   const pr = calcProfit(selectedBilling);
                   return (

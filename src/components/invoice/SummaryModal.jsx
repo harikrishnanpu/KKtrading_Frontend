@@ -26,12 +26,8 @@ const Transition = forwardRef(function Transition(props, ref) {
 });
 
 export default function SummaryModal({
-  customerName,
   invoiceNo,
   totalAmount,
-  amountWithoutGST,
-  cgst,
-  sgst,
   discount,
   setDiscount,
   receivedAmount,
@@ -43,12 +39,9 @@ export default function SummaryModal({
   onClose,
   onSubmit,
   isSubmitting,
-  salesmanName,
-  totalProducts,
   roundOff,
   setRoundOff,
   roundOffRef,
-  handleLocalSave,
   unloading,
   setUnloading,
   transportation,
@@ -70,15 +63,19 @@ export default function SummaryModal({
   receivedAmountRef,
   neededToPurchase,
   setNeededToPurchase,
-  isApproved,
-  setIsApproved,
   roundOffMode,
-  setRoundOffMode
+  setRoundOffMode,
+  amountReceived
 }) {
 
   const { user: userInfo } = useAuth(); // Get the logged-in user info
-  const [fetchedReceivedAmount, setFetchedReceivedAmount] = useState(0);
-  const [fetchedRemainingAmount, setFetchedRemainingAmount] = useState(0);
+  const [billamountReceived, setBillAmountReceived] = useState(parseFloat(amountReceived).toFixed(2));
+  const [ remainingAmount , setRemainingAmount] = useState(0);
+
+    useEffect(()=>{
+          let remainingAmount = (parseFloat(grandTotal) - billamountReceived).toFixed(2);
+          setRemainingAmount(remainingAmount)
+    },[grandTotal]);
   
 
   useEffect(() => {
@@ -86,12 +83,6 @@ export default function SummaryModal({
       discountRef.current.focus();
     }
   }, [discountRef.current]);
-
-  
-  useEffect(() => {
-    setFetchedReceivedAmount(receivedAmount);
-    setFetchedRemainingAmount((parseFloat(parseFloat(grandTotal)) - parseFloat(receivedAmount)).toFixed(2));
-  }, [discount, receivedAmount, grandTotal]);
 
   return (
     <Dialog
@@ -166,8 +157,8 @@ export default function SummaryModal({
   <Grid item xs={6} sm={3}>
     <Card sx={{ p: 1.5, borderRadius: 2, boxShadow: 1 }}>
       <CardContent sx={{ p: 0 }}>
-        <Typography className='font-bold' variant="caption" color="text.secondary">
-          Total Amount
+        <Typography className='font-bold' variant="caption" color="text.dark">
+          Grand Total Amount
         </Typography>
         <Typography variant="h6" fontWeight="bold">
           ₹{parseFloat(grandTotal).toFixed(2)}
@@ -184,7 +175,7 @@ export default function SummaryModal({
           Remaining
         </Typography>
         <Typography variant="h6" fontWeight="bold">
-          ₹{fetchedRemainingAmount}
+          ₹{remainingAmount}
         </Typography>
       </CardContent>
     </Card>
@@ -220,7 +211,7 @@ export default function SummaryModal({
               value={receivedAmount || 0}
               onKeyDown={(e)=> changeRef(e, paymentMethodRef)}
               onChange={(e) =>
-                setReceivedAmount(Math.min(parseFloat(e.target.value) || 0, parseFloat(grandTotal)))
+                setReceivedAmount(Math.min(parseFloat(e.target.value) || 0, parseFloat(remainingAmount).toFixed(2)))
               }
               className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
             />

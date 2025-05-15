@@ -398,15 +398,25 @@ const StockRegistry = () => {
                         <td className="px-2 py-1 text-center">
                         {new Date(log.date).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
                         </td>
-                        <td className="px-2 py-1">{log.itemId}</td>
-                        <td className="px-2 py-1">{log.name}</td>
-                        <td className="px-2 py-1">{log.brand}</td>
-                        <td className="px-2 py-1">{log.category}</td>
-                        <td className="px-2 py-1">{log.changeType}</td>
-                        <td className="px-2 py-1">{log.updatedBy}</td>
-                        <td className="px-2 py-1">{log.invoiceNo || ''}</td>
-                        <td className="px-2 py-1">{log.quantityChange}</td>
-                        <td className="px-2 py-1">{log.finalStock}</td>
+                        <td className="px-2 py-2">{log.itemId}</td>
+                        <td className="px-2 py-2">{log.name}</td>
+                        <td className="px-2 py-2">{log.brand}</td>
+                        <td className="px-2 py-2">{log.category}</td>
+                        <td className="px-2 py-2">{log.changeType}</td>
+                        <td className="px-2 py-2">{log.updatedBy}</td>
+                        <td className="px-2 py-2">{log.invoiceNo || ''}</td>
+<td
+  className={`px-3 py-2 font-bold ${
+    log.quantityChange > 0
+      ? 'text-green-600'
+      : log.quantityChange < 0
+      ? 'text-red-600'
+      : ''
+  }`}
+>
+  {log.quantityChange > 0 ? `+${log.quantityChange}` : log.quantityChange}
+</td>
+                        <td className="px-2 py-2 font-bold">{log.finalStock}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -441,9 +451,17 @@ const StockRegistry = () => {
                       Invoice No: {log.invoiceNo || 'N/A'}
                     </p>
                     <div className="flex justify-between mt-2">
-                      <p className="text-gray-600 text-xs font-bold">
-                        Qty Change: {log.quantityChange}
-                      </p>
+         <p
+  className={`text-sm font-bold ${
+    log.quantityChange > 0
+      ? 'text-green-600'
+      : log.quantityChange < 0
+      ? 'text-red-600'
+      : ''
+  }`}
+>
+  Qty: {log.quantityChange > 0 ? `+${log.quantityChange}` : log.quantityChange}
+</p>
                       <p className="text-gray-600 text-xs font-bold">
                         Final Stock: {log.finalStock}
                       </p>

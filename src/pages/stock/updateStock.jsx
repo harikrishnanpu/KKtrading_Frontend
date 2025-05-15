@@ -1,24 +1,48 @@
-import React, { useState, useEffect } from 'react';
-import api from '../api'; // Axios instance
+// src/pages/StockUpdatePage.jsx
+import React, { useState, useEffect, useMemo, forwardRef } from 'react';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Slide,
+  Button,
+  Drawer,
+  IconButton,
+  TextField,
+  Select,
+  MenuItem,
+  InputLabel,
+  FormControl,
+} from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
+import FilterAltOutlinedIcon from '@mui/icons-material/FilterAltOutlined';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import { useNavigate } from 'react-router-dom';
+import api from '../api';
 import useAuth from 'hooks/useAuth';
+import { Trash } from 'iconsax-react';
+
+const Transition = forwardRef(function Transition(props, ref) {
+  return <Slide direction="up" ref={ref} {...props} />;
+});
 
 const StockUpdatePage = () => {
-  const navigate = useNavigate();
-const {user: userInfo} = useAuth();
+  const { user: userInfo } = useAuth();
+
+  /* ─────────────────────────── state ─────────────────────────── */
   const [searchQuery, setSearchQuery] = useState('');
   const [productSuggestions, setProductSuggestions] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
   const [quantityChange, setQuantityChange] = useState('');
   const [remark, setRemark] = useState('');
+  const [updateError, setUpdateError] = useState('');
 
   const [logs, setLogs] = useState([]);
-  const [filteredLogs, setFilteredLogs] = useState([]);
 
-  // Filters
+  /* filters */
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [filterName, setFilterName] = useState('');
@@ -27,28 +51,30 @@ const {user: userInfo} = useAuth();
   const [sortField, setSortField] = useState('date');
   const [sortDirection, setSortDirection] = useState('desc');
 
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [logError, setLogError] = useState('');
-  const [updateError, setUpdateError] = useState('');
   const [deleteMessage, setDeleteMessage] = useState('');
 
-  // Fetch logs
+  /* ─────────────────────────── fetch logs ─────────────────────────── */
   const fetchLogs = async () => {
     setLoading(true);
     setLogError('');
     try {
-      const params = {};
-      if (fromDate) params.fromDate = fromDate;
-      if (toDate) params.toDate = toDate;
-      if (filterName) params.name = filterName;
-      if (filterBrand) params.brand = filterBrand;
-      if (filterCategory) params.category = filterCategory;
-      params.sortField = sortField;
-      params.sortDirection = sortDirection;
-
+      const params = {
+        ...(fromDate && { fromDate }),
+        ...(toDate && { toDate }),
+        ...(filterName && { name: filterName }),
+        ...(filterBrand && { brand: filterBrand }),
+        ...(filterCategory && { category: filterCategory }),
+        sortField,
+        sortDirection,
+      };
       const { data } = await api.get('/api/stock-update/logs', { params });
       setLogs(data);
-    } catch (error) {
+    } catch {
       setLogError('Failed to fetch logs.');
     } finally {
       setLoading(false);
@@ -57,394 +83,439 @@ const {user: userInfo} = useAuth();
 
   useEffect(() => {
     fetchLogs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fromDate, toDate, filterName, filterBrand, filterCategory, sortField, sortDirection]);
 
-  useEffect(() => {
-    setFilteredLogs(logs);
-  }, [logs]);
-
-  // Product search
-  const handleSearchChange = async (e) => {
+  /* ─────────────────────────── suggestions ─────────────────────────── */
+  const handleSearchChange = async e => {
     const q = e.target.value;
     setSearchQuery(q);
-    if (q.trim().length === 0) {
-      setProductSuggestions([]);
-      return;
-    }
+    if (!q.trim()) return setProductSuggestions([]);
     try {
-      const { data } = await api.get('/api/stock-update/search-products', {
-        params: { q },
-      });
+      const { data } = await api.get('/api/stock-update/search-products', { params: { q } });
       setProductSuggestions(data);
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
     }
   };
 
-  const selectProduct = (product) => {
-    setSelectedProduct(product);
-    setSearchQuery(product.name);
+  const selectProduct = p => {
+    setSelectedProduct(p);
+    setSearchQuery(p.name);
     setProductSuggestions([]);
   };
 
+  /* ─────────────────────────── stock update ─────────────────────────── */
   const handleStockUpdate = async () => {
-    if (!selectedProduct) {
-      setUpdateError('No product selected.');
-      return;
-    }
+    if (!selectedProduct) return setUpdateError('Select a product first.');
+    if (!quantityChange || isNaN(+quantityChange) || +quantityChange === 0)
+      return setUpdateError('Quantity must be a non-zero number.');
 
-    if (!quantityChange || isNaN(parseFloat(quantityChange)) || parseFloat(quantityChange) === 0) {
-      setUpdateError('Enter a valid quantity change (e.g. +10 or -5).');
-      return;
-    }
-
-    setUpdateError('');
     try {
-      const { data } = await api.post('/api/stock-update/create', {
+      await api.post('/api/stock-update/create', {
         item_id: selectedProduct.item_id,
         quantityChange,
         submittedBy: userInfo?.name || 'Unknown',
-        remark
+        remark,
       });
-      // After update, refetch logs and product details
-      fetchLogs();
-    //   const productRes = await api.get(`/api/products/itemId/${selectedProduct.item_id}`);
-      setSelectedProduct('');
+      /* reset & refetch */
+      setSelectedProduct(null);
       setSearchQuery('');
       setQuantityChange('');
       setRemark('');
-    } catch (error) {
-      console.error(error);
-      setUpdateError(error.response?.data?.message || 'Failed to update stock.');
+      setUpdateError('');
+      fetchLogs();
+      setDialogOpen(false);
+    } catch (err) {
+      setUpdateError(err.response?.data?.message || 'Update failed.');
     }
   };
 
-  const handleDeleteLog = async (logId) => {
-    if (!window.confirm('Are you sure you want to delete this update log?')) return;
+  /* ─────────────────────────── delete log ─────────────────────────── */
+  const handleDeleteLog = async id => {
+    if (!window.confirm('Delete this update log?')) return;
     try {
-      const { data } = await api.delete(`/api/stock-update/${logId}`);
+      const { data } = await api.delete(`/api/stock-update/${id}`);
       setDeleteMessage(data.message);
       fetchLogs();
-      if (selectedProduct) {
-        const productRes = await api.get(`/api/products/itemId/${selectedProduct.item_id}`);
-        setSelectedProduct(productRes.data);
-      }
-      setTimeout(() => setDeleteMessage(''), 3000);
-    } catch (error) {
-      console.error(error);
-      setDeleteMessage('Failed to delete log.');
+      setTimeout(() => setDeleteMessage(''), 2500);
+    } catch {
+      setDeleteMessage('Delete failed.');
     }
   };
 
+  /* ─────────────────────────── PDF ─────────────────────────── */
   const generatePDF = () => {
     const doc = new jsPDF();
-    doc.text('Stock Update Logs', 14, 15);
-    doc.setFontSize(10);
-    doc.text(`Filters: From: ${fromDate || 'All'} To: ${toDate || 'All'}`, 14, 22);
-    doc.text(`Name: ${filterName || 'All'}, Brand: ${filterBrand || 'All'}, Category: ${filterCategory || 'All'}`, 14, 27);
+    doc.text('Stock Update Logs', 14, 15).setFontSize(9);
+    doc.text(
+      `Filters → From: ${fromDate || 'All'} | To: ${toDate || 'All'} | Name: ${
+        filterName || 'All'
+      } | Brand: ${filterBrand || 'All'} | Cat: ${filterCategory || 'All'}`,
+      14,
+      22
+    );
 
-    const columns = ['Date', 'Product Name', 'Brand', 'Category', 'Quantity Change', 'Updated By', 'Remark'];
-    const rows = filteredLogs.map(log => [
-      new Date(log.date).toLocaleString(),
-      log.name,
-      log.brand,
-      log.category,
-      log.quantity > 0 ? `+${log.quantity}` : `${log.quantity}`,
-      log.submittedBy,
-      log.remark || ''
+    const rows = logs.map(l => [
+      new Date(l.date).toLocaleString(),
+      l.item_id,
+      l.name,
+      l.brand,
+      l.category,
+      l.quantity > 0 ? `+${l.quantity}` : l.quantity,
+      l.submittedBy,
+      l.remark || '',
     ]);
-
     doc.autoTable({
-      head: [columns],
+      head: [['Date', 'ID', 'Name', 'Brand', 'Category', 'Qty', 'User', 'Remark']],
       body: rows,
-      startY: 32,
+      startY: 28,
       styles: { fontSize: 8 },
     });
-
     doc.save('stock_updates.pdf');
   };
 
-  // Sorting and filtering handled by effect on logs fetch
-  // Pagination (if needed)
+  /* ─────────────────────────── pagination helpers ─────────────────────────── */
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
-  const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
-  const paginateLogs = () => {
+  const paginated = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
-    return filteredLogs.slice(start, start + itemsPerPage);
-  };
+    return logs.slice(start, start + itemsPerPage);
+  }, [logs, currentPage]);
 
+  /* ─────────────────────────── render ─────────────────────────── */
   return (
-    <div className="p-4">
+    <div className="p-4 max-w-7xl mx-auto">
+      {/* top bar */}
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-sm font-semibold text-gray-700">Stock Updates</h2>
 
-      {/* Product Search and Update */}
-      <div className="bg-white p-2 rounded-lg shadow-md mb-4">
-        <h3 className="text-sm font-bold text-gray-700 mb-2">Update Stock</h3>
-        <div className="relative mb-2">
-          <input
-            type="text"
+        <div className="space-x-2 flex">
+          <Button
+            variant="outlined"
+            startIcon={<FilterAltOutlinedIcon />}
+            onClick={() => setDrawerOpen(true)}
+          >
+            Filters / PDF
+          </Button>
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<AddCircleOutlineIcon />}
+            onClick={() => setDialogOpen(true)}
+          >
+            Update Stock
+          </Button>
+        </div>
+      </div>
+
+      {/* messages */}
+      {logError && <p className="text-red-600 text-sm mb-2">{logError}</p>}
+      {deleteMessage && <p className="text-green-600 text-sm mb-2">{deleteMessage}</p>}
+
+      {/* table (≥ md) */}
+      <div className="hidden md:block">
+        <table className="w-full text-sm text-gray-700 bg-white shadow rounded-lg overflow-hidden">
+          <thead className="bg-red-600 text-white">
+            <tr>
+              {['Date', 'ID', 'Name', 'Qty', 'User', 'Remark', ''].map(h => (
+                <th key={h} className="px-3 py-2 text-left whitespace-nowrap">
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={7} className="text-center py-6">
+                  Loading…
+                </td>
+              </tr>
+            ) : paginated.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="text-center py-6">
+                  No logs
+                </td>
+              </tr>
+            ) : (
+              paginated.map(log => (
+                <tr
+                  key={log._id}
+                  className="odd:bg-gray-50 even:bg-white hover:bg-gray-100 transition"
+                >
+                  <td className="px-3 py-2">{new Date(log.date).toLocaleString()}</td>
+                  <td className="px-3 py-2">{log.item_id}</td>
+                  <td className="px-3 py-2">{log.name}</td>
+                  <td
+                    className={`px-3 py-2 font-bold ${
+                      log.quantity > 0 ? 'text-green-600' : 'text-red-600'
+                    }`}
+                  >
+                    {log.quantity > 0 ? `+${log.quantity}` : log.quantity}
+                  </td>
+                  <td className="px-3 py-2">{log.submittedBy}</td>
+                  <td className="px-3 py-2">{log.remark}</td>
+                  <td className="px-3 py-2">
+                    <IconButton onClick={() => handleDeleteLog(log._id)} size="small" color="error">
+                      <Trash fontSize="inherit" />
+                    </IconButton>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* card view (< md) */}
+      <div className="md:hidden space-y-3">
+        {loading ? (
+          <p className="text-center text-gray-500">Loading…</p>
+        ) : paginated.length === 0 ? (
+          <p className="text-center text-gray-500">No logs</p>
+        ) : (
+          paginated.map(log => (
+            <div key={log._id} className="bg-white shadow rounded-lg p-3">
+              <div className="flex justify-between text-sm font-semibold">
+                <span>{log.name}</span>
+                <span className="text-gray-500">{new Date(log.date).toLocaleString()}</span>
+              </div>
+              <p className="text-xs text-gray-600">ID: {log.item_id}</p>
+              <p
+                className={`text-sm font-bold ${
+                  log.quantity > 0 ? 'text-green-600' : 'text-red-600'
+                }`}
+              >
+                Qty: {log.quantity > 0 ? `+${log.quantity}` : log.quantity}
+              </p>
+              <p className="text-xs">User: {log.submittedBy}</p>
+              <p className="text-xs mb-2">Remark: {log.remark}</p>
+              <Button
+                variant="text"
+                color="error"
+                size="small"
+                onClick={() => handleDeleteLog(log._id)}
+              >
+                Delete
+              </Button>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* pagination */}
+      {logs.length > 0 && (
+        <div className="flex justify-between items-center mt-4 text-sm">
+          <Button
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage(p => p - 1)}
+          >
+            Previous
+          </Button>
+          <span>
+            Page {currentPage} of {Math.ceil(logs.length / itemsPerPage)}
+          </span>
+          <Button
+            disabled={currentPage * itemsPerPage >= logs.length}
+            onClick={() => setCurrentPage(p => p + 1)}
+          >
+            Next
+          </Button>
+        </div>
+      )}
+
+      {/* ───────────── Update-stock Dialog ───────────── */}
+      <Dialog
+   open={dialogOpen}
+      TransitionComponent={Transition}
+      fullWidth
+      maxWidth="xs"
+      PaperProps={{
+        sx: {
+          bottom: -40,
+          left: 0,
+          right: 0,
+          borderRadius: "16px 16px 0 0", // Rounded top corners
+          // maxHeight: "30vh", // Keep it compact
+          width: "90%", // Responsive width
+          textAlign: "center", // Center text inside Paper
+          display: "flex",
+          justifyContent: "center",
+          padding: 2,
+        },
+      }}
+      sx={{
+        "& .MuiDialog-container": {
+          display: "flex",
+          alignItems: "flex-end",   // Stick to bottom
+        },
+      }}
+        onClose={() => setDialogOpen(false)}
+      >
+        <DialogTitle>
+          Update Stock
+          <IconButton
+            edge="end"
+            onClick={() => setDialogOpen(false)}
+            sx={{ position: 'absolute', right: 8, top: 8 }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent dividers className="space-y-4">
+          <TextField
+            label="Search product"
+            size="small"
+            fullWidth
             value={searchQuery}
             onChange={handleSearchChange}
-            className="w-full border border-gray-300 rounded p-1 text-xs"
-            placeholder="Search product by name or item_id..."
           />
+          {/* suggestion list */}
           {productSuggestions.length > 0 && (
-            <ul className="absolute z-10 w-full bg-white border mt-1 rounded shadow-md max-h-40 overflow-y-auto text-xs">
-              {productSuggestions.map((p) => (
+            <ul className="border rounded text-left max-h-40 overflow-y-auto text-sm">
+              {productSuggestions.map(p => (
                 <li
                   key={p._id}
-                  className="p-2 hover:bg-gray-100 cursor-pointer"
+                  className="px-3 py-2 cursor-pointer hover:bg-gray-100"
                   onClick={() => selectProduct(p)}
                 >
-                  {p.item_id} - {p.name}
+                  {p.item_id} — {p.name}
                 </li>
               ))}
             </ul>
           )}
+
+          {selectedProduct && (
+            <div className="bg-gray-50 p-3 rounded text-sm">
+              <p className="font-semibold">
+                {selectedProduct.name} ({selectedProduct.item_id})
+              </p>
+              <p>Brand: {selectedProduct.brand}</p>
+              <p>Category: {selectedProduct.category}</p>
+              <p>In Stock: {selectedProduct.countInStock}</p>
+            </div>
+          )}
+
+          <TextField
+            label="Quantity change (+ / -)"
+            size="small"
+            fullWidth
+            value={quantityChange}
+            onChange={e => setQuantityChange(e.target.value)}
+          />
+          <TextField
+            label="Remark"
+            size="small"
+            fullWidth
+            value={remark}
+            onChange={e => setRemark(e.target.value)}
+          />
+          {updateError && <p className="text-red-600 text-sm">{updateError}</p>}
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+          <Button variant="outlined" onClick={handleStockUpdate}>
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ───────────── Filter Drawer ───────────── */}
+      <Drawer
+        anchor="right"
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        PaperProps={{ className: 'w-full max-w-sm' }}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b">
+          <h3 className="text-lg font-medium">Filters & PDF</h3>
+          <IconButton onClick={() => setDrawerOpen(false)}>
+            <CloseIcon />
+          </IconButton>
         </div>
-        {selectedProduct && (
-          <div className="border rounded p-2 text-xs bg-gray-50 mb-2 animate-fadeIn">
-            <p className="font-bold text-gray-700 mb-1">
-              {selectedProduct.name} ({selectedProduct.item_id})
-            </p>
-            <p className="text-gray-600 mb-1">Brand: {selectedProduct.brand}</p>
-            <p className="text-gray-600 mb-1">Category: {selectedProduct.category}</p>
-            <p className="text-gray-600 mb-1">
-              Current Stock: {selectedProduct.countInStock}
-            </p>
-          </div>
-        )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-          <div>
-            <label className="block text-xs font-bold mb-1">Quantity Change (+/-)</label>
-            <input
-              type="text"
-              value={quantityChange}
-              onChange={(e) => setQuantityChange(e.target.value)}
-              className="w-full border border-gray-300 rounded p-1 text-xs"
-              placeholder="+10 or -5"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold mb-1">Remark</label>
-            <input
-              type="text"
-              value={remark}
-              onChange={(e) => setRemark(e.target.value)}
-              className="w-full border border-gray-300 rounded p-1 text-xs"
-              placeholder="Optional remark"
-            />
-          </div>
-          <div className="flex items-end">
-            <button
-              onClick={handleStockUpdate}
-              className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-1 rounded text-xs"
-            >
-              Update Stock
-            </button>
-          </div>
-        </div>
-        {updateError && <p className="text-red-500 text-xs mt-1">{updateError}</p>}
-      </div>
+        <div className="p-4 space-y-4 text-sm">
+          <TextField
+            label="From date"
+            type="date"
+            size="small"
+            fullWidth
+            InputLabelProps={{ shrink: true }}
+            value={fromDate}
+            onChange={e => setFromDate(e.target.value)}
+          />
+          <TextField
+            label="To date"
+            type="date"
+            size="small"
+            fullWidth
+            InputLabelProps={{ shrink: true }}
+            value={toDate}
+            onChange={e => setToDate(e.target.value)}
+          />
+          <TextField
+            label="Name"
+            size="small"
+            fullWidth
+            value={filterName}
+            onChange={e => setFilterName(e.target.value)}
+          />
+          <TextField
+            label="Brand"
+            size="small"
+            fullWidth
+            value={filterBrand}
+            onChange={e => setFilterBrand(e.target.value)}
+          />
+          <TextField
+            label="Category"
+            size="small"
+            fullWidth
+            value={filterCategory}
+            onChange={e => setFilterCategory(e.target.value)}
+          />
 
-      {/* Filters */}
-      <div className="bg-white p-2 rounded-lg shadow-md mb-2">
-        <h3 className="text-sm font-bold text-gray-700 mb-2">Filters & Sorting</h3>
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-2 mb-2">
-          <div>
-            <label className="block text-xs font-bold mb-1">From Date</label>
-            <input
-              type="date"
-              value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
-              className="w-full border border-gray-300 rounded p-1 text-xs"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold mb-1">To Date</label>
-            <input
-              type="date"
-              value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
-              className="w-full border border-gray-300 rounded p-1 text-xs"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold mb-1">Name</label>
-            <input
-              type="text"
-              value={filterName}
-              onChange={(e) => setFilterName(e.target.value)}
-              className="w-full border border-gray-300 rounded p-1 text-xs"
-              placeholder="Filter by name"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold mb-1">Brand</label>
-            <input
-              type="text"
-              value={filterBrand}
-              onChange={(e) => setFilterBrand(e.target.value)}
-              className="w-full border border-gray-300 rounded p-1 text-xs"
-              placeholder="Filter by brand"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold mb-1">Category</label>
-            <input
-              type="text"
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-              className="w-full border border-gray-300 rounded p-1 text-xs"
-              placeholder="Filter by category"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold mb-1">Sort Field</label>
-            <select
+          <FormControl size="small" fullWidth>
+            <InputLabel>Sort field</InputLabel>
+            <Select
+              label="Sort field"
               value={sortField}
-              onChange={(e) => setSortField(e.target.value)}
-              className="w-full border border-gray-300 rounded p-1 text-xs"
+              onChange={e => setSortField(e.target.value)}
             >
-              <option value="date">Date</option>
-              <option value="name">Name</option>
-              <option value="brand">Brand</option>
-              <option value="category">Category</option>
-              <option value="quantity">Quantity</option>
-            </select>
-          </div>
+              {['date', 'name', 'brand', 'category', 'quantity'].map(f => (
+                <MenuItem key={f} value={f}>
+                  {f}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-          <div>
-            <label className="block text-xs font-bold mb-1">Sort Direction</label>
-            <select
+          <FormControl size="small" fullWidth>
+            <InputLabel>Direction</InputLabel>
+            <Select
+              label="Direction"
               value={sortDirection}
-              onChange={(e) => setSortDirection(e.target.value)}
-              className="w-full border border-gray-300 rounded p-1 text-xs"
+              onChange={e => setSortDirection(e.target.value)}
             >
-              <option value="asc">Ascending</option>
-              <option value="desc">Descending</option>
-            </select>
-          </div>
+              <MenuItem value="asc">Ascending</MenuItem>
+              <MenuItem value="desc">Descending</MenuItem>
+            </Select>
+          </FormControl>
 
-          <div className="flex items-end">
-            <button
-              onClick={generatePDF}
-              className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-1 rounded text-xs"
-            >
-              Generate PDF
-            </button>
-          </div>
+          <Button
+            fullWidth
+            variant="outlined"
+            color="primary"
+            onClick={generatePDF}
+            className="!mt-2"
+          >
+            Download PDF
+          </Button>
         </div>
-      </div>
-
-      {logError && <p className="text-red-500 text-xs mb-2 text-center">{logError}</p>}
-      {deleteMessage && <p className="text-green-600 text-xs mb-2 text-center">{deleteMessage}</p>}
-
-      {loading ? (
-        <div className="text-center text-gray-500 text-xs">Loading logs...</div>
-      ) : filteredLogs.length === 0 ? (
-        <p className="text-center text-gray-500 text-xs">No logs found.</p>
-      ) : (
-        <>
-          {/* Table for large screens */}
-          <div className="hidden md:block">
-            <table className="w-full text-xs text-gray-500 bg-white shadow-md rounded-lg overflow-hidden">
-              <thead className="bg-red-600 text-white">
-                <tr>
-                  <th className="px-2 py-1 text-left">Date</th>
-                  <th className="px-2 py-1 text-left">Item Id</th>
-                  <th className="px-2 py-1 text-left">Name</th>
-                  <th className="px-2 py-1 text-center">Quantity</th>
-                  <th className="px-2 py-1 text-left">Updated By</th>
-                  <th className="px-2 py-1 text-left">Remark</th>
-                  <th className="px-2 py-1 text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginateLogs().map((log) => (
-                  <tr key={log._id} className="hover:bg-gray-100">
-                    <td className="px-2 py-1 text-left">
-                      {new Date(log.date).toLocaleString()}
-                    </td>
-                    <td className="px-2 py-1">{log.item_id}</td>
-                    <td className="px-2 py-1">{log.name}</td>
-                    <td className={`px-2 py-1 text-center font-bold ${log.quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {log.quantity > 0 ? `+${log.quantity}` : log.quantity}
-                    </td>
-                    <td className="px-2 py-1">{log.submittedBy}</td>
-                    <td className="px-2 py-1">{log.remark}</td>
-                    <td className="px-2 py-1 text-center">
-                      <button
-                        onClick={() => handleDeleteLog(log._id)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <i className="fa fa-trash" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Cards for small screens */}
-          <div className="md:hidden">
-            {paginateLogs().map((log) => (
-              <div key={log._id} className="bg-white rounded-lg shadow-md p-2 mb-2">
-                <div className="flex justify-between items-center">
-                  <p className="text-sm font-bold text-gray-700">{log.name}</p>
-                  <p className="text-xs text-gray-400">{new Date(log.date).toLocaleString()}</p>
-                </div>
-                <p className="text-xs text-gray-600">Brand: {log.brand}</p>
-                <p className="text-xs text-gray-600">Category: {log.category}</p>
-                <p className={`text-xs font-bold ${log.quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  Quantity: {log.quantity > 0 ? `+${log.quantity}` : log.quantity}
-                </p>
-                <p className="text-xs text-gray-600">Updated By: {log.submittedBy}</p>
-                <p className="text-xs text-gray-600">Remark: {log.remark}</p>
-                <div className="text-right mt-2">
-                  <button
-                    onClick={() => handleDeleteLog(log._id)}
-                    className="text-red-500 hover:text-red-700 text-xs font-bold"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Pagination */}
-          <div className="flex justify-between items-center mt-2 text-xs">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className={`px-2 py-1 rounded ${
-                currentPage === 1 ? 'bg-gray-200 text-gray-500' : 'bg-red-500 text-white hover:bg-red-600'
-              }`}
-            >
-              Previous
-            </button>
-            <span className="text-gray-500">
-              Page {currentPage} of {totalPages}
-            </span>
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className={`px-2 py-1 rounded ${
-                currentPage === totalPages ? 'bg-gray-200 text-gray-500' : 'bg-red-500 text-white hover:bg-red-600'
-              }`}
-            >
-              Next
-            </button>
-          </div>
-        </>
-      )}
+      </Drawer>
     </div>
   );
 };

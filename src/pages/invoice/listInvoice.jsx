@@ -58,6 +58,22 @@ const StatusIndicator = ({ billing }) => {
   );
 };
 
+const StatusIndicatorForNeedPurchase = ({ billing }) => {
+  let colorClass = 'bg-red-500';
+if( billing.isneededToPurchase && billing.neededToPurchase.length > 0 && billing.neededToPurchase.every(item => item.purchased && item.verified) ){
+  colorClass = "bg-green-500"
+}
+  return (
+    <motion.div
+      className={`w-3 h-3 rounded-full ${colorClass}`}
+      animate={{ scale: [1, 1.2, 1] }}
+      transition={{ duration: 1.5, repeat: Infinity }}
+    />
+  );
+};
+
+
+
 /**
  * ProfitBadge
  * Renders a small badge indicating the profit percentage with color coding.
@@ -903,7 +919,7 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
               <thead className="bg-red-600 text-xs text-white">
                 <tr className="divide-y">
                   <th className="px-4 py-2 text-left">Status</th>
-                  <th
+                  {/* <th
                     className="px-2 py-2 cursor-pointer"
                     onClick={() => {
                       setSortField('invoiceNo');
@@ -911,7 +927,7 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
                     }}
                   >
                     Invoice No {sortField === 'invoiceNo' && (sortOrder === 'asc' ? '↑' : '↓')}
-                  </th>
+                  </th> */}
                   <th
                     className="px-2 py-2 cursor-pointer"
                     onClick={() => {
@@ -950,20 +966,15 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className={`hover:bg-gray-100 divide-y divide-x ${
-                        billing.isneededToPurchase &&
-                        billing.neededToPurchase.length > 0 &&
-                        billing.neededToPurchase.every(item => item.purchased && item.verified)  ? 'bg-green-100' : 
-                        billing.isneededToPurchase && 
-                        billing.neededToPurchase.length > 0 &&
-                        billing.neededToPurchase.some(item => !item.purchased || !item.verified) ? 'bg-red-100' : ''}`}
+                      className="hover:bg-gray-100 divide-y divide-x"
                     >
-                      <td className="px-4 py-2 text-center">
+                      <td className="px-4 py-2 text-center align-center flex justify-between">
                         <StatusIndicator billing={billing} />
+                        <StatusIndicatorForNeedPurchase billing={billing} />
                       </td>
                       <td
                         onClick={() => navigate(`/invoice/details/${billing._id}`)}
-                        className={`px-2 cursor-pointer flex text-xs font-bold py-2 ${
+                        className={`px-2 cursor-pointer align-center flex text-xs font-bold py-2 ${
                           billing.isApproved ? 'text-red-600' : 'text-yellow-600'
                         }`}
                       >
@@ -1053,7 +1064,7 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
                             </button>
                           )}
 
-{userInfo.isAdmin && billing.isneededToPurchase && (
+{userInfo.isAdmin && billing.neededToPurchase.length > 0 && (
     <button
       onClick={() => handleNeedPurchase(billing)}
       className="bg-blue-500 hover:bg-blue-600 text-white px-2 font-bold py-1 rounded flex items-center"

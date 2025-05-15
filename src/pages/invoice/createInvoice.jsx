@@ -520,6 +520,9 @@ const handleproductUpdate = async (
       needToPurchase: needToPurchaseFlag,
       billingId: invoiceNo,                      
     });
+    const { data: updatedProduct } = await api.get(`/api/products/itemId/${product.item_id}`);
+    await addProductByItemId(updatedProduct)
+
 
     alert(
       needToPurchaseFlag
@@ -2189,9 +2192,6 @@ const netTotal = rateWithoutGST + gstAmount;
                           key={index}
                           onClick={() => {
                             addProductByItemId(suggestion);
-                            setItemName(suggestion.name);
-                            setItemCategory(suggestion.category);
-                            setItemBrand(suggestion.brand);
                           }}
                           className={`p-4 text-xs font-bold text-gray-600 cursor-pointer hover:bg-gray-100 ${
                             index === selectedSuggestionIndex ? 'bg-gray-200' : ''

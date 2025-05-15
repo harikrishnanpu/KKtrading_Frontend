@@ -87,8 +87,8 @@ export default function EditBillScreen() {
   const [filterText, setFilterText] = useState('');
   const [fetchQuantity, setFetchQuantity] = useState(0);
   const [showOutOfStockModal, setShowOutOfStockModal] = useState(false);
-  const [imageError, setImageError] = useState(false);
-  const [salesmanPhoneNumber, setSalesmanPhoneNumber] = useState('');
+  const [ amountReceived , setAmountReceived ] = useState(0);
+   const [salesmanPhoneNumber, setSalesmanPhoneNumber] = useState('');
   const [salesmen, setSalesmen] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [itemName, setItemName] = useState('');
@@ -328,6 +328,8 @@ const [printOptions, setPrintOptions] = useState({
     }
   }, [unit, selectedProduct]);
 
+
+
   // Fetch Billing Details by ID
   useEffect(() => {
     const fetchBillingDetails = async () => {
@@ -337,6 +339,7 @@ const [printOptions, setPrintOptions] = useState({
         const { data } = await api.get(`/api/billing/${id}`);
         setInvoiceNo(data.invoiceNo);
         setInvoiceDate(new Date(data.invoiceDate).toISOString().split('T')[0]);
+        setAmountReceived(parseFloat(data.billingAmountReceived));
 
         const formattedExpectedDeliveryDate = new Date(data.expectedDeliveryDate)
           .toISOString()
@@ -456,7 +459,10 @@ const [printOptions, setPrintOptions] = useState({
       const { data } = await api.get(`/api/products/itemId/${product.item_id}`);
       
       setSelectedProduct(data);
-      setQuantity(1);
+      setItemName(data.name);
+      setItemBrand(data.brand);
+      setItemCategory(data.category)
+      setQuantity(0);
       setGstRateInput(data.gstPercent);
       setFetchItemPrice(data.price);
 
@@ -537,6 +543,10 @@ const [printOptions, setPrintOptions] = useState({
         needToPurchase: needToPurchaseFlag,
         invoiceNo: invoiceNo,                      
       });
+
+    const { data: updatedProduct } = await api.get(`/api/products/itemId/${product.item_id}`);
+    await addProductByItemId(updatedProduct)
+
   
       alert(
         needToPurchaseFlag
@@ -1974,7 +1984,7 @@ const netTotal = rateWithoutGST + gstAmount;
                             }}
                             className="text-xs text-gray-500 font-bold hover:text-gray-700"
                           >
-                            Update Stock
+                            Update Stock / Need Purchase
                           </button>
                         </div>
                       </div>
@@ -2222,7 +2232,7 @@ const netTotal = rateWithoutGST + gstAmount;
                         }}
                         className="text-xs cursor-pointer text-gray-500 text-center font-bold my-5"
                       >
-                        Update Stock
+                       Update Stock / Need Purchase
                       </p>
                     </div>
                   )}
@@ -2471,6 +2481,7 @@ const netTotal = rateWithoutGST + gstAmount;
       {/* Summary Modal */}
       {showSummaryModal && (
         <SummaryModal
+          amountReceived={amountReceived}
           accounts={accounts}
           customerName={customerName}
           invoiceNo={invoiceNo}
