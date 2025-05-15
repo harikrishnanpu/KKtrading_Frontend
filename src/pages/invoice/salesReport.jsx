@@ -28,7 +28,7 @@ const Transition = React.forwardRef(function Transition(props, ref) {
 // ─── Tiny badge for % profit ───────────────────────────────────────
 const ProfitBadge = ({ value }) => (
   <span
-    className={`px-2 py-3 rounded-full text-xs font-semibold ${
+    className={`px-2 py-1 rounded-full text-xs font-semibold ${
       value >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
     }`}
   >
@@ -209,7 +209,7 @@ const SalesReport = () => {
   /* ─────────────── TOTAL (sum of every row's total₹) ───────────── */
   useEffect(() => {
     const grand = filteredProducts.reduce(
-      (s, r) => s + (parseFloat(r.selledPrice) * r.quantity), 0);
+      (s, r) => s + (parseFloat(r.selledPrice) * parseFloat(r.quantity)), 0);
     setTotalAmount(grand);
   }, [filteredProducts]);
 
@@ -465,6 +465,7 @@ const SalesReport = () => {
               <thead className="bg-red-600 text-white">
                 <tr>
                   <th className="px-2 py-3 text-left">Invoice No</th>
+                  <th className="px-2 py-3">P.Id</th>
                   <th className="px-2 py-3">Product</th>
                   <th className="px-2 py-3">Invoice Date</th>
                   <th className="px-2 py-3">Category</th>
@@ -481,7 +482,7 @@ const SalesReport = () => {
                 {paginatedRows().map(r => {
                   const cost  = parseFloat(productMap[r.item_id]?.price || 0);
                   const sell  = parseFloat(r.selledPrice);
-                  const qty   = r.quantity;
+                  const qty   = parseFloat(r.quantity);
                   const total = sell * qty;
                   const pct   = sell > 0 ? ((sell - cost) / sell) * 100 : 0;
 
@@ -498,6 +499,7 @@ const SalesReport = () => {
                       >
                         {r.invoiceNo}
                       </td>
+                      <td className="px-2 py-3">{r.item_id}</td>
                       <td className="px-2 py-3">{r.name}</td>
                       <td className="px-2 py-3">
                         {new Date(r.invoiceDate).toLocaleDateString()}
@@ -509,7 +511,7 @@ const SalesReport = () => {
                         {r.brand || productMap[r.item_id]?.brand || '--'}
                       </td>
                       <td className="px-2 py-3 text-center">{qty}</td>
-                      <td className="px-2 py-3 text-center">{r.unit}</td>
+                      <td className="px-2 py-3 text-center">NOS</td>
                       <td className="px-2 py-3 text-right">₹{sell.toFixed(2)}</td>
                       <td className="px-2 py-3 font-bold text-right">₹{total.toFixed(2)}</td>
                       <td className="px-2 py-3 text-center">
@@ -536,7 +538,7 @@ const SalesReport = () => {
             {paginatedRows().map(r => {
               const cost  = parseFloat(productMap[r.item_id]?.price || 0);
               const sell  = parseFloat(r.selledPrice);
-              const total = sell * r.quantity;
+              const total = sell * parseFloat(r.quantity);
               const pct   = sell > 0 ? ((sell - cost) / sell) * 100 : 0;
 
               return (
@@ -568,7 +570,7 @@ const SalesReport = () => {
                     Brand: {r.brand || productMap[r.item_id]?.brand || '--'}
                   </p>
                   <p className="text-gray-600 text-xs mt-1">
-                    Qty: {r.quantity} {r.unit}
+                    Qty: {r.quantity} NOS
                   </p>
                   <p className="text-gray-600 text-xs mt-1">
                     Sell&nbsp;₹: {sell.toFixed(2)}

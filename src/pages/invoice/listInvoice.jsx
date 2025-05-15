@@ -919,7 +919,7 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
               <thead className="bg-red-600 text-xs text-white">
                 <tr className="divide-y">
                   <th className="px-4 py-2 text-left">Status</th>
-                  {/* <th
+                  <th
                     className="px-2 py-2 cursor-pointer"
                     onClick={() => {
                       setSortField('invoiceNo');
@@ -927,7 +927,7 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
                     }}
                   >
                     Invoice No {sortField === 'invoiceNo' && (sortOrder === 'asc' ? '↑' : '↓')}
-                  </th> */}
+                  </th>
                   <th
                     className="px-2 py-2 cursor-pointer"
                     onClick={() => {
@@ -952,6 +952,7 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
                   <th className="px-2 py-2">Products</th>
                   <th className="px-2 py-2">Payment</th>
                   <th className="px-2 py-2">Delivery</th>
+                  <th className='px-2 py-2'>Total Amount</th>
                   <th className="px-2 py-2">Remark</th>
                   {userInfo.isSuper && <th className="px-2 py-2">P/L (%)</th>}
                   <th className="px-2 py-2">Actions</th>
@@ -968,24 +969,28 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
                       exit={{ opacity: 0 }}
                       className="hover:bg-gray-100 divide-y divide-x"
                     >
-                      <td className="px-4 py-2 text-center align-center flex justify-between">
+                      <td className="px-4 py-2">
+                        <div className='flex justify-between'>
                         <StatusIndicator billing={billing} />
                         { billing.neededToPurchase?.length > 0 && <StatusIndicatorForNeedPurchase billing={billing} /> }
+                        </div>
                       </td>
                       <td
                         onClick={() => navigate(`/invoice/details/${billing._id}`)}
-                        className={`px-2 cursor-pointer align-center flex text-xs font-bold py-2 ${
+                        className={`px-2 cursor-pointer text-xs font-bold py-2 ${
                           billing.isApproved ? 'text-red-600' : 'text-yellow-600'
                         }`}
                       >
+                        <div className='flex justify-between'>
                         {billing.invoiceNo}{' '}
                         {billing.isApproved && (
                           <img
-                            className="h-2 w-2 ml-1 mt-1"
-                            src="/images/tick.svg"
-                            alt="Approved"
+                          className="h-2 w-2 ml-1 mt-1"
+                          src="/images/tick.svg"
+                          alt="Approved"
                           />
                         )}
+                        </div>
                       </td>
                       <td className="px-2 text-xs py-2">
                         {format(new Date(billing.invoiceDate), 'dd MMM yyyy')}
@@ -1010,6 +1015,9 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
                       </td>
                       <td className="px-2 text-xs py-2">
                         {billing.deliveryStatus}
+                      </td>
+                      <td className="px-2 text-xs font-bold py-2">
+                        Rs.{billing.grandTotal}
                       </td>
                       <td className="px-2 text-xs py-2">
                         {billing.remark || '--'}

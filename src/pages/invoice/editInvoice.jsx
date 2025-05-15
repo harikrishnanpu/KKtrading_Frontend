@@ -295,38 +295,29 @@ const [printOptions, setPrintOptions] = useState({
 
   // We need to handle the case when the user changes the unit
   useEffect(() => {
-    if (selectedProduct) {
-      const parsedActLenght = parseFloat(selectedProduct.actLength);
-      const parsedActBreadth = parseFloat(selectedProduct.actBreadth);
-      const parsedArea = parsedActLenght * parsedActBreadth;
-      if (selectedProduct.category === 'TILES') {
-        if (unit === 'SQFT') {
-          setDisplaysellingPrice(
-            (
-              parseFloat(selectedProduct.price / 0.78) / parsedArea
-            ).toFixed(2)
-          );
-        } else if (unit === 'BOX') {
-          setDisplaysellingPrice(
-            (parseFloat(selectedProduct.price / 0.78) * selectedProduct.psRatio
-            ).toFixed(2)
-          );
-        } else {
-          setDisplaysellingPrice(
-            parseFloat((selectedProduct.price / 0.78).toFixed(2))
-          );
-        }
-      } else if (selectedProduct.category === 'GRANITE') {
-        setDisplaysellingPrice(
-          (parseFloat(selectedProduct.price) / 0.75).toFixed(2)
-        );
-      } else {
-        setDisplaysellingPrice(
-          (parseFloat(selectedProduct.price) / 0.60).toFixed(2)
-        );
-      }
-    }
-  }, [unit, selectedProduct]);
+     if (selectedProduct) {
+       if (unit === 'SQFT') {
+         const quantity = selectedProduct.countInStock;
+         const adjustedquantity = (
+           parseFloat(quantity) *
+           parseFloat(selectedProduct.length * selectedProduct.breadth)
+         ).toFixed(2);
+         setFetchQuantity(adjustedquantity);
+         setQuantity(0);
+       } else if (unit === 'BOX') {
+         const quantity = selectedProduct.countInStock;
+         const adjustedquantity = (
+           parseFloat(quantity) / parseFloat(selectedProduct.psRatio)
+         ).toFixed(2);
+         setFetchQuantity(adjustedquantity);
+         setQuantity(0);
+       } else {
+         const quantity = selectedProduct.countInStock;
+         setFetchQuantity(quantity);
+         setQuantity(0);
+       }
+     }
+   }, [unit, selectedProduct]);
 
 
 
@@ -1972,7 +1963,7 @@ const netTotal = rateWithoutGST + gstAmount;
                             }}
                             className="text-xs text-gray-500 font-bold hover:text-gray-700"
                           >
-                            Update Stock / Need Purchase
+                            Stock / Need Purchase
                           </button>
                         </div>
                       </div>
@@ -2217,7 +2208,7 @@ const netTotal = rateWithoutGST + gstAmount;
                         }}
                         className="text-xs cursor-pointer text-gray-500 text-center font-bold my-5"
                       >
-                       Update Stock / Need Purchase
+                      Stock / Need Purchase
                       </p>
                     </div>
                   )}

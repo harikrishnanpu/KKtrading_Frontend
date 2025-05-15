@@ -735,10 +735,9 @@ const handleproductUpdate = async (
         // For 'TNOS', quantity is directly the enteredQty value
         product.quantity = parsedValue;
       } else {
-        // For other units, use the enteredQty directly
         product.quantity = parsedValue;
       }
-      product[field] = parsedValue;
+        product[field] = parsedValue;
     } else if (field === 'sellingPrice') {
       // Handle changes to sellingPrice
       product[field] = parsedValue;
@@ -2106,7 +2105,7 @@ const netTotal = rateWithoutGST + gstAmount;
                           }}
                           className="text-xs text-gray-500 font-bold hover:text-gray-700"
                         >
-                          Update Stock
+                          Stock / Need Purchase
                         </button>
                       </div>
                     </div>
@@ -2358,7 +2357,7 @@ const netTotal = rateWithoutGST + gstAmount;
                       }}
                       className="text-xs cursor-pointer text-gray-500 text-center font-bold my-2"
                     >
-                      Update Stock
+                      Stock / Need Purchase
                     </p>
                   </div>
                 )}
