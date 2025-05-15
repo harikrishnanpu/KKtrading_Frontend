@@ -74,7 +74,7 @@ export default function SummaryModal({
 
     useEffect(()=>{
           let remainingAmount = (parseFloat(grandTotal) - billamountReceived).toFixed(2);
-          setRemainingAmount(remainingAmount)
+          setRemainingAmount(isNaN(remainingAmount) ? grandTotal : remainingAmount);
     },[grandTotal]);
   
 
@@ -211,7 +211,7 @@ export default function SummaryModal({
               value={receivedAmount || 0}
               onKeyDown={(e)=> changeRef(e, paymentMethodRef)}
               onChange={(e) =>
-                setReceivedAmount(Math.min(parseFloat(e.target.value) || 0, parseFloat(remainingAmount).toFixed(2)))
+                setReceivedAmount(Math.min(parseFloat(e.target.value) || 0 , isNaN(parseFloat(remainingAmount)) ? parseFloat(grandTotal) : parseFloat(remainingAmount)))
               }
               className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
             />

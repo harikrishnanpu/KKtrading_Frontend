@@ -970,7 +970,7 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
                     >
                       <td className="px-4 py-2 text-center align-center flex justify-between">
                         <StatusIndicator billing={billing} />
-                        <StatusIndicatorForNeedPurchase billing={billing} />
+                        { billing.neededToPurchase?.length > 0 && <StatusIndicatorForNeedPurchase billing={billing} /> }
                       </td>
                       <td
                         onClick={() => navigate(`/invoice/details/${billing._id}`)}

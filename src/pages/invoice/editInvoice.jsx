@@ -428,9 +428,6 @@ const [printOptions, setPrintOptions] = useState({
       }
     } catch (err) {
   console.error(err);
-  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
-  setShowErrorModal(false);        // reset so modal can reopen on same error
-  setShowErrorModal(true);
         setSuggestions([]);
       // setError('Error fetching product suggestions.');
       setShowSuggestionsSidebar(false);
@@ -657,7 +654,7 @@ const [printOptions, setPrintOptions] = useState({
     setItemName('');
     setItemBrand('');
     setItemCategory('');
-    setGstRateInput(18); // reset back to 18 by default
+    setGstRateInput(0); // reset back to 18 by default
     setError('');
   };
 
@@ -1746,10 +1743,6 @@ const netTotal = rateWithoutGST + gstAmount;
                                     e.preventDefault();
                                     const selected = suggestions[selectedSuggestionIndex];
                                     addProductByItemId(selected);
-                                    setItemId(selected.item_id);
-                                    setItemName(selected.name);
-                                    setItemCategory(selected.category);
-                                    setItemBrand(selected.brand);
                                     setSuggestions([]);
                                     setShowSuggestionsSidebar(false);
                                     itemNameRef.current?.focus();
@@ -1849,13 +1842,8 @@ const netTotal = rateWithoutGST + gstAmount;
                               max={fetchQuantity}
                               value={quantity}
                               onChange={(e) =>
-                                setQuantity(
-                                  Math.min(
-                                    parseFloat(e.target.value) || 0,
-                                    fetchQuantity
-                                  )
-                                )
-                              }
+                                setQuantity(parseFloat(e.target.value))
+                                }
                               onKeyDown={(e) => changeRef(e, sellingPriceRef)}
                               className="w-full border border-gray-300 px-2 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
                             />
@@ -2123,10 +2111,7 @@ const netTotal = rateWithoutGST + gstAmount;
                             value={quantity}
                             onChange={(e) =>
                               setQuantity(
-                                Math.min(
-                                  parseFloat(e.target.value) || 0,
-                                  fetchQuantity
-                                )
+                                  parseFloat(e.target.value)
                               )
                             }
                             onKeyDown={(e) => {

@@ -438,6 +438,7 @@ const [printOptions, setPrintOptions] = useState({
     if (selectedProduct) {
       const parsedActLenght = parseFloat(selectedProduct.actLength);
       const parsedActBreadth = parseFloat(selectedProduct.actBreadth);
+
       const parsedArea = parsedActLenght * parsedActBreadth;
       if (selectedProduct.category === 'TILES') {
         if (unit === 'SQFT') {
@@ -491,9 +492,6 @@ const [printOptions, setPrintOptions] = useState({
       }
     } catch (err) {
   console.error(err);
-  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
-  setShowErrorModal(false);        // reset so modal can reopen on same error
-  setShowErrorModal(true);
 
       setSuggestions([]);
       setError('Error fetching product suggestions.');
@@ -550,6 +548,9 @@ const handleproductUpdate = async (
       const { data } = await api.get(`/api/products/itemId/${product.item_id}`);
 
       setSelectedProduct(data);
+      setItemName(data.name);
+      setItemBrand(data.brand);
+      setItemCategory(data.category);
       setQuantity(1);
       setItemId(data.item_id);
       setGstRateInput(parseFloat(data.gstPercent) || 18);
@@ -701,7 +702,7 @@ const handleproductUpdate = async (
     setItemBrand('');
     setSellingPrice('');
     setDisplaysellingPrice('');
-    setGstRateInput(18); // reset to default 18%
+    setGstRateInput(0); // reset to default 18%
     setError('');
   };
 
@@ -925,7 +926,7 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
         const itemBase = quantity * sellingPriceInQty;
         const itemDiscount = itemBase * discountRatio;
     
-const rateWithoutGST = (itemBase - itemDiscount) / (1 + gstRate / 100);    
+    const rateWithoutGST = (itemBase - itemDiscount) / (1 + p.gstRate / 100);    
     // After discount
     const netBase = itemBase - itemDiscount;
     
