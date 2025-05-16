@@ -795,7 +795,7 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
             onClick={resetFilters}
             className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded text-xs font-bold"
           >
-            <i className="fa fa-refresh" />
+            reset
           </button>
         </div>
       </div>
@@ -987,7 +987,7 @@ Margin:{' '}
               onClick={resetFilters}
               className="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded text-xs font-bold"
             >
-              <i className="fa fa-refresh" />
+               reset
             </button>
           </div>
         </div>
@@ -1134,7 +1134,7 @@ Margin:{' '}
                         </td>
                       )}
                       <td className="px-2 text-xs py-2">
-                        <div className="flex mt-2 text-xs space-x-1">
+                        <div className="flex mt-2 flex-wrap gap-2 text-xs space-x-1">
                           {userInfo.isAdmin && (
                             <button
                               onClick={() => navigate(`/invoice/edit/${billing._id}`)}

@@ -6,12 +6,9 @@ import 'react-loading-skeleton/dist/skeleton.css';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import useAuth from 'hooks/useAuth';
-
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaUser } from 'react-icons/fa';
-
-// ─── MUI ───────────────────────────────────────────────────────────
 import {
   Dialog,
   DialogContent,
@@ -20,12 +17,10 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 
-// ─── Transition for full-screen dialog ────────────────────────────
 const Transition = React.forwardRef(function Transition(props, ref) {
   return <Slide direction="up" ref={ref} {...props} />;
 });
 
-// ─── Tiny badge for % profit ───────────────────────────────────────
 const ProfitBadge = ({ value }) => (
   <span
     className={`px-2 py-1 rounded-full text-xs font-semibold ${
@@ -38,23 +33,21 @@ const ProfitBadge = ({ value }) => (
 );
 
 /* ────────────────────────────────────────────────────────── */
-/*                       MAIN COMPONENT                      */
-/* ────────────────────────────────────────────────────────── */
 const SalesReport = () => {
-  const navigate = useNavigate();           // reserved for future use
+  const navigate           = useNavigate();       // reserved
   const { user: userInfo } = useAuth();
 
-  // ── Data pulled from server ─────────────────────────────────────
-  const [billings, setBillings]   = useState([]);
-  const [products, setProducts]   = useState([]);   // for cost lookup / brand-category
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState('');
+  /* ─── Server data ──────────────────────────────────────────── */
+  const [billings, setBillings] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [totalCount, setTotalCount] = useState(0); // total invoices (server)
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
 
-  // ── Flattened product rows (one row per product line) ───────────
-  const [flatProducts,     setFlatProducts]     = useState([]);
-  const [filteredProducts, setFilteredProducts] = useState([]);
+  /* ─── Flattened product rows ───────────────────────────────── */
+  const [flatRows, setFlatRows] = useState([]);
 
-  // ── Filters & sorting ───────────────────────────────────────────
+  /* ─── Filters & sorting ────────────────────────────────────── */
   const [fromDate, setFromDate]           = useState('');
   const [toDate, setToDate]               = useState('');
   const [customerName, setCustomerName]   = useState('');
@@ -67,153 +60,105 @@ const SalesReport = () => {
   const [sortField, setSortField]         = useState('invoiceDate');
   const [sortDirection, setSortDirection] = useState('asc');
 
-  // ── Pagination ──────────────────────────────────────────────────
-  const itemsPerPage = 15;
+  /* ─── Pagination (server-side, by invoice) ─────────────────── */
+  const itemsPerPage = 15;         // must match backend default
   const [currentPage, setCurrentPage] = useState(1);
 
-  // ── Totals ──────────────────────────────────────────────────────
-  const [totalAmount, setTotalAmount] = useState(0);
+  /* ─── Grand total (₹) of current page rows ─────────────────── */
+  const [pageTotal, setPageTotal] = useState(0);
 
-  // ── Suggestions for datalists ───────────────────────────────────
+  /* ─── Suggestions (from current page only) ─────────────────── */
   const [customerSuggestions, setCustomerSuggestions] = useState([]);
   const [salesmanSuggestions, setSalesmanSuggestions] = useState([]);
-  const [invoiceSuggestions, setInvoiceSuggestions]   = useState([]);
-  const [itemSuggestions, setItemSuggestions]         = useState([]);
+  const [invoiceSuggestions,  setInvoiceSuggestions]  = useState([]);
+  const [itemSuggestions,     setItemSuggestions]     = useState([]);
 
-  // ── Modal state (invoice detail) ────────────────────────────────
+  /* ─── Modal ────────────────────────────────────────────────── */
   const [selectedBilling, setSelectedBilling] = useState(null);
 
-  /* ───────────────────────── FETCH DATA ────────────────────────── */
+  /* ─────────────── Fetch products once (cost lookup) ────────── */
   useEffect(() => {
-    let isMounted = true;
-
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [billingRes, productRes] = await Promise.all([
-          api.get('/api/billing/sort/sales-report'),
-          api.get('/api/products/product/all')
-        ]);
-        if (isMounted) {
-          setBillings(billingRes.data);
-          setProducts(productRes.data);
-        }
-      } catch (err) {
-        if (isMounted) setError('Failed to fetch data.');
-        console.error(err);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-
-    fetchData();
-    return () => { isMounted = false; };
+    api.get('/api/products/product/all')
+      .then(r => setProducts(r.data))
+      .catch(() => {});
   }, []);
 
-  /* ───────────────────── COST LOOKUP MAP ───────────────────────── */
-  const productMap = useMemo(() => {
-    const map = {};
-    products.forEach((p) => (map[p.item_id] = p));
-    return map;
-  }, [products]);
+  /* ─────────────── Build query & fetch billings ─────────────── */
+  const buildQuery = () => {
+    const q = new URLSearchParams({
+      sortField,
+      sortDirection,
+      page: currentPage,
+      limit: itemsPerPage
+    });
+    if (fromDate)        q.append('fromDate', fromDate);
+    if (toDate)          q.append('toDate', toDate);
+    if (customerName)    q.append('customerName', customerName);
+    if (salesmanName)    q.append('salesmanName', salesmanName);
+    if (invoiceNo)       q.append('invoiceNo', invoiceNo);
+    if (paymentStatus)   q.append('paymentStatus', paymentStatus);
+    if (deliveryStatus)  q.append('deliveryStatus', deliveryStatus);
+    if (itemName)        q.append('itemName', itemName);
+    if (amountThreshold) q.append('amountThreshold', amountThreshold);
+    return q.toString();
+  };
 
-  /* ─────────────────── FLATTEN BILLINGS → ROWS ─────────────────── */
   useEffect(() => {
-    const rows = billings.flatMap((b) =>
-      b.products.map((p) => ({
-        ...p,                                      // name, item_id, qty, category, brand, unit
+    const controller = new AbortController();
+    setLoading(true);
+    setError('');
+    api
+      .get(`/api/billing/sort/sales-report?${buildQuery()}`, {
+        signal: controller.signal
+      })
+      .then(res => {
+        setBillings(res.data.billings);
+        setTotalCount(res.data.total);
+      })
+      .catch(() => setError('Failed to fetch data.'))
+      .finally(() => setLoading(false));
+    return () => controller.abort();
+  }, [
+    fromDate, toDate, customerName, salesmanName, invoiceNo,
+    paymentStatus, deliveryStatus, itemName, amountThreshold,
+    sortField, sortDirection, currentPage
+  ]);
+
+  /* ─────────── Flatten billings → product rows ──────────────── */
+  useEffect(() => {
+    const rows = billings.flatMap(b =>
+      b.products.map(p => ({
+        ...p,
         invoiceNo:      b.invoiceNo,
         invoiceDate:    b.invoiceDate,
         customerName:   b.customerName,
         salesmanName:   b.salesmanName,
         paymentStatus:  b.paymentStatus,
         deliveryStatus: b.deliveryStatus,
-        billingAmount:  b.billingAmount,           // for filters
+        billingAmount:  b.billingAmount
       }))
     );
-    setFlatProducts(rows);
+    setFlatRows(rows);
   }, [billings]);
 
-  /* ──────────────── PROFIT CALC FOR A BILLING ──────────────────── */
-  const calcProfit = (billing) => {
-    let cost = 0;
-    let revenue = 0;
+  /* ──────────── Cost lookup map (memo) ──────────────────────── */
+  const productMap = useMemo(() => {
+    const m = {};
+    products.forEach(p => (m[p.item_id] = p));
+    return m;
+  }, [products]);
 
-    billing.products.forEach((p) => {
-      const prod = productMap[p.item_id];
-      cost    += (parseFloat(prod?.price || 0) * p.quantity);
-      revenue += (parseFloat(p.selledPrice)   * p.quantity);
-    });
-
-    const otherExp = (billing.otherExpenses || []).reduce(
-      (s, e) => s + parseFloat(e.amount || 0), 0);
-    const fuel = parseFloat(billing.totalFuelCharge || 0);
-
-    const profit = revenue - cost - otherExp - fuel;
-    const pct    = revenue > 0 ? (profit / revenue) * 100 : 0;
-
-    return { totalCost: cost, totalRevenue: revenue,
-             totalProfit: profit, profitPercentage: pct,
-             otherExp, fuel };
-  };
-
-  /* ─────────── FILTER + SORT (on product rows) ─────────────────── */
+  /* ──────────── Grand total (₹) for current page ────────────── */
   useEffect(() => {
-    let data = [...flatProducts];
+    setPageTotal(
+      flatRows.reduce(
+        (s, r) => s + parseFloat(r.selledPrice) * parseFloat(r.quantity),
+        0
+      )
+    );
+  }, [flatRows]);
 
-    if (fromDate)
-      data = data.filter((r) =>
-        new Date(r.invoiceDate).toISOString().split('T')[0] >= fromDate);
-    if (toDate)
-      data = data.filter((r) =>
-        new Date(r.invoiceDate).toISOString().split('T')[0] <= toDate);
-    if (customerName)
-      data = data.filter((r) =>
-        r.customerName.toLowerCase().includes(customerName.toLowerCase()));
-    if (salesmanName)
-      data = data.filter((r) =>
-        r.salesmanName.toLowerCase().includes(salesmanName.toLowerCase()));
-    if (invoiceNo)
-      data = data.filter((r) =>
-        r.invoiceNo.toLowerCase().includes(invoiceNo.toLowerCase()));
-    if (paymentStatus)
-      data = data.filter((r) =>
-        r.paymentStatus.toLowerCase() === paymentStatus.toLowerCase());
-    if (deliveryStatus)
-      data = data.filter((r) =>
-        r.deliveryStatus.toLowerCase() === deliveryStatus.toLowerCase());
-    if (itemName)
-      data = data.filter((r) =>
-        r.name.toLowerCase().includes(itemName.toLowerCase()));
-    if (amountThreshold)
-      data = data.filter((r) =>
-        r.billingAmount >= parseFloat(amountThreshold));
-
-    // sort
-    data.sort((a, b) => {
-      const av = a[sortField];
-      const bv = b[sortField];
-      if (av < bv) return sortDirection === 'asc' ? -1 : 1;
-      if (av > bv) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
-
-    setFilteredProducts(data);
-    setCurrentPage(1); // reset page on every filter change
-  }, [
-    flatProducts, fromDate, toDate, customerName, salesmanName,
-    invoiceNo, paymentStatus, deliveryStatus, itemName,
-    amountThreshold, sortField, sortDirection
-  ]);
-
-  /* ─────────────── TOTAL (sum of every row's total₹) ───────────── */
-  useEffect(() => {
-    const grand = filteredProducts.reduce(
-      (s, r) => s + (parseFloat(r.selledPrice) * parseFloat(r.quantity)), 0);
-    setTotalAmount(grand);
-  }, [filteredProducts]);
-
-  /* ────────────── SUGGESTIONS FOR AUTOCOMPLETE ─────────────────── */
+  /* ──────────── Suggestions (current page scope) ────────────── */
   useEffect(() => {
     setCustomerSuggestions([...new Set(billings.map(b => b.customerName))]);
     setSalesmanSuggestions([...new Set(billings.map(b => b.salesmanName))]);
@@ -223,28 +168,46 @@ const SalesReport = () => {
     ]);
   }, [billings]);
 
-  /* ───────────────── PAGINATION HELPERS ────────────────────────── */
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-  const paginatedRows = () => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredProducts.slice(start, start + itemsPerPage);
-  };
-  const pageChange = (p) =>
+  /* ──────────── Pagination helpers ──────────────────────────── */
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
+  const pageChange = p =>
     p >= 1 && p <= totalPages && setCurrentPage(p);
 
-  /* ───────────────── MODAL HELPERS ─────────────────────────────── */
-  const viewBilling = (b) => setSelectedBilling(b);
+  /* ──────────── Modal helpers ───────────────────────────────── */
+  const viewBilling = b => setSelectedBilling(b);
   const closeModal  = () => setSelectedBilling(null);
 
-  /* ────────────── EXPORT PDF (invoice-level) ───────────────────── */
+  /* ──────────── Profit calculator (invoice) ─────────────────── */
+  const calcProfit = billing => {
+    let cost = 0;
+    let revenue = 0;
+    billing.products.forEach(p => {
+      const prod = productMap[p.item_id];
+      cost    += (parseFloat(prod?.price || 0) * p.quantity);
+      revenue += (parseFloat(p.selledPrice) * p.quantity);
+    });
+    const otherExp = (billing.otherExpenses || []).reduce(
+      (s, e) => s + parseFloat(e.amount || 0), 0);
+    const fuel = parseFloat(billing.totalFuelCharge || 0);
+    const profit = revenue - cost - otherExp - fuel;
+    const pct = revenue > 0 ? (profit / revenue) * 100 : 0;
+    return { totalCost: cost, totalRevenue: revenue,
+             totalProfit: profit, profitPercentage: pct,
+             otherExp, fuel };
+  };
+
+  /* ──────────── PDF export (current page) ───────────────────── */
   const generatePDF = () => {
     const doc = new jsPDF();
     doc.text('Sales Report', 14, 15);
     doc.setFontSize(12);
-    doc.text(`Date Range: ${fromDate || 'All'} to ${toDate || 'All'}`, 14, 25);
+    doc.text(
+      `Date Range: ${fromDate || 'All'} to ${toDate || 'All'}`,
+      14,
+      25
+    );
     doc.text(`Customer Name: ${customerName || 'All'}`, 14, 32);
-    doc.text(`Total Amount: Rs. ${totalAmount.toFixed(2)}`, 14, 39);
-
+    doc.text(`Total Amount: Rs. ${pageTotal.toFixed(2)}`, 14, 39);
     const columns = [
       'Invoice No','Invoice Date','Salesman','Customer',
       'Billing Amount','Discount','Net Amount',
@@ -257,21 +220,20 @@ const SalesReport = () => {
       b.customerName,
       `Rs. ${b.grandTotal.toFixed(2)}`,
       `Rs. ${b.discount.toFixed(2)}`,
-      `Rs. ${(b.billingAmount).toFixed(2)}`,
+      `Rs. ${b.billingAmount.toFixed(2)}`,
       b.paymentStatus,
       b.deliveryStatus
     ]);
     doc.autoTable({ head:[columns], body:rows, startY:45, styles:{fontSize:8} });
     doc.save('sales_report.pdf');
   };
-
   /* ───────────────────────── RENDER ────────────────────────────── */
   return (
-    <>
-      {/* ─── Grand total card ────────────────────────────────────── */}
+<>
+      {/* Grand total */}
       <div className="bg-white p-4 w-60 rounded-lg shadow-md mb-2">
         <p className="text-sm font-bold text-gray-700">
-          Total Amount: Rs.&nbsp;{totalAmount.toFixed(2)}
+          Total Amount: Rs.&nbsp;{pageTotal.toFixed(2)}
         </p>
       </div>
 
@@ -447,13 +409,12 @@ const SalesReport = () => {
       </div>
 
       {/* ─── Error / loading states ──────────────────────────────── */}
-      {error && (
+{error && (
         <p className="text-red-500 text-center text-xs mb-2">{error}</p>
       )}
-
       {loading ? (
         <p className="text-xs text-center text-gray-500">Loading…</p>
-      ) : filteredProducts.length === 0 ? (
+      ) : flatRows.length === 0 ? (
         <p className="text-center text-gray-500 text-xs">
           No records found for the selected criteria.
         </p>
@@ -479,7 +440,7 @@ const SalesReport = () => {
                 </tr>
               </thead>
               <tbody>
-                {paginatedRows().map(r => {
+                {flatRows.map(r => {
                   const cost  = parseFloat(productMap[r.item_id]?.price || 0);
                   const sell  = parseFloat(r.selledPrice);
                   const qty   = parseFloat(r.quantity);
@@ -535,7 +496,7 @@ const SalesReport = () => {
 
           {/* ─── Mobile cards ─────────────────────────────────────── */}
           <div className="md:hidden">
-            {paginatedRows().map(r => {
+            {flatRows.map(r => {
               const cost  = parseFloat(productMap[r.item_id]?.price || 0);
               const sell  = parseFloat(r.selledPrice);
               const total = sell * parseFloat(r.quantity);
