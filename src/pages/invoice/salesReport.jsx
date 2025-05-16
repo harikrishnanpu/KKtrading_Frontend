@@ -231,7 +231,7 @@ const SalesReport = () => {
   return (
 <>
       {/* Grand total */}
-      <div className="bg-white p-4 w-60 rounded-lg shadow-md mb-2">
+      <div className="bg-white fixed bottom-10 left-0 p-4 w-60 rounded-lg shadow-md mb-2">
         <p className="text-sm font-bold text-gray-700">
           Total Amount: Rs.&nbsp;{pageTotal.toFixed(2)}
         </p>

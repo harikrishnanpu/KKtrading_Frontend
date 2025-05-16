@@ -64,7 +64,7 @@ const TransportPayment = Loadable(lazy(() => import('pages/transport/payment')))
 
 
 const DailyTransactions = Loadable(lazy(() => import('pages/daily/transactions')));
-const DailyReport  = Loadable(lazy(() => import('pages/maintenance/coming-soon/coming-soon2')));
+const DailyReport  = Loadable(lazy(() => import('pages/daily/dailyReport')));
 
 const ListPaymentAccount = Loadable(lazy(() => import('pages/main_accounts/listAccount')));
 const CreatePaymentAccount = Loadable(lazy(() => import('pages/main_accounts/createAccount')));

@@ -7,12 +7,12 @@ import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
 import { keyframes } from '@mui/system';
+import { Link as RouterLink } from 'react-router-dom';
+
 
 // project-imports
 import WelcomeBanner from 'sections/dashboard/default/WelcomeBanner';
-import PreviewDataCard from 'components/dashboard/previewDataCard';  // Ensure this path is correct
 import LowStockPreview from 'components/dashboard/lowstockPreview';   // Ensure this path is correct
-import TotalIncome from 'sections/widget/chart/TotalIncome';          // Ensure this path is correct
 import MainCard from 'components/MainCard';
 import { ThemeMode } from 'config';
 
@@ -20,24 +20,12 @@ import { ThemeMode } from 'config';
 import WelcomeImage from 'assets/images/analytics/welcome-banner.png';
 import cardBack from 'assets/images/widget/img-dropbox-bg.svg';
 
-// icons
-import {
-  ArrowUp,
-  ArrowDown,
-  Wallet3,
-  Book,
-  CloudChange,
-  Calendar,
-  ArrowSwapHorizontal,
-  ShoppingCart,
-  Receipt,
-  RotateLeft,
-  Danger
-} from 'iconsax-react';
+
 
 // API instance
 import api from 'pages/api'; // Adjust to your actual API import if needed
-import { Stack } from '@mui/material';
+import { Avatar, Button, Stack } from '@mui/material';
+import useAuth from 'hooks/useAuth';
 
 // Define a simple fade-in animation for the skeleton cards
 const fadeIn = keyframes`
@@ -53,6 +41,7 @@ const fadeIn = keyframes`
 
 export default function DashboardDefault() {
   const theme = useTheme();
+  const { user } = useAuth();
 
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -226,112 +215,61 @@ export default function DashboardDefault() {
    * - color
    * - optional percentage or arrow icon
    */
-  const cardsConfig = [
-    {
-      key: 'bills',
-      title: 'Total Bills',
-      count: dashboardData.totalBills ?? 0,
-      monthly: dashboardData.monthlyBills ?? Array(12).fill(0),
-      iconPrimary: <ShoppingCart size={24} color={theme.palette.success.main} />,
-      color: theme.palette.success.main,
-      percentage: (
-        <Typography
-          color="success"
-          sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
-        >
-          <ArrowUp size={16} style={{ transform: 'rotate(45deg)' }} /> 0%
-        </Typography>
-      )
-    },
-    {
-      key: 'purchases',
-      title: 'Total Purchases',
-      count: dashboardData.totalPurchases ?? 0,
-      monthly: dashboardData.monthlyPurchases ?? Array(12).fill(0),
-      iconPrimary: <Receipt size={24} color={theme.palette.info.main} />,
-      color: theme.palette.info.main,
-      percentage: (
-        <Typography
-          color="info.main"
-          sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
-        >
-          <ArrowUp size={16} style={{ transform: 'rotate(45deg)' }} /> 0%
-        </Typography>
-      )
-    },
-    {
-      key: 'returns',
-      title: 'Total Returns',
-      count: dashboardData.totalReturns ?? 0,
-      monthly: dashboardData.monthlyReturns ?? Array(12).fill(0),
-      iconPrimary: <RotateLeft size={24} color={theme.palette.primary.main} />,
-      color: theme.palette.primary.main,
-      percentage: (
-        <Typography
-          color="primary.main"
-          sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
-        >
-          <ArrowUp size={16} style={{ transform: 'rotate(45deg)' }} /> 0%
-        </Typography>
-      )
-    },
-    {
-      key: 'damages',
-      title: 'Total Damages',
-      count: dashboardData.totalDamages ?? 0,
-      monthly: dashboardData.monthlyDamages ?? Array(12).fill(0),
-      iconPrimary: <Danger size={24} color={theme.palette.error.main} />,
-      color: theme.palette.error.main,
-      percentage: (
-        <Typography
-          color="error.main"
-          sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
-        >
-          <ArrowDown size={16} style={{ transform: 'rotate(-45deg)' }} /> 0%
-        </Typography>
-      )
-    },
-    {
-      key: 'lowStock',
-      title: 'Low Stock Items',
-      count: dashboardData.totalLowStock ?? 0,
-      monthly: dashboardData.monthlyLowStock ?? Array(12).fill(0),
-      iconPrimary: <ArrowDown size={24} color={theme.palette.warning.main} />,
-      color: theme.palette.warning.main,
-      percentage: (
-        <Typography
-          color="warning.main"
-          sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
-        >
-          <ArrowDown size={16} style={{ transform: 'rotate(-45deg)' }} /> 0%
-        </Typography>
-      )
-    },
-    {
-      key: 'deliveries',
-      title: 'Total Deliveries',
-      count: dashboardData.totalDeliveries ?? 0,
-      monthly: dashboardData.monthlyDeliveries ?? Array(12).fill(0),
-      iconPrimary: (
-        <ArrowSwapHorizontal size={24} color={theme.palette.secondary.main} />
-      ),
-      color: theme.palette.secondary.main,
-      percentage: (
-        <Typography
-          color="secondary.main"
-          sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
-        >
-          <ArrowUp size={16} style={{ transform: 'rotate(45deg)' }} /> 0%
-        </Typography>
-      )
-    }
-  ];
+
 
   return (
     <Grid container rowSpacing={4.5} columnSpacing={2.75}>
       {/* Welcome Banner */}
       <Grid item xs={12}>
         <WelcomeBanner />
+      </Grid>
+
+      <Grid item xs={12}>
+        <MainCard>
+          <Grid
+            container
+            spacing={2}
+            alignItems="center"
+            justifyContent="space-between"
+          >
+            <Grid item>
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Avatar>{user?.name?.[0] || 'U'}</Avatar>
+                <div>
+                  <Typography variant="subtitle2">
+                    {user?.name || 'User'}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {user?.role || ''}
+                  </Typography>
+                </div>
+              </Stack>
+            </Grid>
+
+            <Grid item>
+              <Stack direction="row" spacing={1}>
+                <Button
+                  component={RouterLink}
+                  to="/invoice/create"
+                  variant="contained"
+                  color="primary"
+                  size="small"
+                >
+                  Create Estimate
+                </Button>
+                <Button
+                  component={RouterLink}
+                  to="/daily/report"
+                  variant="outlined"
+                  color="primary"
+                  size="small"
+                >
+                  Daily Report
+                </Button>
+              </Stack>
+            </Grid>
+          </Grid>
+        </MainCard>
       </Grid>
 
       {/* Low Stock Preview Section */}
