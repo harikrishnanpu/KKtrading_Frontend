@@ -1,6 +1,7 @@
+// src/pages/StockRegistry.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api'; // Make sure this points to your axios instance
+import api from '../api';                           // axios instance
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import jsPDF from 'jspdf';
@@ -9,159 +10,104 @@ import useAuth from 'hooks/useAuth';
 
 const StockRegistry = () => {
   const navigate = useNavigate();
-  const [logs, setLogs] = useState([]);
-  const [filteredLogs, setFilteredLogs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
-  const [itemName, setItemName] = useState('');
-  const [brand, setBrand] = useState('');
-  const [category, setCategory] = useState('');
-  const [invoiceNo, setInvoiceNo] = useState('');
-  const [changeType, setChangeType] = useState('');
-
-  const [sortField, setSortField] = useState('date');
-  const [sortDirection, setSortDirection] = useState('asc');
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 15;
-
   const { user: userInfo } = useAuth();
 
-  const fetchLogs = async () => {
+  /* ───── state ──────────────────────────────────────────────── */
+  const [logs, setLogs]                 = useState([]);
+  const [loading, setLoading]           = useState(true);
+  const [error, setError]               = useState('');
+
+  const [fromDate, setFromDate]         = useState('');
+  const [toDate, setToDate]             = useState('');
+  const [itemName, setItemName]         = useState('');
+  const [brand, setBrand]               = useState('');
+  const [category, setCategory]         = useState('');
+  const [invoiceNo, setInvoiceNo]       = useState('');
+  const [changeType, setChangeType]     = useState('');
+  const [sortField, setSortField]       = useState('date');
+  const [sortDirection, setSortDirection] = useState('asc');
+
+  const itemsPerPage                    = 15;
+  const [currentPage, setCurrentPage]   = useState(1);
+  const [totalPages, setTotalPages]     = useState(1);
+
+  /* ───── autocomplete suggestions (current page slice only) ─── */
+  const [itemSuggestions, setItemSuggestions]         = useState([]);
+  const [brandSuggestions, setBrandSuggestions]       = useState([]);
+  const [categorySuggestions, setCategorySuggestions] = useState([]);
+  const [invoiceSuggestions, setInvoiceSuggestions]   = useState([]);
+
+  /* ───── fetch helper ───────────────────────────────────────── */
+  const fetchLogs = async (page = 1) => {
     setLoading(true);
     try {
-      const response = await api.get('/api/products/stock/stock-logs');
-      setLogs(response.data);
+      const { data } = await api.get('/api/products/stock/stock-logs', {
+        params: {
+          page,
+          limit: itemsPerPage,
+          fromDate,
+          toDate,
+          itemName,
+          brand,
+          category,
+          invoiceNo,
+          changeType,
+          sortField,
+          sortDirection
+        }
+      });
+
+      setLogs(data.logs);
+      setTotalPages(Math.ceil(data.total / itemsPerPage));
+      setCurrentPage(page);
+
+      setItemSuggestions(
+        [...new Set(data.logs.map((l) => l.name))].filter(Boolean)
+      );
+      setBrandSuggestions(
+        [...new Set(data.logs.map((l) => l.brand || ''))].filter(Boolean)
+      );
+      setCategorySuggestions(
+        [...new Set(data.logs.map((l) => l.category || ''))].filter(Boolean)
+      );
+      setInvoiceSuggestions(
+        [...new Set(data.logs.map((l) => l.invoiceNo || ''))].filter(Boolean)
+      );
     } catch (err) {
-      setError('Failed to fetch stock logs.');
       console.error(err);
+      setError('Failed to fetch stock logs.');
     } finally {
       setLoading(false);
     }
   };
 
+  /* ───── first load ─────────────────────────────────────────── */
   useEffect(() => {
-    fetchLogs();
+    fetchLogs(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Filter logs
-  const filterLogs = () => {
-    let filtered = logs;
-
-    // Date range filter
-    if (fromDate) {
-      filtered = filtered.filter(
-        (log) => new Date(log.date).toISOString().split('T')[0] >= fromDate
-      );
-    }
-    if (toDate) {
-      filtered = filtered.filter(
-        (log) => new Date(log.date).toISOString().split('T')[0] <= toDate
-      );
-    }
-
-    // Item name filter
-    if (itemName) {
-      filtered = filtered.filter((log) =>
-        log.name.toLowerCase().includes(itemName.toLowerCase())
-      );
-    }
-
-    // Brand filter
-    if (brand) {
-      filtered = filtered.filter((log) =>
-        (log.brand || '').toLowerCase().includes(brand.toLowerCase())
-      );
-    }
-
-    // Category filter
-    if (category) {
-      filtered = filtered.filter((log) =>
-        (log.category || '').toLowerCase().includes(category.toLowerCase())
-      );
-    }
-
-    // InvoiceNo filter
-    if (invoiceNo) {
-      filtered = filtered.filter((log) =>
-        log.invoiceNo ? log.invoiceNo.toLowerCase().includes(invoiceNo.toLowerCase()) : false
-      );
-    }
-
-    // ChangeType filter
-    if (changeType) {
-      filtered = filtered.filter(
-        (log) => log.changeType.toLowerCase() === changeType.toLowerCase()
-      );
-    }
-
-    // Sort
-    if (sortField) {
-      filtered.sort((a, b) => {
-        let fieldA = a[sortField];
-        let fieldB = b[sortField];
-
-        // For date sorting
-        if (sortField === 'date') {
-          fieldA = new Date(fieldA);
-          fieldB = new Date(fieldB);
-        } else {
-          // Convert strings to lowercase for consistent sorting
-          if (typeof fieldA === 'string') fieldA = fieldA.toLowerCase();
-          if (typeof fieldB === 'string') fieldB = fieldB.toLowerCase();
-        }
-
-        if (sortDirection === 'asc') {
-          return fieldA < fieldB ? -1 : fieldA > fieldB ? 1 : 0;
-        } else {
-          return fieldA > fieldB ? -1 : fieldA < fieldB ? 1 : 0;
-        }
-      });
-    }
-
-    setFilteredLogs(filtered);
-  };
-
+  /* ───── reload on filter/sort change ───────────────────────── */
   useEffect(() => {
-    filterLogs();
-  }, [fromDate, toDate, itemName, brand, category, invoiceNo, changeType, sortField, sortDirection, logs]);
-
-  const paginateLogs = () => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredLogs.slice(start, start + itemsPerPage);
-  };
-
-  const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
+    fetchLogs(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    fromDate,
+    toDate,
+    itemName,
+    brand,
+    category,
+    invoiceNo,
+    changeType,
+    sortField,
+    sortDirection
+  ]);
 
   const handlePageChange = (page) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
+    if (page >= 1 && page <= totalPages) fetchLogs(page);
   };
 
-  // Autocomplete suggestions
-  const [itemSuggestions, setItemSuggestions] = useState([]);
-  const [brandSuggestions, setBrandSuggestions] = useState([]);
-  const [categorySuggestions, setCategorySuggestions] = useState([]);
-  const [invoiceSuggestions, setInvoiceSuggestions] = useState([]);
-
-  useEffect(() => {
-    const uniqueItems = [...new Set(logs.map((l) => l.name))];
-    setItemSuggestions(uniqueItems);
-
-    const uniqueBrands = [...new Set(logs.map((l) => l.brand || ''))].filter(Boolean);
-    setBrandSuggestions(uniqueBrands);
-
-    const uniqueCategories = [...new Set(logs.map((l) => l.category || ''))].filter(Boolean);
-    setCategorySuggestions(uniqueCategories);
-
-    const uniqueInvoices = [...new Set(logs.map((l) => l.invoiceNo || ''))].filter(Boolean);
-    setInvoiceSuggestions(uniqueInvoices);
-  }, [logs]);
-
+  /* ───── PDF ────────────────────────────────────────────────── */
   const generatePDF = () => {
     const doc = new jsPDF();
     doc.text('Stock Registry Report', 14, 15);
@@ -174,20 +120,20 @@ const StockRegistry = () => {
     doc.text(`Invoice No: ${invoiceNo || 'All'}`, 14, 52);
     doc.text(`Change Type: ${changeType || 'All'}`, 14, 57);
 
-    const tableColumn = [
-      'Date',
-      'Item Name',
-      'Brand',
-      'Category',
-      'Change Type',
-      'Invoice No',
-      'Qty Change',
-      'Final Stock',
-    ];
-    const tableRows = [];
-
-    filteredLogs.forEach((log) => {
-      const rowData = [
+    doc.autoTable({
+      head: [
+        [
+          'Date',
+          'Item Name',
+          'Brand',
+          'Category',
+          'Change Type',
+          'Invoice No',
+          'Qty Change',
+          'Final Stock'
+        ]
+      ],
+      body: logs.map((log) => [
         new Date(log.date).toLocaleDateString(),
         log.name,
         log.brand,
@@ -195,27 +141,22 @@ const StockRegistry = () => {
         log.changeType,
         log.invoiceNo || '',
         log.quantityChange,
-        log.finalStock,
-      ];
-      tableRows.push(rowData);
-    });
-
-    doc.autoTable({
-      head: [tableColumn],
-      body: tableRows,
+        log.finalStock
+      ]),
       startY: 65,
-      styles: { fontSize: 8 },
+      styles: { fontSize: 8 }
     });
 
     doc.save('stock_registry_report.pdf');
   };
 
+  /* ───── UI ─────────────────────────────────────────────────── */
   return (
     <>
-
       {/* Filters */}
-      <div className="bg-white p-2 rounded-lg shadow-md mb-2">
+      <div className="bg-white p-4 rounded-lg shadow-md mb-2">
         <div className="grid grid-cols-1 md:grid-cols-6 gap-2">
+          {/* From / To date */}
           <div>
             <label className="block text-xs font-bold mb-1">From Date</label>
             <input
@@ -235,6 +176,7 @@ const StockRegistry = () => {
             />
           </div>
 
+          {/* Item name */}
           <div>
             <label className="block text-xs font-bold mb-1">Item Name</label>
             <input
@@ -246,12 +188,13 @@ const StockRegistry = () => {
               placeholder="Enter Item Name"
             />
             <datalist id="itemSuggestions">
-              {itemSuggestions.map((name, index) => (
-                <option key={index} value={name} />
+              {itemSuggestions.map((name, idx) => (
+                <option key={idx} value={name} />
               ))}
             </datalist>
           </div>
 
+          {/* Brand */}
           <div>
             <label className="block text-xs font-bold mb-1">Brand</label>
             <input
@@ -263,12 +206,13 @@ const StockRegistry = () => {
               placeholder="Enter Brand"
             />
             <datalist id="brandSuggestions">
-              {brandSuggestions.map((name, index) => (
-                <option key={index} value={name} />
+              {brandSuggestions.map((name, idx) => (
+                <option key={idx} value={name} />
               ))}
             </datalist>
           </div>
 
+          {/* Category */}
           <div>
             <label className="block text-xs font-bold mb-1">Category</label>
             <input
@@ -280,12 +224,13 @@ const StockRegistry = () => {
               placeholder="Enter Category"
             />
             <datalist id="categorySuggestions">
-              {categorySuggestions.map((name, index) => (
-                <option key={index} value={name} />
+              {categorySuggestions.map((name, idx) => (
+                <option key={idx} value={name} />
               ))}
             </datalist>
           </div>
 
+          {/* Invoice no */}
           <div>
             <label className="block text-xs font-bold mb-1">Invoice No</label>
             <input
@@ -297,12 +242,13 @@ const StockRegistry = () => {
               placeholder="Enter Invoice No"
             />
             <datalist id="invoiceSuggestions">
-              {invoiceSuggestions.map((no, index) => (
-                <option key={index} value={no} />
+              {invoiceSuggestions.map((no, idx) => (
+                <option key={idx} value={no} />
               ))}
             </datalist>
           </div>
 
+          {/* Change type */}
           <div>
             <label className="block text-xs font-bold mb-1">Change Type</label>
             <select
@@ -319,6 +265,7 @@ const StockRegistry = () => {
             </select>
           </div>
 
+          {/* Sort field & direction */}
           <div>
             <label className="block text-xs font-bold mb-1">Sort Field</label>
             <select
@@ -333,7 +280,6 @@ const StockRegistry = () => {
               <option value="quantityChange">Quantity Change</option>
             </select>
           </div>
-
           <div>
             <label className="block text-xs font-bold mb-1">Sort Direction</label>
             <select
@@ -346,6 +292,7 @@ const StockRegistry = () => {
             </select>
           </div>
 
+          {/* PDF button */}
           <div className="flex items-end">
             <button
               onClick={generatePDF}
@@ -357,46 +304,45 @@ const StockRegistry = () => {
         </div>
       </div>
 
+      {/* Content */}
       {loading ? (
-        <div>
-          <Skeleton count={5} />
-        </div>
+        <Skeleton count={5} />
       ) : (
         <>
           {error && (
             <p className="text-red-500 text-center mb-2 text-xs">{error}</p>
           )}
-          {filteredLogs.length === 0 ? (
+
+          {logs.length === 0 ? (
             <p className="text-center text-gray-500 text-xs">
               No stock logs found for the selected criteria.
             </p>
           ) : (
             <>
-              {/* Table for Large Screens */}
+              {/* Desktop table */}
               <div className="hidden md:block">
                 <table className="w-full text-xs text-gray-500 bg-white shadow-md rounded-lg overflow-hidden">
                   <thead className="bg-red-600 text-xs text-white">
-                    <tr className="divide-y">
-                      <th className="px-2 py-1 text-left">Date</th>
-                      <th className="px-2 py-1">Item Id</th>
-                      <th className="px-2 py-1">Item Name</th>
-                      <th className="px-2 py-1">Brand</th>
-                      <th className="px-2 py-1">Category</th>
-                      <th className="px-2 py-1">Change Type</th>
-                      <th className="px-2 py-1">Updated By</th>
-                      <th className="px-2 py-1">Invoice No</th>
-                      <th className="px-2 py-1">Qty Change</th>
-                      <th className="px-2 py-1">Final Stock</th>
+                    <tr>
+                      <th className="px-2 py-2 text-left">Date</th>
+                      <th className="px-2 py-2">Item Id</th>
+                      <th className="px-2 py-2">Item Name</th>
+                      <th className="px-2 py-2">Brand</th>
+                      <th className="px-2 py-2">Category</th>
+                      <th className="px-2 py-2">Change Type</th>
+                      <th className="px-2 py-2">Updated By</th>
+                      <th className="px-2 py-2">Invoice No</th>
+                      <th className="px-2 py-2">Qty Change</th>
+                      <th className="px-2 py-2">Final Stock</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {paginateLogs().map((log, index) => (
-                      <tr
-                        key={index}
-                        className="hover:bg-gray-100 divide-y divide-x"
-                      >
+                    {logs.map((log, idx) => (
+                      <tr key={idx} className="hover:bg-gray-100 divide-x divide-y">
                         <td className="px-2 py-1 text-center">
-                        {new Date(log.date).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+                          {new Date(log.date).toLocaleString('en-IN', {
+                            timeZone: 'Asia/Kolkata'
+                          })}
                         </td>
                         <td className="px-2 py-2">{log.itemId}</td>
                         <td className="px-2 py-2">{log.name}</td>
@@ -405,29 +351,33 @@ const StockRegistry = () => {
                         <td className="px-2 py-2">{log.changeType}</td>
                         <td className="px-2 py-2">{log.updatedBy}</td>
                         <td className="px-2 py-2">{log.invoiceNo || ''}</td>
-<td
-  className={`px-3 py-2 font-bold ${
-    log.quantityChange > 0
-      ? 'text-green-600'
-      : log.quantityChange < 0
-      ? 'text-red-600'
-      : ''
-  }`}
->
-  {log.quantityChange > 0 ? `+${log.quantityChange}` : log.quantityChange}
-</td>
-                        <td className="px-2 py-2 font-bold">{log.finalStock}</td>
+                        <td
+                          className={`px-3 py-2 font-bold ${
+                            log.quantityChange > 0
+                              ? 'text-green-600'
+                              : log.quantityChange < 0
+                              ? 'text-red-600'
+                              : ''
+                          }`}
+                        >
+                          {log.quantityChange > 0
+                            ? `+${log.quantityChange}`
+                            : log.quantityChange}
+                        </td>
+                        <td className="px-2 py-2 font-bold">
+                          {log.finalStock}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
 
-              {/* Cards for Small Screens */}
+              {/* Mobile cards */}
               <div className="md:hidden">
-                {paginateLogs().map((log, index) => (
+                {logs.map((log, idx) => (
                   <div
-                    key={index}
+                    key={idx}
                     className="bg-white rounded-lg shadow-md p-2 mb-2"
                   >
                     <div className="flex justify-between items-center">
@@ -435,7 +385,9 @@ const StockRegistry = () => {
                         {log.name}
                       </p>
                       <p className="text-xs text-gray-500">
-                      {new Date(log.date).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+                        {new Date(log.date).toLocaleString('en-IN', {
+                          timeZone: 'Asia/Kolkata'
+                        })}
                       </p>
                     </div>
                     <p className="text-gray-600 text-xs mt-1">
@@ -451,17 +403,20 @@ const StockRegistry = () => {
                       Invoice No: {log.invoiceNo || 'N/A'}
                     </p>
                     <div className="flex justify-between mt-2">
-         <p
-  className={`text-sm font-bold ${
-    log.quantityChange > 0
-      ? 'text-green-600'
-      : log.quantityChange < 0
-      ? 'text-red-600'
-      : ''
-  }`}
->
-  Qty: {log.quantityChange > 0 ? `+${log.quantityChange}` : log.quantityChange}
-</p>
+                      <p
+                        className={`text-sm font-bold ${
+                          log.quantityChange > 0
+                            ? 'text-green-600'
+                            : log.quantityChange < 0
+                            ? 'text-red-600'
+                            : ''
+                        }`}
+                      >
+                        Qty:{' '}
+                        {log.quantityChange > 0
+                          ? `+${log.quantityChange}`
+                          : log.quantityChange}
+                      </p>
                       <p className="text-gray-600 text-xs font-bold">
                         Final Stock: {log.finalStock}
                       </p>
@@ -475,7 +430,7 @@ const StockRegistry = () => {
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className={`px-2 text-xs font-bold py-1 rounded-lg ${
+                  className={`px-4 text-xs font-bold py-2 rounded-lg ${
                     currentPage === 1
                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                       : 'bg-red-500 text-white hover:bg-red-600'
@@ -489,7 +444,7 @@ const StockRegistry = () => {
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className={`px-2 text-xs font-bold py-1 rounded-lg ${
+                  className={`px-4 text-xs font-bold py-2 rounded-lg ${
                     currentPage === totalPages
                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                       : 'bg-red-500 text-white hover:bg-red-600'

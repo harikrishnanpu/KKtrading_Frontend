@@ -1,19 +1,8 @@
-// src/pages/StockUpdatePage.jsx
-import React, { useState, useEffect, useMemo, forwardRef } from 'react';
+import React, { useState, useEffect, forwardRef } from 'react';
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Slide,
-  Button,
-  Drawer,
-  IconButton,
-  TextField,
-  Select,
-  MenuItem,
-  InputLabel,
-  FormControl,
+  Dialog, DialogTitle, DialogContent, DialogActions, Slide,
+  Button, Drawer, IconButton, TextField, Select, MenuItem,
+  InputLabel, FormControl
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import FilterAltOutlinedIcon from '@mui/icons-material/FilterAltOutlined';
@@ -28,52 +17,62 @@ const Transition = forwardRef(function Transition(props, ref) {
   return <Slide direction="up" ref={ref} {...props} />;
 });
 
-const StockUpdatePage = () => {
+const itemsPerPage = 15;
+
+export default function StockUpdatePage() {
   const { user: userInfo } = useAuth();
 
-  /* ─────────────────────────── state ─────────────────────────── */
-  const [searchQuery, setSearchQuery] = useState('');
+  /* ───── state ─────────────────────────────────────────────── */
+  const [searchQuery, setSearchQuery]       = useState('');
   const [productSuggestions, setProductSuggestions] = useState([]);
-  const [selectedProduct, setSelectedProduct] = useState(null);
-
+  const [selectedProduct, setSelectedProduct]       = useState(null);
   const [quantityChange, setQuantityChange] = useState('');
-  const [remark, setRemark] = useState('');
-  const [updateError, setUpdateError] = useState('');
+  const [remark, setRemark]                 = useState('');
+  const [updateError, setUpdateError]       = useState('');
 
-  const [logs, setLogs] = useState([]);
+  const [logs, setLogs]           = useState([]);
+  const [loading, setLoading]     = useState(false);
+  const [logError, setLogError]   = useState('');
+  const [deleteMsg, setDeleteMsg] = useState('');
 
   /* filters */
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
-  const [filterName, setFilterName] = useState('');
+  const [fromDate, setFromDate]       = useState('');
+  const [toDate, setToDate]           = useState('');
+  const [filterName, setFilterName]   = useState('');
   const [filterBrand, setFilterBrand] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
-  const [sortField, setSortField] = useState('date');
-  const [sortDirection, setSortDirection] = useState('desc');
+  const [sortField, setSortField]     = useState('date');
+  const [sortDir, setSortDir]         = useState('desc');
 
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  /* UI */
+  const [drawerOpen, setDrawerOpen]   = useState(false);
+  const [dialogOpen, setDialogOpen]   = useState(false);
 
-  const [loading, setLoading] = useState(false);
-  const [logError, setLogError] = useState('');
-  const [deleteMessage, setDeleteMessage] = useState('');
+  /* pagination */
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages]   = useState(1);
 
-  /* ─────────────────────────── fetch logs ─────────────────────────── */
-  const fetchLogs = async () => {
+  /* ───── fetch logs ─────────────────────────────────────────── */
+  const fetchLogs = async (page = 1) => {
     setLoading(true);
     setLogError('');
     try {
-      const params = {
-        ...(fromDate && { fromDate }),
-        ...(toDate && { toDate }),
-        ...(filterName && { name: filterName }),
-        ...(filterBrand && { brand: filterBrand }),
-        ...(filterCategory && { category: filterCategory }),
-        sortField,
-        sortDirection,
-      };
-      const { data } = await api.get('/api/stock-update/logs', { params });
-      setLogs(data);
+      const { data } = await api.get('/api/stock-update/logs', {
+        params: {
+          page,
+          limit: itemsPerPage,
+          fromDate,
+          toDate,
+          name: filterName,
+          brand: filterBrand,
+          category: filterCategory,
+          sortField,
+          sortDirection: sortDir
+        }
+      });
+      setLogs(data.logs);
+      setTotalPages(Math.ceil(data.total / itemsPerPage));
+      setCurrentPage(page);
     } catch {
       setLogError('Failed to fetch logs.');
     } finally {
@@ -81,18 +80,29 @@ const StockUpdatePage = () => {
     }
   };
 
+  /* initial + filter/sort change */
   useEffect(() => {
-    fetchLogs();
+    fetchLogs(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fromDate, toDate, filterName, filterBrand, filterCategory, sortField, sortDirection]);
+  }, [
+    fromDate,
+    toDate,
+    filterName,
+    filterBrand,
+    filterCategory,
+    sortField,
+    sortDir
+  ]);
 
-  /* ─────────────────────────── suggestions ─────────────────────────── */
+  /* ───── product suggestions ───────────────────────────────── */
   const handleSearchChange = async e => {
     const q = e.target.value;
     setSearchQuery(q);
     if (!q.trim()) return setProductSuggestions([]);
     try {
-      const { data } = await api.get('/api/stock-update/search-products', { params: { q } });
+      const { data } = await api.get('/api/stock-update/search-products', {
+        params: { q }
+      });
       setProductSuggestions(data);
     } catch (err) {
       console.error(err);
@@ -105,9 +115,10 @@ const StockUpdatePage = () => {
     setProductSuggestions([]);
   };
 
-  /* ─────────────────────────── stock update ─────────────────────────── */
+  /* ───── stock update submit ───────────────────────────────── */
   const handleStockUpdate = async () => {
-    if (!selectedProduct) return setUpdateError('Select a product first.');
+    if (!selectedProduct)
+      return setUpdateError('Select a product first.');
     if (!quantityChange || isNaN(+quantityChange) || +quantityChange === 0)
       return setUpdateError('Quantity must be a non-zero number.');
 
@@ -116,35 +127,35 @@ const StockUpdatePage = () => {
         item_id: selectedProduct.item_id,
         quantityChange,
         submittedBy: userInfo?.name || 'Unknown',
-        remark,
+        remark
       });
-      /* reset & refetch */
+      /* reset */
       setSelectedProduct(null);
       setSearchQuery('');
       setQuantityChange('');
       setRemark('');
       setUpdateError('');
-      fetchLogs();
+      fetchLogs(1);
       setDialogOpen(false);
     } catch (err) {
       setUpdateError(err.response?.data?.message || 'Update failed.');
     }
   };
 
-  /* ─────────────────────────── delete log ─────────────────────────── */
-  const handleDeleteLog = async id => {
+  /* ───── delete log ────────────────────────────────────────── */
+  const handleDelete = async id => {
     if (!window.confirm('Delete this update log?')) return;
     try {
       const { data } = await api.delete(`/api/stock-update/${id}`);
-      setDeleteMessage(data.message);
-      fetchLogs();
-      setTimeout(() => setDeleteMessage(''), 2500);
+      setDeleteMsg(data.message);
+      fetchLogs(currentPage);
+      setTimeout(() => setDeleteMsg(''), 2500);
     } catch {
-      setDeleteMessage('Delete failed.');
+      setDeleteMsg('Delete failed.');
     }
   };
 
-  /* ─────────────────────────── PDF ─────────────────────────── */
+  /* ───── PDF ───────────────────────────────────────────────── */
   const generatePDF = () => {
     const doc = new jsPDF();
     doc.text('Stock Update Logs', 14, 15).setFontSize(9);
@@ -156,41 +167,33 @@ const StockUpdatePage = () => {
       22
     );
 
-    const rows = logs.map(l => [
-      new Date(l.date).toLocaleString(),
-      l.item_id,
-      l.name,
-      l.brand,
-      l.category,
-      l.quantity > 0 ? `+${l.quantity}` : l.quantity,
-      l.submittedBy,
-      l.remark || '',
-    ]);
     doc.autoTable({
       head: [['Date', 'ID', 'Name', 'Brand', 'Category', 'Qty', 'User', 'Remark']],
-      body: rows,
+      body: logs.map(l => [
+        new Date(l.date).toLocaleString(),
+        l.item_id,
+        l.name,
+        l.brand,
+        l.category,
+        l.quantity > 0 ? `+${l.quantity}` : l.quantity,
+        l.submittedBy,
+        l.remark || ''
+      ]),
       startY: 28,
-      styles: { fontSize: 8 },
+      styles: { fontSize: 8 }
     });
     doc.save('stock_updates.pdf');
   };
 
-  /* ─────────────────────────── pagination helpers ─────────────────────────── */
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 15;
-  const paginated = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return logs.slice(start, start + itemsPerPage);
-  }, [logs, currentPage]);
-
-  /* ─────────────────────────── render ─────────────────────────── */
+  /* ───── render ────────────────────────────────────────────── */
   return (
     <div className="p-4 max-w-7xl mx-auto">
-      {/* top bar */}
+      {/* Header */}
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-sm font-semibold text-gray-700">Stock Updates</h2>
-
-        <div className="space-x-2 flex">
+        <h2 className="text-xs font-semibold text-gray-700">
+          Stock Updates
+        </h2>
+        <div className="flex space-x-2">
           <Button
             variant="outlined"
             startIcon={<FilterAltOutlinedIcon />}
@@ -209,13 +212,15 @@ const StockUpdatePage = () => {
         </div>
       </div>
 
-      {/* messages */}
-      {logError && <p className="text-red-600 text-sm mb-2">{logError}</p>}
-      {deleteMessage && <p className="text-green-600 text-sm mb-2">{deleteMessage}</p>}
+      {/* Messages */}
+      {logError && <p className="text-red-600 text-xs mb-2">{logError}</p>}
+      {deleteMsg && (
+        <p className="text-green-600 text-xs mb-2">{deleteMsg}</p>
+      )}
 
-      {/* table (≥ md) */}
+      {/* Table (desktop) */}
       <div className="hidden md:block">
-        <table className="w-full text-sm text-gray-700 bg-white shadow rounded-lg overflow-hidden">
+        <table className="w-full text-xs text-gray-700 bg-white shadow rounded-lg overflow-hidden">
           <thead className="bg-red-600 text-white">
             <tr>
               {['Date', 'ID', 'Name', 'Qty', 'User', 'Remark', ''].map(h => (
@@ -232,19 +237,21 @@ const StockUpdatePage = () => {
                   Loading…
                 </td>
               </tr>
-            ) : paginated.length === 0 ? (
+            ) : logs.length === 0 ? (
               <tr>
                 <td colSpan={7} className="text-center py-6">
                   No logs
                 </td>
               </tr>
             ) : (
-              paginated.map(log => (
+              logs.map(log => (
                 <tr
                   key={log._id}
-                  className="odd:bg-gray-50 even:bg-white hover:bg-gray-100 transition"
+                  className="odd:bg-gray-50 divide-x divide-y even:bg-white hover:bg-gray-100"
                 >
-                  <td className="px-3 py-2">{new Date(log.date).toLocaleString()}</td>
+                  <td className="px-3 py-2">
+                    {new Date(log.date).toLocaleString()}
+                  </td>
                   <td className="px-3 py-2">{log.item_id}</td>
                   <td className="px-3 py-2">{log.name}</td>
                   <td
@@ -257,7 +264,11 @@ const StockUpdatePage = () => {
                   <td className="px-3 py-2">{log.submittedBy}</td>
                   <td className="px-3 py-2">{log.remark}</td>
                   <td className="px-3 py-2">
-                    <IconButton onClick={() => handleDeleteLog(log._id)} size="small" color="error">
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => handleDelete(log._id)}
+                    >
                       <Trash fontSize="inherit" />
                     </IconButton>
                   </td>
@@ -268,26 +279,29 @@ const StockUpdatePage = () => {
         </table>
       </div>
 
-      {/* card view (< md) */}
+      {/* Cards (mobile) */}
       <div className="md:hidden space-y-3">
         {loading ? (
           <p className="text-center text-gray-500">Loading…</p>
-        ) : paginated.length === 0 ? (
+        ) : logs.length === 0 ? (
           <p className="text-center text-gray-500">No logs</p>
         ) : (
-          paginated.map(log => (
+          logs.map(log => (
             <div key={log._id} className="bg-white shadow rounded-lg p-3">
-              <div className="flex justify-between text-sm font-semibold">
+              <div className="flex justify-between text-xs font-semibold">
                 <span>{log.name}</span>
-                <span className="text-gray-500">{new Date(log.date).toLocaleString()}</span>
+                <span className="text-gray-500">
+                  {new Date(log.date).toLocaleString()}
+                </span>
               </div>
               <p className="text-xs text-gray-600">ID: {log.item_id}</p>
               <p
-                className={`text-sm font-bold ${
+                className={`text-xs font-bold ${
                   log.quantity > 0 ? 'text-green-600' : 'text-red-600'
                 }`}
               >
-                Qty: {log.quantity > 0 ? `+${log.quantity}` : log.quantity}
+                Qty:{' '}
+                {log.quantity > 0 ? `+${log.quantity}` : log.quantity}
               </p>
               <p className="text-xs">User: {log.submittedBy}</p>
               <p className="text-xs mb-2">Remark: {log.remark}</p>
@@ -295,7 +309,7 @@ const StockUpdatePage = () => {
                 variant="text"
                 color="error"
                 size="small"
-                onClick={() => handleDeleteLog(log._id)}
+                onClick={() => handleDelete(log._id)}
               >
                 Delete
               </Button>
@@ -304,53 +318,48 @@ const StockUpdatePage = () => {
         )}
       </div>
 
-      {/* pagination */}
+      {/* Pagination */}
       {logs.length > 0 && (
-        <div className="flex justify-between items-center mt-4 text-sm">
+        <div className="flex justify-between items-center mt-4 text-xs">
           <Button
             disabled={currentPage === 1}
-            onClick={() => setCurrentPage(p => p - 1)}
+            onClick={() => fetchLogs(currentPage - 1)}
           >
             Previous
           </Button>
           <span>
-            Page {currentPage} of {Math.ceil(logs.length / itemsPerPage)}
+            Page {currentPage} of {totalPages}
           </span>
           <Button
-            disabled={currentPage * itemsPerPage >= logs.length}
-            onClick={() => setCurrentPage(p => p + 1)}
+            disabled={currentPage === totalPages}
+            onClick={() => fetchLogs(currentPage + 1)}
           >
             Next
           </Button>
         </div>
       )}
 
-      {/* ───────────── Update-stock Dialog ───────────── */}
+      {/* Update Stock Dialog */}
       <Dialog
-   open={dialogOpen}
-      TransitionComponent={Transition}
-      fullWidth
-      maxWidth="xs"
-      PaperProps={{
-        sx: {
-          bottom: -40,
-          left: 0,
-          right: 0,
-          borderRadius: "16px 16px 0 0", // Rounded top corners
-          // maxHeight: "30vh", // Keep it compact
-          width: "90%", // Responsive width
-          textAlign: "center", // Center text inside Paper
-          display: "flex",
-          justifyContent: "center",
-          padding: 2,
-        },
-      }}
-      sx={{
-        "& .MuiDialog-container": {
-          display: "flex",
-          alignItems: "flex-end",   // Stick to bottom
-        },
-      }}
+        open={dialogOpen}
+        TransitionComponent={Transition}
+        fullWidth
+        maxWidth="xs"
+        PaperProps={{
+          sx: {
+            bottom: -40,
+            left: 0,
+            right: 0,
+            borderRadius: '16px 16px 0 0',
+            width: '90%',
+            display: 'flex',
+            justifyContent: 'center',
+            p: 2
+          }
+        }}
+        sx={{
+          '& .MuiDialog-container': { alignItems: 'flex-end' }
+        }}
         onClose={() => setDialogOpen(false)}
       >
         <DialogTitle>
@@ -372,9 +381,10 @@ const StockUpdatePage = () => {
             value={searchQuery}
             onChange={handleSearchChange}
           />
-          {/* suggestion list */}
+
+          {/* suggestions */}
           {productSuggestions.length > 0 && (
-            <ul className="border rounded text-left max-h-40 overflow-y-auto text-sm">
+            <ul className="border rounded text-left max-h-40 overflow-y-auto text-xs">
               {productSuggestions.map(p => (
                 <li
                   key={p._id}
@@ -388,7 +398,7 @@ const StockUpdatePage = () => {
           )}
 
           {selectedProduct && (
-            <div className="bg-gray-50 p-3 rounded text-sm">
+            <div className="bg-gray-50 p-3 rounded text-xs">
               <p className="font-semibold">
                 {selectedProduct.name} ({selectedProduct.item_id})
               </p>
@@ -412,7 +422,9 @@ const StockUpdatePage = () => {
             value={remark}
             onChange={e => setRemark(e.target.value)}
           />
-          {updateError && <p className="text-red-600 text-sm">{updateError}</p>}
+          {updateError && (
+            <p className="text-red-600 text-xs">{updateError}</p>
+          )}
         </DialogContent>
 
         <DialogActions>
@@ -423,7 +435,7 @@ const StockUpdatePage = () => {
         </DialogActions>
       </Dialog>
 
-      {/* ───────────── Filter Drawer ───────────── */}
+      {/* Filters / PDF Drawer */}
       <Drawer
         anchor="right"
         open={drawerOpen}
@@ -437,7 +449,7 @@ const StockUpdatePage = () => {
           </IconButton>
         </div>
 
-        <div className="p-4 space-y-4 text-sm">
+        <div className="p-4 space-y-4 text-xs">
           <TextField
             label="From date"
             type="date"
@@ -497,8 +509,8 @@ const StockUpdatePage = () => {
             <InputLabel>Direction</InputLabel>
             <Select
               label="Direction"
-              value={sortDirection}
-              onChange={e => setSortDirection(e.target.value)}
+              value={sortDir}
+              onChange={e => setSortDir(e.target.value)}
             >
               <MenuItem value="asc">Ascending</MenuItem>
               <MenuItem value="desc">Descending</MenuItem>
@@ -508,7 +520,6 @@ const StockUpdatePage = () => {
           <Button
             fullWidth
             variant="outlined"
-            color="primary"
             onClick={generatePDF}
             className="!mt-2"
           >
@@ -518,6 +529,4 @@ const StockUpdatePage = () => {
       </Drawer>
     </div>
   );
-};
-
-export default StockUpdatePage;
+}
