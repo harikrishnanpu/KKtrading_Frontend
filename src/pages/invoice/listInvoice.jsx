@@ -116,6 +116,19 @@ const handleNeedPurchase = (billing) => {
   const [error, setError] = useState(null);
   const [products, setProducts] = useState([]);
 
+
+const [stats, setStats] = useState({
+  totalInvoices: 0,
+  totalRevenue: 0,
+  totalProfit: 0,
+  totalCost: 0,
+  totalOtherExpense: 0,
+  totalFuelCharge: 0,
+  totalPending: 0
+});
+const [totalPages, setTotalPages] = useState(0);   // server-derived page count
+
+
   // Pagination & Filtering State
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
@@ -132,33 +145,101 @@ const handleNeedPurchase = (billing) => {
   // ---------------------------------------------------------------------------
   // Data Fetching: Billings and Products
   // ---------------------------------------------------------------------------
-  useEffect(() => {
-    let isMounted = true;
-    setLoading(true);
-  
-    const fetchData = async () => {
-      try {
-        const [billingRes, productRes] = await Promise.all([
-          api.get('/api/billing'),
-          api.get('/api/products/product/all'),
-        ]);
-        if (isMounted) {
-          setBillings(billingRes.data);
-          setProducts(productRes.data);
-        }
-      } catch (err) {
-        if (isMounted) setError('Failed to fetch data');
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-  
-    fetchData();
-  
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+// helper: turn local filter state into the query‐string object
+const buildQuery = () => ({
+  page        : currentPage,
+  limit       : itemsPerPage,
+  search      : searchTerm,
+  invoiceStartDate,
+  invoiceEndDate,
+  deliveryStartDate,
+  deliveryEndDate,
+  status      : statusTab,
+  userId      : userInfo._id,
+  isAdmin     : userInfo.isAdmin,
+});
+
+useEffect(() => {
+  const controller = new AbortController();     // one controller for both calls
+  setLoading(true);
+
+  const billingsReq = api.get('/api/billing/list/pagenated', {
+    params : buildQuery(),
+    signal : controller.signal,
+  });
+
+  const productsReq = api.get('/api/products/product/all', {
+    signal : controller.signal,
+  });
+
+  Promise.all([billingsReq, productsReq])
+    .then(([billingsRes, productsRes]) => {
+  const { billings, totalCount, stats: baseStats } = billingsRes.data;
+
+  /* ------------------------------------------------------------------ */
+  /* build a quick lookup for cost-price                                 */
+  /* ------------------------------------------------------------------ */
+  const costMap = {};
+  productsRes.data.forEach(p => { costMap[p.item_id] = parseFloat(p.price || 0); });
+
+  /* ------------------------------------------------------------------ */
+  /* ① total **cost** of all invoices (purchase side)                   */
+  /* ------------------------------------------------------------------ */
+  const totalCost = billings.reduce((acc, inv) => {
+    const invoiceCost = inv.products.reduce(
+      (sum, p) => sum + costMap[p.item_id] * p.quantity,
+      0
+    );
+    return acc + invoiceCost;
+  }, 0);
+
+  /* ------------------------------------------------------------------ */
+  /* ② total **profit** (revenue – cost – otherExp – fuel)              */
+  /*     baseStats already contains:                                    */
+  /*        totalRevenue | totalOtherExpense | totalFuelCharge          */
+  /* ------------------------------------------------------------------ */
+  const totalProfit =
+    (baseStats.totalRevenue ?? 0) -
+    totalCost -
+    (baseStats.totalOtherExpense ?? 0) -
+    (baseStats.totalFuelCharge ?? 0);
+
+  /* ------------------------------------------------------------------ */
+  /* push everything into state                                         */
+  /* ------------------------------------------------------------------ */
+  setBillings(billings);
+  setTotalPages(Math.ceil(totalCount / itemsPerPage));
+  setProducts(productsRes.data);
+
+  setStats({
+    ...baseStats,  // keep what the server already calculated
+    totalCost,
+    totalProfit,
+  });
+})
+
+    .catch(err => {
+      if (err.name !== 'CanceledError')
+        setError('Failed to fetch data');
+    })
+    .finally(() => setLoading(false));
+
+  // cleanup → abort if deps change or component unmounts
+  return () => controller.abort();
+}, [
+  currentPage,
+  searchTerm,
+  invoiceStartDate,
+  invoiceEndDate,
+  deliveryStartDate,
+  deliveryEndDate,
+  statusTab,
+  sortField,
+  sortOrder,
+  userInfo._id,
+  userInfo.isAdmin,
+]);
+
   
 
   // ---------------------------------------------------------------------------
@@ -324,7 +405,7 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
   // ---------------------------------------------------------------------------
   // Pagination Calculations
   // ---------------------------------------------------------------------------
-  const totalPages = Math.ceil(filteredBillings.length / itemsPerPage);
+  // const totalPages = Math.ceil(filteredBillings.length / itemsPerPage);
   const paginatedBillings = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredBillings.slice(startIndex, startIndex + itemsPerPage);
@@ -333,37 +414,37 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
   // ---------------------------------------------------------------------------
   // Stats Calculation across all filtered billings (including pending amount)
   // ---------------------------------------------------------------------------
-  const stats = useMemo(() => {
-    return filteredBillings.reduce(
-      (acc, b) => {
-        const profit = calculateProfit(b);
-        const billingAmount = parseFloat(b.billingAmount) || 0;
-        const received = parseFloat(b.billingAmountReceived) || 0;
-        const pending = billingAmount - received;
+  // const stats = useMemo(() => {
+  //   return filteredBillings.reduce(
+  //     (acc, b) => {
+  //       const profit = calculateProfit(b);
+  //       const billingAmount = parseFloat(b.billingAmount) || 0;
+  //       const received = parseFloat(b.billingAmountReceived) || 0;
+  //       const pending = billingAmount - received;
   
-        acc.totalInvoices += 1;
-        acc.totalRevenue += profit.totalRevenue;
-        acc.totalProfit += profit.totalProfit;
-        acc.totalCost += profit.totalCost;
-        // Accumulate total other expenses and fuel charges
-        acc.totalOtherExpense += profit.totalOtherExpense;
-        acc.totalFuelCharge += profit.totalFuelExpenese;
-        if (b.paymentStatus !== 'Paid') {
-          acc.totalPending += pending;
-        }
-        return acc;
-      },
-      {
-        totalInvoices: 0,
-        totalRevenue: 0,
-        totalProfit: 0,
-        totalCost: 0,
-        totalOtherExpense: 0,
-        totalFuelCharge: 0,
-        totalPending: 0,
-      }
-    );
-  }, [filteredBillings]);
+  //       acc.totalInvoices += 1;
+  //       acc.totalRevenue += profit.totalRevenue;
+  //       acc.totalProfit += profit.totalProfit;
+  //       acc.totalCost += profit.totalCost;
+  //       // Accumulate total other expenses and fuel charges
+  //       acc.totalOtherExpense += profit.totalOtherExpense;
+  //       acc.totalFuelCharge += profit.totalFuelExpenese;
+  //       if (b.paymentStatus !== 'Paid') {
+  //         acc.totalPending += pending;
+  //       }
+  //       return acc;
+  //     },
+  //     {
+  //       totalInvoices: 0,
+  //       totalRevenue: 0,
+  //       totalProfit: 0,
+  //       totalCost: 0,
+  //       totalOtherExpense: 0,
+  //       totalFuelCharge: 0,
+  //       totalPending: 0,
+  //     }
+  //   );
+  // }, [filteredBillings]);
   
 
   // ---------------------------------------------------------------------------
@@ -741,7 +822,7 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
               <p className="text-xs font-bold text-red-600">Total Invoices</p>
               <p className="text-xs text-gray-500">{stats.totalInvoices} invoices</p>
               <p className="text-sm font-bold text-gray-700">
-                ₹{stats.totalRevenue.toLocaleString()}
+                ₹{stats?.totalRevenue?.toLocaleString()}
               </p>
             </motion.div>
             <motion.div
@@ -751,7 +832,7 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
               <p className="text-xs font-bold text-green-600">Total Revenue</p>
               <p className="text-xs text-gray-500">{stats.totalInvoices} invoices</p>
               <p className="text-sm font-bold text-gray-700">
-                ₹{stats.totalRevenue.toLocaleString()}
+                ₹{stats?.totalRevenue?.toLocaleString()}
               </p>
             </motion.div>
             <motion.div
@@ -759,12 +840,33 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
               whileHover={{ scale: 1.02 }}
             >
               <p className="text-xs font-bold text-purple-600">Total Profit</p>
-              <p className={`text-xs text-gray-500 ${((stats.totalRevenue - stats.totalFuelCharge - stats.totalOtherExpense - stats.totalCost) / stats.totalRevenue * 100).toFixed(2) > 0 ? 'text-green-500' : 'text-red-500'}`}>
-              Margin: {stats.totalRevenue > 0 ? `${((stats.totalRevenue - stats.totalFuelCharge - stats.totalOtherExpense - stats.totalCost) / stats.totalRevenue * 100).toFixed(2)}%`  : ( '0.00%' )}
-              </p>
-              <p className="text-sm font-bold text-gray-700">
-                ₹{stats.totalProfit.toLocaleString()}
-              </p>
+<p
+  className={`text-xs text-gray-500 ${
+    ((stats.totalRevenue ?? 0) -
+      (stats.totalFuelCharge ?? 0) -
+      (stats.totalOtherExpense ?? 0) -
+      (stats.totalCost ?? 0)) > 0
+      ? 'text-green-500'
+      : 'text-red-500'
+  }`}
+>
+Margin:{' '}
+{(stats.totalRevenue ?? 0) > 0
+  ? `${(
+      ((stats.totalRevenue - (stats.totalCost ?? 0) - (stats.totalOtherExpense ?? 0) - (stats.totalFuelCharge ?? 0)) /
+        stats.totalRevenue) *
+      100
+    ).toFixed(2)}%`
+  : '0.00%'}
+
+</p>
+
+
+
+ <p className="text-sm font-bold text-gray-700">
+  ₹{(stats?.totalProfit ?? 0).toLocaleString()}
+</p>
+
             </motion.div>
             <motion.div
               className="bg-white p-4 rounded-lg shadow-md flex-1 min-w-[200px]"
@@ -772,7 +874,7 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
             >
               <p className="text-xs font-bold text-blue-600">Avg. Profit/Invoice</p>
               <p className="text-sm font-bold text-gray-700">
-                ₹{(stats.totalProfit / stats.totalInvoices || 0).toLocaleString()}
+                ₹{(stats?.totalProfit / stats?.totalInvoices || 0).toLocaleString()}
               </p>
             </motion.div>
             {/* New Stat Card: Total Pending Amount */}
@@ -782,10 +884,10 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
             >
               <p className="text-xs font-bold text-orange-600">Total Pending</p>
               <p className="text-xs text-gray-500">
-                {stats.totalInvoices} invoices
+                {stats?.totalInvoices} invoices
               </p>
               <p className="text-sm font-bold text-gray-700">
-                ₹{stats.totalPending.toLocaleString()}
+                ₹{stats?.totalPending?.toLocaleString()}
               </p>
             </motion.div>
           </div>
@@ -999,7 +1101,7 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
                         {format(new Date(billing.expectedDeliveryDate), 'dd MMM yyyy, HH:mm')}
                       </td>
                       <td className="px-2 text-xs py-2">
-                        {billing.showroom}
+                        {billing.showroom == "Moncompu - Main Office" ? 'MNCP' : 'CGNSH'}
                       </td>
                       <td className="px-2 text-xs py-2">
                         {billing.salesmanName}
@@ -1313,7 +1415,7 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
                       <div className="stat">
                         <div className="stat-title">Total Revenue</div>
                         <div className="stat-value text-green-600">
-                          ₹{selectedBilling.grandTotal?.toLocaleString()}
+                          ₹{selectedBilling?.grandTotal?.toLocaleString()}
                         </div>
                       </div>
                     </div>
@@ -1321,7 +1423,7 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
                       <div className="stat">
                         <div className="stat-title">Total Cost</div>
                         <div className="stat-value text-blue-600">
-                          ₹{calculateProfit(selectedBilling).totalCost.toLocaleString()}
+                          ₹{calculateProfit(selectedBilling)?.totalCost.toLocaleString()}
                         </div>
                       </div>
                     </div>
@@ -1329,7 +1431,7 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
                       <div className="stat">
                         <div className="stat-title">Total Other Exp.</div>
                         <div className="stat-value text-purple-600">
-                          ₹{calculateProfit(selectedBilling).totalOtherExpense.toLocaleString()}
+                          ₹{calculateProfit(selectedBilling)?.totalOtherExpense.toLocaleString()}
                         </div>
                       </div>
                     </div>
@@ -1337,7 +1439,7 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
                       <div className="stat">
                         <div className="stat-title">Total Fuel Exp.</div>
                         <div className="stat-value text-green-600">
-                          ₹{calculateProfit(selectedBilling).totalFuelExpenese.toLocaleString()}
+                          ₹{calculateProfit(selectedBilling)?.totalFuelExpenese.toLocaleString()}
                         </div>
                       </div>
                     </div>
@@ -1345,14 +1447,21 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
                       <div className="stat">
                         <div className="stat-title">Net Profit</div>
                         <div className="stat-value text-purple-600">
-                          ₹{calculateProfit(selectedBilling).totalProfit.toLocaleString()}
+                          ₹{calculateProfit(selectedBilling)?.totalProfit.toLocaleString()}
                         </div>
-                        <div className="stat-desc">
-                          {calculateProfit(selectedBilling).totalCost > 0
-                            ?  (( calculateProfit(selectedBilling).totalRevenue - calculateProfit(selectedBilling).totalFuelExpenese - calculateProfit(selectedBilling).totalOtherExpense - calculateProfit(selectedBilling).totalCost ) / calculateProfit(selectedBilling).totalRevenue * 100).toFixed(2)
-                            : '0.00'}
-                          % Margin
-                        </div>
+             <div className="stat-desc">
+  {(() => {
+    const profit = calculateProfit(selectedBilling);
+    return profit.totalCost > 0 && profit.totalRevenue > 0
+      ? `${(
+          ((profit.totalRevenue - profit.totalFuelExpenese - profit.totalOtherExpense - profit.totalCost) /
+            profit.totalRevenue) *
+          100
+        ).toFixed(2)}% Margin`
+      : '0.00% Margin';
+  })()}
+</div>
+
                       </div>
                     </div>
                   </div>

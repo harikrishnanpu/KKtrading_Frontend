@@ -145,11 +145,15 @@ const UpdateListPage = Loadable(lazy(()=> import('pages/UpdatesInfo/updatesList'
 const CreatePurchaseRequest = Loadable(lazy(()=> import('pages/purchase/createPurchaseRequest')));
 const ListPurchaseRequest = Loadable(lazy(()=> import('pages/purchase/listPurchaseRequest')));
 
+
+const ErrorPage = Loadable(lazy(()=> import('pages/error/ErrorPage')));
+
 // ==============================|| MAIN ROUTES ||============================== //
 
 const MainRoutes = {
   path: '/',
   element: <TabsLayout />,
+  errorElement: <ErrorPage />,
   children: [
       {
         path: '/employee',
