@@ -406,10 +406,16 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
   // Pagination Calculations
   // ---------------------------------------------------------------------------
   // const totalPages = Math.ceil(filteredBillings.length / itemsPerPage);
-  const paginatedBillings = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredBillings.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredBillings, currentPage]);
+const paginatedBillings = filteredBillings;
+
+useEffect(() => setCurrentPage(1), [
+    searchTerm,
+    invoiceStartDate,
+    invoiceEndDate,
+    deliveryStartDate,
+    deliveryEndDate,
+    statusTab
+  ]);
 
   // ---------------------------------------------------------------------------
   // Stats Calculation across all filtered billings (including pending amount)
