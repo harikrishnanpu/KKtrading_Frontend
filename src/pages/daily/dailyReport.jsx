@@ -22,7 +22,9 @@ const meta = {
   Deliveries         : { icon: HiTruck,           colour: 'blue'  },
   'Accounts Balance' : { icon: HiBanknotes,       colour: 'purple'},
   'Payments In'      : { icon: HiMiniDocumentCurrencyYen,            colour: 'green' },
-  'Payments Out'     : { icon: HiMiniDocumentCurrencyYen,            colour: 'red'   }
+  'Payments Out'     : { icon: HiMiniDocumentCurrencyYen,            colour: 'red'   },
+  'Payments Transfer'     : { icon: HiMiniDocumentCurrencyYen,            colour: 'blue'   },
+
 };
 
 const StatCard = ({ label, value }) => {
@@ -105,6 +107,7 @@ export default function DailyReport() {
             <StatCard label="Accounts Balance" value={`₹ ${data.accountsBalance}`}  />
             <StatCard label="Payments In"      value={`₹ ${data.paymentsIn}`}       />
             <StatCard label="Payments Out"     value={`₹ ${data.paymentsOut}`}      />
+            <StatCard label="Payments Transfer"     value={`₹ ${data.paymentsTransfer}`}      />
           </div>
 
           {/* leaves */}
