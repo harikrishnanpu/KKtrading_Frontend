@@ -7,7 +7,7 @@ const Transition = React.forwardRef(function Transition(props, ref) {
   return <Slide direction="up" ref={ref} {...props} />;
 });
 
-const ErrorModal = ({ open, message = "Something went wrong", onClose }) => {
+const ErrorModal = ({ open, outOfStock=[], message="something went wrong", onClose }) => {
   return (
     <Dialog
       open={open}
@@ -37,16 +37,26 @@ const ErrorModal = ({ open, message = "Something went wrong", onClose }) => {
         },
       }}
     >
-      <div className="flex flex-col items-center space-y-2">
-        <ErrorOutlineIcon sx={{ fontSize: 40, color: "error.main" }} />
-        <p className="text-xs font-bold text-red-700">{message}</p>
-        <button
-          className="mt-2 bg-red-500 text-white px-4 py-1 text-xs rounded hover:bg-red-600"
-          onClick={onClose}
-        >
-          Close
-        </button>
-      </div>
+<div className="flex flex-col items-center space-y-2">
+  <ErrorOutlineIcon sx={{ fontSize: 40, color: "error.main" }} />
+  <p className="text-xs font-bold text-red-700">{message}</p>
+  {outOfStock.length > 0 ? (
+    <div className="space-y-1 text-xs text-red-600">
+      {outOfStock.map((item, index) => (
+        <p key={index}>
+          Item: <strong>{item.name}</strong> | Available: {item.available} | Requested: {item.requested}
+        </p>
+      ))}
+    </div>
+  ) : null}
+  <button
+    className="mt-2 bg-red-500 text-white px-4 py-1 text-xs rounded hover:bg-red-600"
+    onClick={onClose}
+  >
+    Close
+  </button>
+</div>
+
     </Dialog>
   );
 };

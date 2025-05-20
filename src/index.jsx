@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client';
 import 'assets/fonts/inter/inter.css';
 
 // scroll bar
-import 'simplebar/dist/simplebar.css';
+import 'simplebar/dist/simplebar.min.css';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 

@@ -115,6 +115,7 @@ const handleNeedPurchase = (billing) => {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [error, setError] = useState(null);
   const [products, setProducts] = useState([]);
+  const [outofStockProds, setOutOfStockProds] = useState([]);
 
 
 const [stats, setStats] = useState({
@@ -610,18 +611,32 @@ useEffect(() => setCurrentPage(1), [
 
   const handleApprove = async (bill) => {
     try {
-      if (window.confirm('Are you sure you want to approve this billing?')) {
-        await api.put(`/api/billing/bill/approve/${bill._id}`, { userId: userInfo._id });
-        setBillings(
-          billings.map((b) =>
-            b._id === bill._id ? { ...b, isApproved: true } : b
-          )
-        );
-      }
-    } catch (error) {
-      setError(error?.response?.data?.message || error?.message || 'Something went wrong');
-      console.error(error);
+   if (window.confirm('Are you sure you want to approve this billing?')) {
+      await api.put(`/api/billing/bill/approve/${bill._id}`, { userId: userInfo._id });
+      
+      setBillings(
+        billings.map((b) =>
+          b._id === bill._id ? { ...b, isApproved: true } : b
+        )
+      );
+
+      // Clear error/out-of-stock after success
+      setError(null);
+      setOutOfStockProds([]);
     }
+    } catch (error) {
+    if (error?.response?.data?.outOfStock?.length > 0) {
+      setOutOfStockProds(error.response.data.outOfStock);
+    }
+
+    setError(
+      error?.response?.data?.error || 
+      error?.message || 
+      'Something went wrong'
+    );
+
+    console.error(error);
+  }
   };
 
   // =============================================================================
@@ -812,6 +827,7 @@ useEffect(() => setCurrentPage(1), [
 <ErrorModal
    open={Boolean(error)}
    message={error}
+   outOfStock={outofStockProds}
    onClose={() => setError(null)}
  />
 
