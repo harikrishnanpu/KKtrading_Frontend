@@ -329,9 +329,9 @@ useEffect(() => {
                         : '-'}
                   </td>
                   <td className="px-3 py-2 flex gap-2 justify-center">
-                    <Button size="small" onClick={() => openEdit(it)}>
+                    {userInfo.isAdmin && (<Button size="small" onClick={() => openEdit(it)}>
                       edit
-                    </Button>
+                    </Button> )}
                     {userInfo.isSuper && (
                       <Button size="small" color="error" onClick={() => apiDelete(it._id)}>
                         delete
@@ -361,9 +361,9 @@ useEffect(() => {
                   {it.invoiceNo}
                 </span>
                 <div className="flex gap-2">
-                  <Button size="small" onClick={() => openEdit(it)}>
+                  {userInfo.isAdmin && (<Button size="small" onClick={() => openEdit(it)}>
                     edit
-                  </Button>
+                  </Button> )}
                   {userInfo.isSuper && (
                     <Button size="small" color="error" onClick={() => apiDelete(it._id)}>
                       delete

@@ -1,7 +1,5 @@
 // project import
 import dashboard from './dashboard';
-import support from './support';
-import pages from './pages';
 import apps from './apps';
 import accounts from './accounts';
 import payments from './payments';

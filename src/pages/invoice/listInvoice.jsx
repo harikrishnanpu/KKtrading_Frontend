@@ -1171,7 +1171,7 @@ Margin:{' '}
                           >
                             <i className="fa fa-eye mr-1"></i> View
                           </button>
-                          {userInfo.isAdmin && (
+                          {userInfo.isSuper && (
                             <button
                               onClick={() => handleRemove(billing._id,billing.invoiceNo)}
                               className="bg-red-500 hover:bg-red-600 text-white px-2 font-bold py-1 rounded flex items-center"

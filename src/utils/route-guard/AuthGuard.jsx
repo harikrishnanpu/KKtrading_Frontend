@@ -37,10 +37,10 @@ export default function AuthGuard({ children }) {
       navigate('/login', { state: { from: location.pathname }, replace: true });
     } else if (user && !user.isEmployee) {
       navigate('/employee', { replace: true });
-    } else if (location.pathname === '/admin/allusers/' && (!user?.isAdmin && !user?.isSuper)) {
+    } else if (location.pathname == '/admin/allusers' && !user?.isSuper) {
       navigate('/', { replace: true });
     }
-  }, [isLoggedIn, user, location.pathname, navigate]);
+  }, [isLoggedIn, user, location, navigate]);
 
   return children;
 }

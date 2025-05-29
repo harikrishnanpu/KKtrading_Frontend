@@ -477,6 +477,14 @@ const [printOptions, setPrintOptions] = useState({
     if (!newValue.trim()) {
       setSuggestions([]);
       setError('');
+      setItemName('');
+      setItemCategory('');
+      setItemBrand('');
+      setItemRemark('');
+      setQuantity('');
+      setDisplaysellingPrice(0.00);
+      setSellingPrice('');
+      setGstRateInput('');
       setShowSuggestionsSidebar(false);
       return;
     }

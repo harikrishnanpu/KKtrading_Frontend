@@ -31,7 +31,12 @@ const {user} = useAuth();
 
   useLayoutEffect(() => {
     const filteredMenu = {
-      items: menuItem.items.filter(item => item.id !== 'admin' || user?.isAdmin)
+items: menuItem.items.filter(item => {
+  if (['admin', 'Reports', 'Accounts' , 'Stocks', 'Payments','App', 'Purchase'].includes(item.id)) {
+    return user?.isAdmin;
+  }
+  return true;
+})
     };
     setMenuItems(filteredMenu);
   }, [menuItem,user]);

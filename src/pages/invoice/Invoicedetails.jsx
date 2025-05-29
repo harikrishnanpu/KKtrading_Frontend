@@ -281,7 +281,7 @@ export default function Details() {
                         ) : (
                           (billing?.products || []).map((product, index) => {
                             const amount =
-                              (product.sellingPrice || 0) * (product.quantity || 0);
+                              (product.sellingPrice || 0) * (product.enteredQty || 0);
                             return (
                               <TableRow key={product._id || index}>
                                 <TableCell>{index + 1}</TableCell>
@@ -296,7 +296,7 @@ export default function Details() {
                                     </Typography>
                                   )}
                                 </TableCell>
-                                <TableCell>{product.quantity}</TableCell>
+                                <TableCell>{product.enteredQty}</TableCell>
                                 <TableCell>{product.sellingPrice}</TableCell>
                                 <TableCell>{product.gstRate}%</TableCell>
                                 <TableCell align="right">{amount.toFixed(2)}</TableCell>
