@@ -286,9 +286,6 @@ useEffect(() => {
                 <tr key={it._id} className="border-b hover:bg-gray-100">
                   <td
                     className="px-3 py-2 text-red-600 cursor-pointer"
-                    onClick={() =>
-                      userInfo.isAdmin && navigate(`/invoice/details/${it.billingId}`)
-                    }
                   >
                     {it.invoiceNo}
                   </td>
@@ -354,9 +351,6 @@ useEffect(() => {
               <div className="flex items-center justify-between mb-2">
                 <span
                   className="text-red-600 font-semibold cursor-pointer"
-                  onClick={() =>
-                    userInfo.isAdmin && navigate(`/invoice/details/${it.billingId}`)
-                  }
                 >
                   {it.invoiceNo}
                 </span>
