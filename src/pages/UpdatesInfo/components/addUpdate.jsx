@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, IconButton, Slide } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import 'react-quill/dist/quill.snow.css'; 
 import api from 'pages/api';
 
 const Transition = React.forwardRef(function Transition(props, ref) {

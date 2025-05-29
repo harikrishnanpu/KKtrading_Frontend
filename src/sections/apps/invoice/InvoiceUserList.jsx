@@ -17,7 +17,6 @@ import Avatar from 'components/@extended/Avatar';
 import MoreIcon from 'components/@extended/MoreIcon';
 
 // assets
-import Avatar1 from 'assets/images/users/avatar-5.png';
 import Avatar2 from 'assets/images/users/avatar-6.png';
 import Avatar3 from 'assets/images/users/avatar-7.png';
 import Avatar4 from 'assets/images/users/avatar-8.png';
@@ -28,10 +27,7 @@ import Avatar5 from 'assets/images/users/avatar-9.png';
 export default function InvoiceUserList({ invoices, error, loading }) {
 
 
-  // Map salesman names to avatars
-  const avatarMap = {
-    "ff" : Avatar1
-  };
+
 
   // Function to calculate relative time (e.g., '5 min ago')
   const getRelativeTime = (date) => {
@@ -91,7 +87,7 @@ export default function InvoiceUserList({ invoices, error, loading }) {
                 <Grid item>
                   <Avatar
                     alt={invoice.customerName}
-                    src={avatarMap[invoice.customerName] || Avatar1} // default avatar
+                    src={null} // default avatar
                   />
                 </Grid>
                 <Grid item xs zeroMinWidth>

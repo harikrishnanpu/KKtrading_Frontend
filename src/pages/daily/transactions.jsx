@@ -420,16 +420,17 @@ const DailyTransactions = () => {
   // -------------------------------
   // On mount + whenever fromDate/toDate changes
   // -------------------------------
+  const fetchAccounts = async () => {
+    try {
+      const accountsRes = await api.get('/api/accounts/allaccounts');
+      setAccounts(accountsRes.data);
+    } catch (err) {
+      console.error('Failed to fetch accounts:', err);
+    }
+  };
+
   useEffect(() => {
     fetchTransactions();
-    const fetchAccounts = async () => {
-      try {
-        const accountsRes = await api.get('/api/accounts/allaccounts');
-        setAccounts(accountsRes.data);
-      } catch (err) {
-        console.error('Failed to fetch accounts:', err);
-      }
-    };
     fetchAccounts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fromDate, toDate]);
@@ -559,8 +560,9 @@ const DailyTransactions = () => {
 
       // Refresh
       fetchTransactions();
+      fetchAccounts();
     } catch (err) {
-      setError('Failed to add transaction.');
+      setError(err.response.data.message || err.message || 'failed to add transaction');
       console.error(err);
     }
   };
@@ -1163,9 +1165,9 @@ const handleDeleteTransaction = async (id) => {
                   >
                     <MenuItem value="">Select Account</MenuItem>
                     {accounts.map((account, index) => (
-                      <MenuItem key={index} value={account.accountId}>
-                        {account.accountName}
-                      </MenuItem>
+                <MenuItem className='flex justify-between gap-30' key={index} value={account.accountId}>
+                  <span>{account.accountName}</span> <span className={`ml-auto ${account.balanceAmount > 0 ? 'text-green-500' : 'text-red-500'}`}> Balance: {account.balanceAmount}</span>
+                </MenuItem>
                     ))}
                   </Select>
                 </FormControl>
@@ -1201,9 +1203,9 @@ const handleDeleteTransaction = async (id) => {
                   >
                     <MenuItem value="">Select Account</MenuItem>
                     {accounts.map((account, index) => (
-                      <MenuItem key={index} value={account.accountId}>
-                        {account.accountName}
-                      </MenuItem>
+                <MenuItem className='flex justify-between gap-30' key={index} value={account.accountId}>
+                  <span>{account.accountName}</span> <span className={`ml-auto ${account.balanceAmount > 0 ? 'text-green-500' : 'text-red-500'}`}> Balance: {account.balanceAmount}</span>
+                </MenuItem>
                     ))}
                   </Select>
                 </FormControl>
@@ -1291,8 +1293,8 @@ const handleDeleteTransaction = async (id) => {
             >
               <MenuItem value="">Select Method</MenuItem>
               {modalType === 'transfer' ? <MenuItem value="Internal Transfer">Transfer</MenuItem> : accounts.map((account, index) => (
-                <MenuItem key={index} value={account.accountId}>
-                  {account.accountName}
+                <MenuItem className='flex justify-between gap-30' key={index} value={account.accountId}>
+                  <span>{account.accountName}</span> <span className={`ml-auto ${account.balanceAmount > 0 ? 'text-green-500' : 'text-red-500'}`}> Balance: {account.balanceAmount}</span>
                 </MenuItem>
               ))}
             </Select>

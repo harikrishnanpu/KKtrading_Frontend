@@ -343,7 +343,7 @@ const totalInternalTransfer = filteredAccounts.reduce((total, account) => {
                 <th className="px-4 py-2 text-left">Account ID</th>
                 <th className="px-2 py-2">Account Name</th>
                 <th className="px-2 py-2">Balance</th>
-                <th className="px-2 py-2">Created At</th>
+                <th className="px-2 py-2">Updated At</th>
                 <th className="px-2 py-2">Actions</th>
               </tr>
             </thead>
@@ -418,7 +418,7 @@ const totalInternalTransfer = filteredAccounts.reduce((total, account) => {
               {filteredPayments.map((payment, index) => (
                 <tr key={payment._id || index} className="bg-white border-b hover:bg-gray-50">
                   <td className="px-4 py-2 text-xs">{index + 1}</td>
-                  <td className={`px-4 py-2 text-xs font-semibold ${type === 'in' ? 'text-green-600' : 'text-red-600'}`}>
+                  <td className={`px-4 py-2 text-xs font-semibold ${type === 'in' || payment?.remark?.includes('from')  ? 'text-green-600' : 'text-red-600' }`}>
                     ₹{payment.amount.toFixed(2)}
                   </td>
                   <td className="px-4 py-2 text-xs">{payment.method}</td>
@@ -683,7 +683,7 @@ const totalInternalTransfer = filteredAccounts.reduce((total, account) => {
                         <th className="px-4 py-2 text-left">Account ID</th>
                         <th className="px-2 py-2">Account Name</th>
                         <th className="px-2 py-2">Balance (Rs.)</th>
-                        <th className="px-2 py-2">Created At</th>
+                        <th className="px-2 py-2">Updated At</th>
                         <th className="px-2 py-2">Actions</th>
                       </tr>
                     </thead>
@@ -693,7 +693,7 @@ const totalInternalTransfer = filteredAccounts.reduce((total, account) => {
                           <td className="px-4 py-2 text-xs font-bold text-red-600">{account.accountId}</td>
                           <td className="px-2 py-2 text-xs">{account.accountName}</td>
                           <td className="px-2 py-2 text-xs">₹{account.balanceAmount.toFixed(2)}</td>
-                          <td className="px-2 py-2 text-xs">{new Date(account.createdAt).toLocaleDateString()}</td>
+                          <td className="px-2 py-2 text-xs">{new Date(account.updatedAt).toLocaleDateString()}</td>
                           <td className="px-2 py-2 text-xs">
                             <div className="flex space-x-2">
                               <button

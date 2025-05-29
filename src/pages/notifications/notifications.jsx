@@ -29,16 +29,19 @@ import { Add, Edit, Delete } from '@mui/icons-material';
 
 // If you have a custom Axios instance at 'pages/api' that sets baseURL & headers:
 import api from 'pages/api';
+import useAuth from 'hooks/useAuth';
 
 export default function AllNotificationsPage() {
+  const [fetchedNotifications,setFetchedNotifications] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [users, setUsers] = useState([]); // store all users for checkboxes
+  const {user} = useAuth();
 
   // --- Fetch notifications ---
   const fetchNotifications = async () => {
     try {
       const res = await api.get('/api/notifications');
-      setNotifications(res.data);
+      setFetchedNotifications(res.data);
     } catch (error) {
       console.error('Error fetching notifications:', error);
     }
@@ -59,6 +62,14 @@ export default function AllNotificationsPage() {
     fetchNotifications();
     fetchUsers();
   }, []);
+
+  useEffect(()=>{
+let filteredNotifications = fetchedNotifications.filter((not) => {
+  if (user.isSuper) return true; // show all notifications to super user
+  return not.assignTo?.includes(user._id); // only show if assigned to user
+});
+setNotifications(filteredNotifications)
+  },[fetchedNotifications])
 
   // --------------------------------------------------------------------------
   // STATES FOR ADD, EDIT, AND DELETE DIALOGS
@@ -187,7 +198,8 @@ export default function AllNotificationsPage() {
         message: newNotification.message,
         type: newNotification.type,
         extraInfo: newNotification.extraInfo,
-        assignTo: newNotification.assignTo
+        assignTo: newNotification.assignTo,
+        assignedBy: user._id
       };
 
       await api.post('/api/notifications', payload);
@@ -249,14 +261,14 @@ export default function AllNotificationsPage() {
       <Typography variant="h4" gutterBottom>
         All Notifications
       </Typography>
-      <Button
+      {user.isSuper && <Button
         variant="outlined"
         startIcon={<Add />}
         onClick={handleOpenAdd}
         sx={{ mb: 2 }}
       >
         Add Notification
-      </Button>
+      </Button>}
 
       {/* Notifications Table */}
       <TableContainer component={Paper}>
@@ -268,7 +280,7 @@ export default function AllNotificationsPage() {
               <TableCell>Type</TableCell>
               <TableCell>Extra Info</TableCell>
               <TableCell>Assign To</TableCell>
-              <TableCell>Actions</TableCell>
+              {user.isSuper && <TableCell>Actions</TableCell> }
             </TableRow>
           </TableHead>
           <TableBody>
@@ -291,7 +303,7 @@ export default function AllNotificationsPage() {
                       : '—'}
                   </Stack>
                 </TableCell>
-                <TableCell>
+                 {user.isSuper && <TableCell>
                   <Stack direction="row" spacing={1}>
                     <IconButton
                       color="primary"
@@ -306,7 +318,7 @@ export default function AllNotificationsPage() {
                       <Delete />
                     </IconButton>
                   </Stack>
-                </TableCell>
+                </TableCell> }
               </TableRow>
             ))}
           </TableBody>

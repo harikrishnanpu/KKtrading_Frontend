@@ -24,7 +24,11 @@ import Transitions from 'components/@extended/Transitions';
 import { ThemeMode } from 'config';
 import { Gift, MessageText1, Notification, Setting2 } from 'iconsax-react';
 import Avatar from 'components/@extended/Avatar';
+import useAuth from 'hooks/useAuth';
+import socket from 'api/socket';
 import api from 'pages/api';
+
+
 
 const actionSX = {
   mt: '6px',
@@ -38,31 +42,45 @@ const actionSX = {
 export default function NotificationPage() {
   const theme = useTheme();
   const matchesXs = useMediaQuery(theme.breakpoints.down('md'));
+  const {user} = useAuth();
 
   // anchor ref for popper
   const anchorRef = useRef(null);
 
   // local state
   const [notifications, setNotifications] = useState([]);
+  const [totalUnreadNotifications, setTotalUnreadNotifications] = useState(0);
   const [open, setOpen] = useState(false);
 
-  // fetch notifications from backend
-  const fetchNotifications = async () => {
-    try {
-      // Adjust the URL according to your backend route
-      const response = await api.get('/api/notifications');
-      setNotifications(response.data);
-    } catch (error) {
-      console.error('Failed to fetch notifications:', error);
+  const audioRef = useRef(null);
+
+  const playAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.play().catch((error) => {
+        console.error("Error playing audio:", error);
+      });
     }
   };
 
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
 
-  // number of unread notifications
-  const unreadCount = notifications.filter((item) => !item.read).length;
+useEffect(() => {
+
+  if (user?._id && socket.connected) {    
+    socket.emit('register-user', user._id);
+  }
+
+  socket.on('get-notification', (data)=> {
+    setNotifications(data.notifications);
+    setTotalUnreadNotifications(data.count)
+  })
+
+    socket.on('notification', (data)=> {
+    playAudio();
+    setNotifications(data.notifications);
+    setTotalUnreadNotifications(data.count)
+  })
+
+},[]);
 
   const handleToggle = () => {
     setOpen((prevOpen) => !prevOpen);
@@ -91,7 +109,7 @@ export default function NotificationPage() {
         size="large"
         sx={{ color: 'secondary.main', bgcolor: open ? iconBackColorOpen : iconBackColor, p: 1 }}
       >
-        <Badge badgeContent={unreadCount} color="primary" sx={{ '& .MuiBadge-badge': { top: 2, right: 4 } }}>
+        <Badge badgeContent={totalUnreadNotifications} color="primary" sx={{ '& .MuiBadge-badge': { top: 2, right: 4 } }}>
           <Notification variant="Bold" />
         </Badge>
       </IconButton>
@@ -134,16 +152,16 @@ export default function NotificationPage() {
             >
               <ClickAwayListener onClickAway={handleClose}>
                 <MainCard elevation={0} border={false}>
-                  <Stack direction="row" alignItems="center" justifyContent="space-between">
+                  <Stack direction="row" marginBottom={'10px'} alignItems="center" justifyContent="space-between">
                     <Typography variant="h5">Notifications</Typography>
                     <Link
                       href="#"
                       variant="h6"
                       color="primary"
-                      onClick={(e) => {
+                      onClick={async(e) => {
                         e.preventDefault();
-                        // You can add logic here to mark all as read in backend
-                        // For example: axios.put(...) then refresh notifications
+                       let result = await api.put(`/api/notifications/markasread/${user._id}`)
+                       console.log(result);
                       }}
                     >
                       Mark all read
@@ -162,7 +180,8 @@ export default function NotificationPage() {
                       }
                     }}
                   >
-                    {notifications.map((notification, index) => {
+                    {notifications?.length == 0 && <p className='bg-gray-200 px-2 py-4 text-center rounded-sm text-white'>No Notifications Found</p>}
+                    {notifications?.map((notification, index) => {
                       return (
                         <ListItemButton
                           key={notification._id || index}
@@ -221,8 +240,8 @@ export default function NotificationPage() {
                     })}
                   </List>
 
-                  <Stack direction="row" justifyContent="center">
-                    <Link href="#" variant="h6" color="primary">
+                  <Stack direction="row" marginTop={'20px'} justifyContent="center">
+                    <Link href="/notifications/all" variant="h6" color="primary">
                       View all
                     </Link>
                   </Stack>
@@ -232,6 +251,7 @@ export default function NotificationPage() {
           </Transitions>
         )}
       </Popper>
+              <audio ref={audioRef} src={`/sounds/notification.mp3`} preload="auto" />
     </Box>
   );
 }

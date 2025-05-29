@@ -435,7 +435,7 @@ const SalesReport = () => {
                   <th className="px-2 py-3">Unit</th>
                   <th className="px-2 py-3">Sell&nbsp;₹</th>
                   <th className="px-2 py-3">Total&nbsp;₹</th>
-                  <th className="px-2 py-3">Profit&nbsp;%</th>
+                  {userInfo?.isSuper && <th className="px-2 py-3">Profit&nbsp;%</th>}
                   <th className="px-2 py-3">Delivery</th>
                 </tr>
               </thead>
@@ -475,9 +475,9 @@ const SalesReport = () => {
                       <td className="px-2 py-3 text-center">NOS</td>
                       <td className="px-2 py-3 text-right">₹{sell.toFixed(2)}</td>
                       <td className="px-2 py-3 font-bold text-right">₹{total.toFixed(2)}</td>
-                      <td className="px-2 py-3 text-center">
+                      {userInfo?.isSuper && <td className="px-2 py-3 text-center">
                         <ProfitBadge value={pct} />
-                      </td>
+                      </td> }
                       <td
                         className={`px-2 py-3 text-center font-bold ${
                           r.deliveryStatus === 'Delivered'
@@ -539,9 +539,9 @@ const SalesReport = () => {
                   <p className="text-gray-600 text-xs font-bold mt-1">
                     Total&nbsp;₹: {total.toFixed(2)}
                   </p>
-                  <p className="text-gray-600 text-xs mt-1 flex items-center">
+                 {userInfo?.isSuper && <p className="text-gray-600 text-xs mt-1 flex items-center">
                     Profit:&nbsp;<ProfitBadge value={pct} />
-                  </p>
+                  </p> }
                   <p
                     className={`text-xs font-bold mt-1 ${
                       r.deliveryStatus === 'Delivered'

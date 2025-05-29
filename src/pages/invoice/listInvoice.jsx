@@ -186,13 +186,8 @@ useEffect(() => {
   /* ------------------------------------------------------------------ */
   /* ① total **cost** of all invoices (purchase side)                   */
   /* ------------------------------------------------------------------ */
-  const totalCost = billings.reduce((acc, inv) => {
-    const invoiceCost = inv.products.reduce(
-      (sum, p) => sum + costMap[p.item_id] * p.quantity,
-      0
-    );
-    return acc + invoiceCost;
-  }, 0);
+  const totalCost = baseStats.totalCost || 0;
+
 
   /* ------------------------------------------------------------------ */
   /* ② total **profit** (revenue – cost – otherExp – fuel)              */
@@ -864,10 +859,7 @@ useEffect(() => setCurrentPage(1), [
               <p className="text-xs font-bold text-purple-600">Total Profit</p>
 <p
   className={`text-xs text-gray-500 ${
-    ((stats.totalRevenue ?? 0) -
-      (stats.totalFuelCharge ?? 0) -
-      (stats.totalOtherExpense ?? 0) -
-      (stats.totalCost ?? 0)) > 0
+    (stats.totalProfit) > 0
       ? 'text-green-500'
       : 'text-red-500'
   }`}
@@ -1096,7 +1088,7 @@ Margin:{' '}
                       <td className="px-4 py-2">
                         <div className='flex justify-between'>
                         <StatusIndicator billing={billing} />
-                        { billing.neededToPurchase?.length > 0 && <StatusIndicatorForNeedPurchase billing={billing} /> }
+                        { billing.neededToPurchase?.length > 0 && !billing.neededToPurchase?.every((val,ind)=> val.purchased && val.verified) && <StatusIndicatorForNeedPurchase billing={billing} /> }
                         </div>
                       </td>
                       <td
@@ -1196,7 +1188,7 @@ Margin:{' '}
                             </button>
                           )}
 
-{userInfo.isAdmin && billing.neededToPurchase.length > 0 && (
+{userInfo.isAdmin && billing.neededToPurchase.length > 0 && !billing.neededToPurchase?.every((val,ind)=> val.purchased && val.verified) && (
     <button
       onClick={() => handleNeedPurchase(billing)}
       className="bg-blue-500 hover:bg-blue-600 text-white px-2 font-bold py-1 rounded flex items-center"

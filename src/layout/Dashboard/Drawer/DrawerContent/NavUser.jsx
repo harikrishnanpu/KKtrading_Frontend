@@ -21,7 +21,6 @@ import { useGetMenuMaster } from 'api/menu';
 // assets
 import { ArrowRight2 } from 'iconsax-react';
 
-import avatar1 from 'assets/images/users/avatar-1.png';
 import api from 'pages/api';
 
 const ExpandMore = styled(IconButton, { shouldForwardProp: (prop) => prop !== 'theme' && prop !== 'expand' && prop !== 'drawerOpen' })(
@@ -45,7 +44,7 @@ const ExpandMore = styled(IconButton, { shouldForwardProp: (prop) => prop !== 't
 export default function UserList() {
   const theme = useTheme();
   const navigate = useNavigate();
-  const [avatar, setAvatar] = useState(avatar1);
+  const [avatar, setAvatar] = useState();
   
   const { menuMaster } = useGetMenuMaster();
   const drawerOpen = menuMaster.isDashboardDrawerOpened;

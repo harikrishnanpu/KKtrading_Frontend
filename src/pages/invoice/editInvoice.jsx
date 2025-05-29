@@ -1485,7 +1485,8 @@ const netTotal = rateWithoutGST + gstAmount;
         {/* STEP 4: Add Products */}
         {step === 4 && (
           <div>
-            <div className="flex flex-col min-h-screen">
+          <div>
+            <div className="flex flex-col">
               {/* Desktop Layout */}
               <div className="hidden md:flex flex-col flex-1">
                 <div className="flex flex-col flex-1 overflow-y-auto p-6">
@@ -1506,7 +1507,7 @@ const netTotal = rateWithoutGST + gstAmount;
                         <i className="fa fa-search bg-red-500 p-2 text-white rounded-lg ml-2 items-center" />
                       </div>
 
-                      <div className="overflow-x-auto rounded-md">
+                      <div className="overflow-x-auto rounded-md ">
                         <table className="table-auto w-full border-collapse rounded-xl shadow-md">
                           <thead>
                             <tr className="bg-red-500 text-white text-xs">
@@ -2405,6 +2406,8 @@ const netTotal = rateWithoutGST + gstAmount;
                 </div>
               </div>
             </div>
+          </div>
+            <div className='mb-60'></div>
           </div>
         )}
 

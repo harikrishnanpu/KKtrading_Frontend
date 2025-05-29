@@ -74,16 +74,16 @@ const dashboard = {
       target: false,
       breadcrumbs: false
     },
-    {
-      id: 'chat',
-      title: <FormattedMessage id="Chat" />,
-      type: 'item',
-      url: '/chat',
-      icon: icons.chat,
-      link: '/chat',
-      target: false,
-      breadcrumbs: false
-    },
+    // {
+    //   id: 'chat',
+    //   title: <FormattedMessage id="Chat" />,
+    //   type: 'item',
+    //   url: '/chat',
+    //   icon: icons.chat,
+    //   link: '/chat',
+    //   target: false,
+    //   breadcrumbs: false
+    // },
     {
       id: 'Updates',
       title: <FormattedMessage id="Updates" />,

@@ -70,9 +70,9 @@ const StyledDataGrid = styled(DataGrid)(({ theme }) => ({
 const UserStatusBadge = ({ status }) => (
   <Chip
     label={status}
-    color={status === 'Active' ? 'success' : 'error'}
+    color={status === 'online' ? 'success' : 'error'}
     size="small"
-    variant="outlined"
+    variant="contained"
   />
 );
 
@@ -135,7 +135,7 @@ export default function UserListScreen() {
     },
     {
       field: 'status',
-      headerName: 'Status',
+      headerName: 'online_status',
       renderCell: (params) => <UserStatusBadge status={params.value} />
     },
     {
@@ -166,7 +166,7 @@ export default function UserListScreen() {
         data.map((u) => ({
           ...u,
           id: u._id,
-          status: u.isActive ? 'Active' : 'Inactive',
+          status: u.online_status,
           role: u.isAdmin ? 'Admin' : 'User'
         }))
       );

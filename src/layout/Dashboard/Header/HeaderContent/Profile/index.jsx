@@ -29,7 +29,6 @@ import { ThemeMode } from 'config';
 import useAuth from 'hooks/useAuth';
 
 // assets
-import avatar1 from 'assets/images/users/avatar-6.png';
 import { Setting2, Profile, Logout } from 'iconsax-react';
 import api from 'pages/api';
 
@@ -61,7 +60,7 @@ function a11yProps(index) {
 export default function ProfilePage() {
   const theme = useTheme();
   const navigate = useNavigate();
-  const [avatar, setAvatar] = useState(avatar1);
+  const [avatar, setAvatar] = useState();
 
   const { logout, user } = useAuth();
   const handleLogout = async () => {
