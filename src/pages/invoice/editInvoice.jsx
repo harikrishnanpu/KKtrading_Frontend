@@ -1186,7 +1186,7 @@ const netTotal = rateWithoutGST + gstAmount;
           </div>
           <div className="text-right">
             <button
-              onClick={generatePDF}
+              // onClick={generatePDF}
               className={`mb-2 bg-red-500 text-xs text-white font-bold py-2 px-4 rounded-lg mr-2 ${
                 products.length === 0 ? 'opacity-70 cursor-not-allowed' : 'hover:bg-red-600'
               }`}

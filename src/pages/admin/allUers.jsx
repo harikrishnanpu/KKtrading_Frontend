@@ -43,7 +43,8 @@ import {
   GridView,
   Search,
   Print,
-  Cancel
+  Cancel,
+  NetworkCellOutlined
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 
@@ -70,9 +71,8 @@ const StyledDataGrid = styled(DataGrid)(({ theme }) => ({
 const UserStatusBadge = ({ status }) => (
   <Chip
     label={status}
-    color={status === 'online' ? 'success' : 'error'}
     size="small"
-    variant="contained"
+    className={`${status === 'online' ? 'bg-green-500' : 'error'} font-bold text-white pulse`}
   />
 );
 
@@ -121,7 +121,8 @@ export default function UserListScreen() {
         </Stack>
       )
     },
-    { field: 'email', headerName: 'Email', flex: 1.5 },
+    { field: 'email', headerName: 'Email', flex: .5 },
+    {field: 'lastCheckInTime', headerName: 'checkIn', flex: 1.5, renderCell: (params) => params.value.split('GMT')[0]},
     {
       field: 'role',
       headerName: 'Role',
@@ -130,6 +131,7 @@ export default function UserListScreen() {
           label={params.value}
           color={params.value === 'Admin' ? 'primary' : 'default'}
           size="small"
+          className='font-bold'
         />
       )
     },
@@ -510,11 +512,10 @@ export default function UserListScreen() {
 
             <Stack direction="row" spacing={2}>
               <Button
-                variant="outlined"
-                startIcon={<PersonAdd />}
-                onClick={() => navigate('/user/create')}
+                className='bg-green-600 px-4 text-white font-bold py-2'
+                startIcon={<NetworkCellOutlined />}
               >
-                New User
+                {users.filter((usr,ind) => usr.online_status == 'online')?.length || 0  } Online Users
               </Button>
               <Button
                 variant="outlined"
@@ -611,6 +612,9 @@ export default function UserListScreen() {
                           <Typography variant="h6">{user.name}</Typography>
                           <Typography variant="body2" color="text.secondary">
                             {user.email}
+                          </Typography>
+                          <Typography>
+                           { new Date(user.lastCheckInTime || Date.now()).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) }
                           </Typography>
                         </Box>
                       </Stack>
