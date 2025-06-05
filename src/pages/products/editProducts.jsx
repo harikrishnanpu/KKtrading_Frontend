@@ -845,14 +845,15 @@ const canEditBasic = user.isEmployee && !canEditAll;
                             >
                               Delete
               </Button>
-            <Button
+           {user.isSuper && <Button
               type="submit"
               variant="outlined"
               color="primary"
               disabled={loadingUpdate}
+              onClick={submitHandler}
             >
               {loadingUpdate ? <CircularProgress size={24} /> : 'Update'}
-            </Button>
+            </Button> }
           </Stack>
         </Grid>
       </Grid>
