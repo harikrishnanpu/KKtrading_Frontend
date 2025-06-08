@@ -85,6 +85,7 @@ export default function ChatDrawer({ handleDrawerOpen, openChatDrawer, setUser, 
       open={openChatDrawer}
       ModalProps={{ keepMounted: true }}
       onClose={handleDrawerOpen}
+      className='fixed left-0 z-10'
     >
       <MainCard
         sx={{ bgcolor: matchDownLG ? 'transparent' : drawerBG, borderRadius: '12px 0 0 12px', borderRight: 'none' }}
@@ -98,7 +99,7 @@ export default function ChatDrawer({ handleDrawerOpen, openChatDrawer, setUser, 
                 Messages
               </Typography>
               <Chip
-                label="9"
+                label={9}
                 color={theme.palette.mode === ThemeMode.DARK ? 'default' : 'secondary'}
                 sx={{ width: 20, height: 20, borderRadius: '50%', '& .MuiChip-label': { px: 0.5 } }}
               />

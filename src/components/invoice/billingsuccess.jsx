@@ -16,6 +16,7 @@ import {
 } from '@mui/material';
 import { CloseCircle } from 'iconsax-react';
 import './billingSuccess.css';
+import { useTabs } from 'contexts/TabsContext';
 
 // Transition component for Slide animation from bottom
 const Transition = forwardRef(function Transition(props, ref) {
@@ -25,6 +26,7 @@ const Transition = forwardRef(function Transition(props, ref) {
 const BillingSuccess = ({ estimationNo, isAdmin }) => {
   const navigate = useNavigate();
   const audioRef = useRef(null);
+  const {closeTab,activeTab} = useTabs();
   const [open, setOpen] = useState(true);
 
   const handleContinue = () => {
@@ -45,8 +47,8 @@ const BillingSuccess = ({ estimationNo, isAdmin }) => {
 
   const handleClose = () => {
     setOpen(false);
-    navigate('/dashboard/default/');
-
+    closeTab(activeTab);
+    navigate('/invoice/list/');
   };
 
   return (

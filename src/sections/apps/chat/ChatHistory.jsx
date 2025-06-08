@@ -23,7 +23,7 @@ import { Edit } from 'iconsax-react';
 
 export default function ChatHistory({ theme, user }) {
   const bottomRef = useRef(null);
-  const { chat, chatLoading } = useGetUserChat(user.name);
+  const { chat, chatLoading } = useGetUserChat(user._id);
 
   useEffect(() => {
     // @ts-ignore
@@ -37,7 +37,7 @@ export default function ChatHistory({ theme, user }) {
     <Grid container spacing={2.5}>
       {chat.map((history, index) => (
         <Grid item xs={12} key={index}>
-          {history.from !== user.name ? (
+          {history.from !== user._id ? (
             <Stack spacing={1.25} direction="row" alignItems="flex-start">
               <Grid container justifyContent="flex-end">
                 <Grid item xs={2} md={3} xl={4} />

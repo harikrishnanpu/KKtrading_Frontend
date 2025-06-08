@@ -11,6 +11,7 @@ const CustomerAccountEdit = () => {
   const { id } = useParams(); // Get the account ID from the URL
   const [customerName, setCustomerName] = useState('');
   const [customerContactNumber, setCustomerContactNumber] = useState('');
+  const [customerAddress, setCustomerAddress] = useState('');
   const [customerId, setCustomerId] = useState('');
   const [bills, setBills] = useState([]);
   const [payments, setPayments] = useState([]);
@@ -25,6 +26,7 @@ const CustomerAccountEdit = () => {
   // Refs for managing focus
   const customerNameRef = useRef();
   const customerNumberRef = useRef();
+  const customerAddressRef = useRef();
   const customerIdRef = useRef();
   const billRefs = useRef([]);
   const paymentRefs = useRef([]);
@@ -37,6 +39,7 @@ const CustomerAccountEdit = () => {
       const account = response.data;
       setCustomerName(account.customerName);
       setCustomerContactNumber(account.customerContactNumber);
+      setCustomerAddress(account.customerAddress);
       setCustomerId(account.customerId);
       setBills(account.bills || []);
       setPayments(account.payments || []);
@@ -201,6 +204,7 @@ const CustomerAccountEdit = () => {
     const payload = {
       customerName: customerName.trim(),
       customerContactNumber: customerContactNumber.trim(),
+      customerAddress: customerAddress.trim(),
       customerId: customerId.trim(),
       bills: bills.map((bill) => ({
         _id: bill._id || undefined,
@@ -308,9 +312,25 @@ const CustomerAccountEdit = () => {
               ref={customerNumberRef}
               value={customerContactNumber}
               onChange={(e) => setCustomerContactNumber(e.target.value)}
-              onKeyDown={(e) => changeRef(e, customerIdRef)}
+              onKeyDown={(e) => changeRef(e, customerAddressRef)}
               className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
               placeholder="Enter Customer Contact Number"
+              required
+            />
+          </div>
+
+                    <div className="mb-6">
+            <label className="block text-xs text-gray-700 mb-2">
+              Customer Address <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              ref={customerAddressRef}
+              value={customerAddress}
+              onChange={(e) => setCustomerAddress(e.target.value)}
+              onKeyDown={(e) => changeRef(e, customerIdRef)}
+              className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
+              placeholder="Enter Customer Adress"
               required
             />
           </div>

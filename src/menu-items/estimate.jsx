@@ -37,7 +37,7 @@ const estimate = {
           type: 'item',
           url: '/invoice/list/',
           target: false,
-          breadcrumbs: true
+          breadcrumbs: false
         },
         {
           id: 'Need To Purchase',

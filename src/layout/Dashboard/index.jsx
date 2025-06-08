@@ -83,7 +83,7 @@ export default function MainLayout() {
     '/list', '/all', '/account', '/need-to-purchase',
     '/delivery', '/registry', '/update', '/report', '/payment',
     '/products/upcomming/lowstock', '/default', '/transactions',
-    '/tasks/board','/calendar', '/chat', '/products'
+    '/tasks/board','/calendar', '/chat', '/products', '/customer', '/supplier' , '/transport'
   ];
   
   const shouldForceReload = forceReloadRoutes.some(route => location.pathname.includes(route));

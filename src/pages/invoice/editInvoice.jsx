@@ -5,8 +5,6 @@ import SummaryModal from 'components/invoice/SummaryModal';
 import OutOfStockModal from 'components/invoice/itemAddingModal';
 import api from '../api';
 import useAuth from 'hooks/useAuth';
-import { useGetMenuMaster } from 'api/menu';
-import { openSnackbar } from 'api/snackbar';
 import { 
   Dialog,
   DialogTitle,
@@ -23,6 +21,8 @@ import ItemSuggestionsSidebar from 'components/products/itemSuggestionSidebar';
 import BottomLoader from './components/bottomLoader';
 import { isMobile } from 'react-device-detect';
 import ErrorModal from './components/errorModel';
+import { useTabs } from 'contexts/TabsContext';
+import SuccessModal from 'components/invoice/SccessModal';
 
 
 
@@ -36,7 +36,7 @@ export default function EditBillScreen() {
   const { id } = useParams();
 
   const { user: userInfo } = useAuth();
-  const {menuMaster} = useGetMenuMaster();
+    const {closeTab,activeTab} = useTabs();
   
 
   // Billing Information States
@@ -530,6 +530,7 @@ const [printOptions, setPrintOptions] = useState({
     needToPurchaseFlag,             
   ) => {
     try {
+      setIsLoading(false);
       setIsLoading(true);
   
       /* 1️⃣  hit the unified update route */
@@ -882,17 +883,11 @@ const netTotal = rateWithoutGST + gstAmount;
      const response = await api.post(`/api/billing/edit/${id}`, billingData);
       setShowSummaryModal(false);
       setShowSuccessModal(true);
-      console.log(response.data.existingBilling);
-
-      setTimeout(() => {
-          setShowSuccessModal(false);
-          navigate('/invoice/list/');
-      }, 2000);
     } catch (err) {
-  console.error(err);
-  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
-  setShowErrorModal(false);        // reset so modal can reopen on same error
-  setShowErrorModal(true);
+      console.error(err);
+      setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
+      setShowErrorModal(false);        // reset so modal can reopen on same error
+      setShowErrorModal(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -1153,6 +1148,15 @@ const netTotal = rateWithoutGST + gstAmount;
 
   return (
     <div className="container mx-auto p-2">
+<div className="fixed top-28 left-0 flex justify-start align-center gap-4 w-full p-2 font-bold">
+  {neededToPurchase && <div className='bg-blue-500 px-2 text-center text-white'>
+      <p className='text-xs'>Need to Purchase</p>
+  </div>}
+  {!isApproved && <div className='bg-red-500 px-2 font-bold text-center text-white'>
+      <p className='text-xs'>Not Approved</p>
+  </div> }
+</div>
+
 
       {/* Main Form */}
       <div
@@ -1258,7 +1262,7 @@ const netTotal = rateWithoutGST + gstAmount;
                 </ul>
               )}
             </div>
-            <div className="mb-4 relative">
+            <div className="mb-4">
               <label className="block text-xs text-gray-700">Customer Name</label>
               <div className='flex gap-2'>
               <input
@@ -1270,13 +1274,15 @@ const netTotal = rateWithoutGST + gstAmount;
                 onKeyDown={(e) => {
                   if (e.key === 'ArrowDown') {
                     e.preventDefault();
-                    setCustomerSuggestionIndex((prev) =>
-                      prev < customerSuggestions.length - 1 ? prev + 1 : prev
+                    setCustomerSuggestionIndex((prevIndex) =>
+                      prevIndex < customerSuggestions.length - 1
+                        ? prevIndex + 1
+                        : prevIndex
                     );
                   } else if (e.key === 'ArrowUp') {
                     e.preventDefault();
-                    setCustomerSuggestionIndex((prev) =>
-                      prev > 0 ? prev - 1 : prev
+                    setCustomerSuggestionIndex((prevIndex) =>
+                      prevIndex > 0 ? prevIndex - 1 : prevIndex
                     );
                   } else if (e.key === 'Enter') {
                     if (
@@ -1287,9 +1293,7 @@ const netTotal = rateWithoutGST + gstAmount;
                       const selectedCustomer =
                         customerSuggestions[customerSuggestionIndex];
                       setCustomerName(selectedCustomer.customerName);
-                      setCustomerContactNumber(
-                        selectedCustomer.customerContactNumber
-                      );
+                      setCustomerContactNumber(selectedCustomer.customerContactNumber);
                       setCustomerAddress(selectedCustomer.customerAddress);
                       setCustomerId(selectedCustomer.customerId);
                       customerAddressRef.current?.focus();
@@ -1308,7 +1312,7 @@ const netTotal = rateWithoutGST + gstAmount;
               />
               </div>
               {customerSuggestions.length > 0 && (
-                <div className="absolute z-10 mt-1 w-full bg-white border rounded-md max-h-60 overflow-y-auto">
+                <div className="mt-2 bg-white border rounded-md max-h-60 divide-y overflow-y-auto">
                   {customerSuggestions.map((customer, index) => (
                     <div
                       key={index}
@@ -1321,7 +1325,7 @@ const netTotal = rateWithoutGST + gstAmount;
                         setCustomerSuggestionIndex(-1);
                         setCustomerSuggestions([]);
                       }}
-                      className={`p-2 text-xs cursor-pointer hover:bg-gray-100 ${
+                      className={`p-4 text-xs cursor-pointer hover:bg-gray-100 ${
                         index === customerSuggestionIndex ? 'bg-gray-200' : ''
                       }`}
                     >
@@ -2297,12 +2301,20 @@ const netTotal = rateWithoutGST + gstAmount;
                                     className="w-20 border border-gray-300 px-2 py-1 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs text-center"
                                   />
                                 </div>
-                                <div className="flex justify-between items-center">
+                                                <div className="flex justify-between items-center">
                                   <span className="text-xs font-semibold">
                                     Unit:
                                   </span>
                                   <p className="text-xs font-bold">
                                     {product.unit}
+                                  </p>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-xs font-semibold">
+                                    Quantity in ( Nos ):
+                                  </span>
+<p className={`text-xs font-bold ${Number.isInteger(product.quantity) ? 'text-green-500' : 'text-red-500'}`}>
+                                    {product.quantity} NOS
                                   </p>
                                 </div>
                                 <div className="flex justify-between items-center">
@@ -2450,20 +2462,7 @@ const netTotal = rateWithoutGST + gstAmount;
       </div>
 
       {/* Success Modal */}
-      {showSuccessModal && ( openSnackbar({
-          open: true,
-          message: 'Successfully Updated',
-          variant: 'alert',
-          anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
-      
-                              alert: {
-                                color: 'success'
-                              },
-      
-                              actionButton: true,
-                              close: true
-        }) 
-        )}
+      {showSuccessModal && <SuccessModal page="edit_invoice" message="Bill Edited Successfully!" />}
 
       {/* Summary Modal */}
       {showSummaryModal && (

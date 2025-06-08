@@ -46,7 +46,7 @@ const ErrorModal = ({ message, onClose }) => (
 );
 
 const SuccessModal = ({ message, onClose }) => (
-  <div className="fixed inset-0 flex items-start justify-center z-50">
+  <div className="fixed left-0 top-22 flex items-start justify-center z-50">
     <div className="bg-green-500 text-white rounded-md p-4 shadow-lg relative w-11/12 max-w-sm mt-8 animate-slide-down">
       <button
         onClick={onClose}

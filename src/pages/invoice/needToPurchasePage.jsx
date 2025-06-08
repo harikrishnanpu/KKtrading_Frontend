@@ -1,514 +1,428 @@
-// src/pages/NeedToPurchaseList.js
 import React, { useState, useEffect, useMemo, forwardRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
-import { format, isAfter, isBefore } from 'date-fns';
+import { isAfter, isBefore } from 'date-fns';
 import useAuth from 'hooks/useAuth';
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions, Slide,
-  TextField, Button, FormControlLabel, Checkbox, Drawer,
-  IconButton, useMediaQuery, useTheme
+  Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle,
+  Drawer, FormControlLabel, IconButton, Paper, Pagination, Slide,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  TableSortLabel, TextField, useMediaQuery, useTheme, Grid, Typography
 } from '@mui/material';
 import FilterAltOutlinedIcon from '@mui/icons-material/FilterAltOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 
-/* ────────────────────────────────────────────────────────── */
-const UpTransition = forwardRef(function UpTransition(props, ref) {
-  return <Slide direction="up" ref={ref} {...props} />;
-});
-const cx = (...cls) => cls.filter(Boolean).join(' ');
+const UpTransition = forwardRef((props, ref) => <Slide direction="up" ref={ref} {...props}/>);
 
-/* ────────────────────────────────────────────────────────── */
 export default function NeedToPurchaseList() {
-  const navigate            = useNavigate();
-  const { user: userInfo }  = useAuth();
-  const theme               = useTheme();
-  const isMobile            = useMediaQuery(theme.breakpoints.down('sm'));
+  const { user: userInfo } = useAuth();
+  const theme    = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  /* ---------- remote data ---------- */
-  const [items, setItems]    = useState([]);
-  const [products, setProducts] = useState([]);
-  const [busy, setBusy]      = useState(true);
-  const [error, setError]    = useState('');
+  /* Data & state */
+  const [items, setItems]           = useState([]);
+  const [totalsByItem, setTotals]   = useState([]);
+  const [products, setProducts]     = useState([]);
+  const [busy, setBusy]             = useState(true);
+  const [error, setError]           = useState('');
 
-  /* ---------- filters ---------- */
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [search,  setSearch]     = useState('');
+  /* Pagination */
+  const [page, setPage]             = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(4);
+  const [totalPages, setTotalPages] = useState(1);
+  const handleChangePage = (_e, v)  => setPage(v);
+
+  /* Filters */
+  const [sidebarOpen, setSidebarOpen]     = useState(false);
+  const [search, setSearch]               = useState('');
   const [onlyPurchased, setOnlyPurchased] = useState(false);
-  const [onlyVerified,  setOnlyVerified]  = useState(false);
-  const [dateFrom, setDateFrom]   = useState('');
-  const [dateTo,   setDateTo]     = useState('');
+  const [onlyVerified, setOnlyVerified]   = useState(false);
+  const [dateFrom, setDateFrom]           = useState('');
+  const [dateTo, setDateTo]               = useState('');
+  const [filterSalesman, setFilterSalesman] = useState('');
+  const [filterRemark, setFilterRemark]     = useState('');
 
-  /* ---------- edit drawer ---------- */
+  /* Sorting */
+  const [sortField, setSortField]         = useState('createdAt');
+  const [sortDir, setSortDir]             = useState('desc');
+  const handleSort = field => {
+    if (sortField === field) setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
+    else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  };
+
+  /* Edit dialog */
   const [editing, setEditing] = useState(null);
   const [form, setForm]       = useState({});
   const drawerOpen            = Boolean(editing);
 
-  /* ---------- fetch ---------- */
-useEffect(() => {
-  (async () => {
-    setBusy(true);
-    try {
-      const [needRes, prodRes] = await Promise.all([
-        api.get('/api/needtopurchase'),
-        api.get('/api/products/product/all'),
-      ]);
-      setItems(Array.isArray(needRes.data) ? needRes.data : []);
-      setProducts(Array.isArray(prodRes.data) ? prodRes.data : []);
-    } catch (err) {
-      console.error(err);
-      setError(err.response?.data?.message || err.message || 'Failed to fetch data');
-    } finally {
-      setBusy(false);
-    }
-  })();
-}, []);
+  /* Fetch paginated & totals on every filter/page change */
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      setBusy(true);
+      try {
+        const params = {
+          page,
+          limit: rowsPerPage,
+          search,
+          onlyPurchased,
+          onlyVerified,
+          dateFrom,
+          dateTo,
+          salesmanName: filterSalesman,
+          remark:       filterRemark
+        };
+        const [resPage, prodRes] = await Promise.all([
+          api.get('/api/needtopurchase/paginated', { params }),
+          api.get('/api/products/product/all')
+        ]);
+        if (!active) return;
+        setItems(resPage.data.items);
+        setTotals(resPage.data.totalsByItem);
+        setTotalPages(resPage.data.totalPages);
+        setProducts(prodRes.data);
+      } catch (err) {
+        console.error(err);
+        if (!active) return;
+        setError(err.response?.data?.message || err.message);
+      } finally {
+        if (active) setBusy(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [
+    page, rowsPerPage,
+    search, onlyPurchased, onlyVerified,
+    dateFrom, dateTo,
+    filterSalesman, filterRemark
+  ]);
 
-
-  /* ---------- product map ---------- */
+  /* Map products for images, etc */
   const productMap = useMemo(() => {
     const m = {};
-    products.forEach((p) => (m[p.item_id] = p));
+    products.forEach(p => { m[p.item_id] = p; });
     return m;
   }, [products]);
 
-  /* ---------- filter logic ---------- */
-  const filtered = useMemo(() => {
-    return items.filter((it) => {
-      const textMatch = `${it.item_id} ${it.name} ${it.invoiceNo}`
-        .toLowerCase()
-        .includes(search.toLowerCase());
-
-      const purchasedMatch = onlyPurchased ? it.purchased : true;
-      const verifiedMatch  = onlyVerified  ? it.verified  : true;
-
-      const dateMatch = (() => {
-        if (!dateFrom && !dateTo) return true;
-        const created = new Date(it.createdAt);
-        if (dateFrom && isBefore(created, new Date(dateFrom))) return false;
-        if (dateTo   && isAfter (created, new Date(dateTo)))   return false;
-        return true;
-      })();
-
-      return textMatch && purchasedMatch && verifiedMatch && dateMatch;
+  /* Sort current page locally */
+  const sorted = useMemo(() => {
+    return [...items].sort((a, b) => {
+      const A = a[sortField] ?? '';
+      const B = b[sortField] ?? '';
+      if (A < B) return sortDir === 'asc' ? -1 : 1;
+      if (A > B) return sortDir === 'asc' ? 1 : -1;
+      return 0;
     });
-  }, [items, search, onlyPurchased, onlyVerified, dateFrom, dateTo]);
+  }, [items, sortField, sortDir]);
 
-  /* ---------- helpers ---------- */
+  /* Helpers */
   const patchRow = (id, patch) =>
-    setItems((prev) => prev.map((it) => (it._id === id ? { ...it, ...patch } : it)));
+    setItems(it => it.map(x => x._id === id ? { ...x, ...patch } : x));
 
   const apiToggle = async (id, field) => {
     try {
       await api.put(`/api/needtopurchase/${id}`, { [field]: true });
       patchRow(id, { [field]: true });
-    } catch (err) {
-      alert(err.response?.data?.message || err.message);
+    } catch (e) {
+      alert(e.response?.data?.message || e.message);
     }
   };
-
-  const apiDelete = async (id) => {
+  const apiDelete = async id => {
     if (!window.confirm('Remove this entry?')) return;
     try {
       await api.delete(`/api/needtopurchase/${id}`);
-      setItems((prev) => prev.filter((it) => it._id !== id));
-    } catch (err) {
-      alert(err.response?.data?.message || err.message);
+      setItems(it => it.filter(x => x._id !== id));
+    } catch (e) {
+      alert(e.response?.data?.message || e.message);
     }
   };
 
-  /* ---------- edit ---------- */
-  const openEdit = (row) => {
+  const openEdit = row => {
     setEditing(row);
     setForm({
-      invoiceNo:        row.invoiceNo || '',
-      quantityOrdered:  row.quantityOrdered ?? row.quantity ?? 0,
-      quantityNeeded:   row.quantityNeeded  ?? row.quantity ?? 0,
-      purchased:        row.purchased,
-      verified:         row.verified,
+      invoiceNo: row.invoiceNo || '',
+      quantityOrdered: row.quantityOrdered ?? 0,
+      quantityNeeded: row.quantityNeeded ?? 0,
+      purchased: row.purchased,
+      verified:  row.verified,
+      purchaseId: row.purchaseId || '',
+      remark:    row.remark || ''
     });
   };
-  const closeEdit = () => { setEditing(null); setForm({}); };
+  const closeEdit = () => setEditing(null) || setForm({});
   const saveEdit = async () => {
+    const payload = {
+      invoiceNo:        form.invoiceNo,
+      quantityOrdered:  Number(form.quantityOrdered),
+      quantityNeeded:   Number(form.quantityNeeded),
+      purchased:        form.purchased,
+      verified:         form.verified,
+      purchaseId:       form.purchaseId,
+      remark:           form.remark
+    };
     try {
-      const payload = {
-        invoiceNo:       form.invoiceNo,
-        quantityOrdered: Number(form.quantityOrdered),
-        quantityNeeded:  Number(form.quantityNeeded),
-        purchased:       form.purchased,
-        verified:        form.verified,
-      };
       await api.put(`/api/needtopurchase/${editing._id}`, payload);
       patchRow(editing._id, payload);
       closeEdit();
-    } catch (err) {
-      alert(err.response?.data?.message || err.message);
+    } catch (e) {
+      alert(e.response?.data?.message || e.message);
     }
   };
 
-  /* ---------- loaders / errors ---------- */
-  if (busy)
-    return (
-      <div className="p-6">
-        <Skeleton height={40} count={5} />
-      </div>
-    );
-  if (error) return <div className="p-6 text-red-500">{error}</div>;
-  if (items.length === 0)
-    return (
-      <div className="p-6">
-        <h1 className="text-xl font-semibold mb-2">Products Needed to Purchase</h1>
-        <p>No products require ordering at this time.</p>
-      </div>
-    );
+  if (busy) return <Box p={4}><Skeleton count={5} /></Box>;
+  if (error) return <Box p={4} color="error.main">{error}</Box>;
+  if (!items.length) return (
+    <Box p={4} textAlign="center">
+      <Typography variant="h6">No products require ordering right now.</Typography>
+    </Box>
+  );
 
-  /* ---------- render ---------- */
   return (
-    <div className="p-4 bg-gray-50 min-h-screen relative">
+    <Box p={2}>
+      {/* Totals by Item */}
+      <Paper sx={{ p:2, mb:3 }}>
+        <Typography variant="h6" gutterBottom>Total Needed by Item</Typography>
+        <Grid container spacing={2}>
+          {totalsByItem.map(t => (
+            <Grid item xs={6} sm={4} md={3} key={t._id}>
+              <Paper variant="outlined" sx={{ p:1, textAlign:'center' }}>
+                <Typography variant="subtitle2" noWrap>{t.name}</Typography>
+                <Typography variant="h5">{t.totalNeeded}</Typography>
+              </Paper>
+            </Grid>
+          ))}
+        </Grid>
+      </Paper>
 
-      {/* TOP BAR --------------------------------------------------------- */}
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Products Needed to Purchase</h1>
-
+      {/* Top Bar */}
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Typography variant="h5">Products Needed to Purchase</Typography>
         <Button
           startIcon={<FilterAltOutlinedIcon />}
           variant="outlined"
-          color="primary"
           onClick={() => setSidebarOpen(true)}
           size={isMobile ? 'medium' : 'small'}
-          sx={isMobile ? { position: 'fixed', bottom: 24, right: 24, zIndex: 1200 } : {}}
+          sx={isMobile ? { position:'fixed', bottom:24, right:24, zIndex:1200 } : {}}
         >
           {isMobile ? null : 'Filters'}
         </Button>
-      </div>
+      </Box>
 
-      {/* SIDEBAR (Drawer) ------------------------------------------------ */}
+      {/* Filters */}
       <Drawer
-        anchor="left"
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        PaperProps={{ sx: { width: 280 } }}
+        PaperProps={{ sx:{ width:280 } }}
       >
-        <div className="flex justify-between items-center p-3 border-b">
-          <h3 className="text-lg font-semibold">Filters</h3>
-          <IconButton onClick={() => setSidebarOpen(false)} size="small">
-            <CloseIcon />
-          </IconButton>
-        </div>
-        <div className="p-4 space-y-4 text-sm">
-          <TextField
-            label="Search"
-            variant="outlined"
-            size="small"
-            fullWidth
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <div className="flex flex-col gap-2">
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={onlyPurchased}
-                  onChange={(e) => setOnlyPurchased(e.target.checked)}
-                />
-              }
-              label="Only Purchased"
-            />
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={onlyVerified}
-                  onChange={(e) => setOnlyVerified(e.target.checked)}
-                />
-              }
-              label="Only Verified"
-            />
-          </div>
-
-          <TextField
-            label="Date From"
-            type="date"
-            size="small"
-            fullWidth
-            InputLabelProps={{ shrink: true }}
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-          />
-          <TextField
-            label="Date To"
-            type="date"
-            size="small"
-            fullWidth
-            InputLabelProps={{ shrink: true }}
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-          />
-
-          <Button
-            variant="outlined"
-            color="error"
-            fullWidth
-            onClick={() => {
-              setSearch('');
-              setOnlyPurchased(false);
-              setOnlyVerified(false);
-              setDateFrom('');
-              setDateTo('');
-            }}
-          >
-            Reset
+        <Box px={2} py={1} display="flex" justifyContent="space-between" alignItems="center">
+          <Typography variant="h6">Filters</Typography>
+          <IconButton onClick={() => setSidebarOpen(false)}><CloseIcon/></IconButton>
+        </Box>
+        <Box p={2} display="flex" flexDirection="column" gap={2}>
+          <TextField label="Search" size="small" value={search} onChange={e => setSearch(e.target.value)} />
+          <TextField label="Salesman" size="small" value={filterSalesman} onChange={e => setFilterSalesman(e.target.value)} />
+          <TextField label="Remark"   size="small" value={filterRemark}   onChange={e => setFilterRemark(e.target.value)} />
+          <FormControlLabel control={<Checkbox checked={onlyPurchased} onChange={e => setOnlyPurchased(e.target.checked)} />} label="Only Purchased" />
+          <FormControlLabel control={<Checkbox checked={onlyVerified}  onChange={e => setOnlyVerified(e.target.checked)} />}  label="Only Verified" />
+          <TextField label="Date From" type="date" size="small" InputLabelProps={{ shrink:true }} value={dateFrom} onChange={e=>setDateFrom(e.target.value)} />
+          <TextField label="Date To"   type="date" size="small" InputLabelProps={{ shrink:true }} value={dateTo}   onChange={e=>setDateTo(e.target.value)} />
+          <Button variant="outlined" color="error" fullWidth onClick={() => {
+            setSearch(''); setFilterSalesman(''); setFilterRemark('');
+            setOnlyPurchased(false); setOnlyVerified(false);
+            setDateFrom(''); setDateTo('');
+          }}>
+            Reset Filters
           </Button>
-        </div>
+        </Box>
       </Drawer>
 
-      {/* DESKTOP TABLE --------------------------------------------------- */}
-      <div className="hidden md:block">
-        <table className="min-w-full bg-white shadow rounded-lg overflow-hidden text-sm">
-          <thead className="bg-red-600 text-white">
-            <tr>
-              <th className="px-3 py-2">Invoice</th>
-              <th className="px-3 py-2">Item&nbsp;ID</th>
-              <th className="px-3 py-2">Image</th>
-              <th className="px-3 py-2 text-left">Product</th>
-              <th className="px-3 py-2">Ordered</th>
-              <th className="px-3 py-2">Needed</th>
-              <th className="px-3 py-2">Purchased</th>
-              <th className="px-3 py-2">Verified</th>
-              <th className="px-3 py-2 w-28"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((it) => {
-              const prod = productMap[it.item_id] || {};
-              return (
-                <tr key={it._id} className="border-b hover:bg-gray-100">
-                  <td
-                    className="px-3 py-2 text-red-600 cursor-pointer"
+      {/* Desktop Table */}
+      <TableContainer component={Paper} sx={{ display:{ xs:'none', md:'block' } }}>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              {[
+                {id:'invoiceNo',label:'Invoice'},
+                {id:'item_id',  label:'Item ID'},
+                {id:'name',     label:'Product'},
+                {id:'salesmanName',label:'Salesman'},
+                {id:'quantityOrdered',label:'Ordered'},
+                {id:'quantityNeeded',label:'Needed'},
+                {id:'purchased',label:'Purchased'},
+                {id:'verified', label:'Verified'},
+                {id:'remark',   label:'Remark'}
+              ].map(col => (
+                <TableCell key={col.id} sortDirection={sortField===col.id?sortDir:false}>
+                  <TableSortLabel
+                    active={sortField===col.id}
+                    direction={sortField===col.id?sortDir:'asc'}
+                    onClick={()=>handleSort(col.id)}
                   >
-                    {it.invoiceNo}
-                  </td>
-                  <td className="px-3 py-2">{it.item_id}</td>
-                  <td className="px-3 py-2">
-                    {prod.image ? (
-                      <img src={prod.image} alt={prod.name} className="h-10 w-10 object-cover rounded" />
-                    ) : (
-                      <div className="h-10 w-10 bg-gray-300 rounded flex items-center justify-center text-xs">
-                        N/A
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-3 py-2">{it.name}</td>
-                  <td className="px-3 py-2 text-center">{it.quantityOrdered ?? it.quantity}</td>
-                  <td className="px-3 py-2 text-center">{it.quantityNeeded  ?? it.quantity}</td>
-                  <td className="px-3 py-2 text-center">
-                    {it.purchased ? '✅' : (
-                      <Button
-                        onClick={() => apiToggle(it._id, 'purchased')}
-                        size="small"
-                        variant="outlined"
-                      >
-                        mark
-                      </Button>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-center">
-                    {it.verified ? '✅'
-                      : userInfo.isSuper
-                        ? (<Button
-                            onClick={() => apiToggle(it._id, 'verified')}
-                            size="small"
-                            variant="outlined"
-                          >
-                            verify
-                          </Button>)
-                        : '-'}
-                  </td>
-                  <td className="px-3 py-2 flex gap-2 justify-center">
-                    {userInfo.isAdmin && (<Button size="small" onClick={() => openEdit(it)}>
-                      edit
-                    </Button> )}
-                    {userInfo.isSuper && (
-                      <Button size="small" color="error" onClick={() => apiDelete(it._id)}>
-                        delete
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                    {col.label}
+                  </TableSortLabel>
+                </TableCell>
+              ))}
+              <TableCell>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {sorted.map(it => (
+              <TableRow key={it._id} hover>
+                <TableCell>{it.invoiceNo}</TableCell>
+                <TableCell>{it.item_id}</TableCell>
+                <TableCell>{it.name}</TableCell>
+                <TableCell>{it.salesmanName}</TableCell>
+                <TableCell align="center">{it.quantityOrdered}</TableCell>
+                <TableCell align="center">{it.quantityNeeded}</TableCell>
+                <TableCell align="center">
+                  {it.purchased
+                    ? '✅'
+                    : <Button size="small" onClick={()=>apiToggle(it._id,'purchased')}>Mark</Button>}
+                </TableCell>
+                <TableCell align="center">
+                  {it.verified
+                    ? '✅'
+                    : userInfo.isSuper
+                      ? <Button size="small" onClick={()=>apiToggle(it._id,'verified')}>Verify</Button>
+                      : '-'}
+                </TableCell>
+                <TableCell>{it.remark}</TableCell>
+                <TableCell>
+                  {userInfo.isAdmin && <Button size="small" onClick={()=>openEdit(it)}>Edit</Button>}
+                  {userInfo.isSuper && <Button size="small" color="error" onClick={()=>apiDelete(it._id)}>Delete</Button>}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        <Box display="flex" justifyContent="center" my={2}>
+          <Pagination count={totalPages} page={page} onChange={handleChangePage} color="primary"/>
+        </Box>
+      </TableContainer>
 
-      {/* MOBILE CARDS ---------------------------------------------------- */}
-      <div className="space-y-4 md:hidden">
-        {filtered.map((it) => {
-          const prod = productMap[it.item_id] || {};
-          return (
-            <div key={it._id} className="bg-white p-4 rounded-lg shadow text-sm flex flex-col">
-              <div className="flex items-center justify-between mb-2">
-                <span
-                  className="text-red-600 font-semibold cursor-pointer"
-                >
-                  {it.invoiceNo}
-                </span>
-                <div className="flex gap-2">
-                  {userInfo.isAdmin && (<Button size="small" onClick={() => openEdit(it)}>
-                    edit
-                  </Button> )}
-                  {userInfo.isSuper && (
-                    <Button size="small" color="error" onClick={() => apiDelete(it._id)}>
-                      delete
-                    </Button>
-                  )}
-                </div>
-              </div>
+      {/* Mobile Cards */}
+      <Box display={{ xs:'block', md:'none' }} mb={2}>
+        {sorted.map(it => (
+          <Paper key={it._id} variant="outlined" sx={{ p:2, mb:2 }}>
+            <Box display="flex" justifyContent="space-between" mb={1}>
+              <Typography fontWeight="bold" color="error.main">{it.invoiceNo}</Typography>
+              <Box>
+                {userInfo.isAdmin && <Button size="small" onClick={()=>openEdit(it)}>Edit</Button>}
+                {userInfo.isSuper && <Button size="small" color="error" onClick={()=>apiDelete(it._id)}>Delete</Button>}
+              </Box>
+            </Box>
+            <Box display="flex" mb={1}>
+              {productMap[it.item_id]?.image
+                ? <Box component="img" src={productMap[it.item_id].image} alt="" sx={{ width:48, height:48, mr:1, borderRadius:1 }}/>
+                : <Box sx={{ width:48, height:48, bgcolor:'grey.300', mr:1 }}/>
+              }
+              <Box flex={1}>
+                <Typography noWrap>{it.name}</Typography>
+                <Typography variant="caption" color="text.secondary">{it.item_id}</Typography>
+                <Typography variant="caption" color="text.secondary">Salesman: {it.salesmanName}</Typography>
+              </Box>
+            </Box>
+            <Typography variant="caption" mb={1}>Remark: {it.remark}</Typography>
+            <Box display="flex" justifyContent="space-between">
+              <Box>
+                <Typography variant="caption">Ordered: {it.quantityOrdered}</Typography>
+                <Typography variant="caption">Needed: {it.quantityNeeded}</Typography>
+              </Box>
+              <Box>
+                {it.purchased
+                  ? <Typography variant="caption" color="success.main">Purchased</Typography>
+                  : <Button size="small" onClick={()=>apiToggle(it._id,'purchased')}>Purchased</Button>}
+                {it.verified
+                  ? <Typography variant="caption" color="success.main">Verified</Typography>
+                  : userInfo.isSuper
+                    ? <Button size="small" onClick={()=>apiToggle(it._id,'verified')}>Verify</Button>
+                    : null}
+              </Box>
+            </Box>
+          </Paper>
+        ))}
+        <Box display="flex" justifyContent="center">
+          <Pagination count={totalPages} page={page} onChange={handleChangePage} size="small"/>
+        </Box>
+      </Box>
 
-              <div className="flex items-center mb-2">
-                {prod.image ? (
-                  <img src={prod.image} alt={prod.name} className="h-12 w-12 object-cover rounded mr-3" />
-                ) : (
-                  <div className="h-12 w-12 bg-gray-300 rounded mr-3 flex items-center justify-center text-xs">
-                    N/A
-                  </div>
-                )}
-                <div className="flex-1">
-                  <p className="font-medium truncate">{it.name}</p>
-                  <p className="text-gray-500 text-xs">
-                    {it.item_id} • {it.customer}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2 text-center mb-2">
-                <div>
-                  <p className="text-xs text-gray-500">Ordered</p>
-                  <p className="font-semibold">{it.quantityOrdered ?? it.quantity}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Needed</p>
-                  <p className="font-semibold">{it.quantityNeeded ?? it.quantity}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Date</p>
-                  <p className="font-semibold">
-                    {format(new Date(it.createdAt), 'dd/MM')}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex justify-between mt-auto">
-                {it.purchased ? (
-                  <span className="text-green-600 text-xs">Purchased</span>
-                ) : (
-                  <Button
-                    onClick={() => apiToggle(it._id, 'purchased')}
-                    size="small"
-                  >
-                    purchased
-                  </Button>
-                )}
-
-                {it.verified ? (
-                  <span className="text-green-600 text-xs">Verified</span>
-                ) : userInfo.isSuper ? (
-                  <Button
-                    onClick={() => apiToggle(it._id, 'verified')}
-                    size="small"
-                  >
-                    verify
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* EDIT DIALOG ----------------------------------------------------- */}
-      <Dialog
-        open={drawerOpen}
-        onClose={closeEdit}
-        TransitionComponent={UpTransition}
-        keepMounted
-        fullWidth
-        maxWidth="md"
-        PaperProps={{
-          sx: {
-            height: '75vh',
-            m: 0,
-            bottom: 0,
-            position: 'fixed',
-            borderTopLeftRadius: 8,
-            borderTopRightRadius: 8,
-          },
-        }}
-      >
+      {/* Edit Dialog */}
+      <Dialog open={drawerOpen} onClose={closeEdit} TransitionComponent={UpTransition} fullWidth maxWidth="md">
         <DialogTitle>Edit Need-to-Purchase</DialogTitle>
-
         <DialogContent dividers>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <TextField
-              label="Invoice No"
-              fullWidth
-              size="small"
-              variant="outlined"
-              className="col-span-2 md:col-span-3"
-              value={form.invoiceNo}
-              onChange={(e) => setForm({ ...form, invoiceNo: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              label="Ordered Qty"
-              type="number"
-              size="small"
-              fullWidth
-              inputProps={{ min: 0 }}
-              value={form.quantityOrdered}
-              onChange={(e) => setForm({ ...form, quantityOrdered: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              label="Needed Qty"
-              type="number"
-              size="small"
-              fullWidth
-              inputProps={{ min: 0 }}
-              value={form.quantityNeeded}
-              onChange={(e) => setForm({ ...form, quantityNeeded: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-            />
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={Boolean(form.purchased)}
-                  onChange={(e) => setForm({ ...form, purchased: e.target.checked })}
-                />
-              }
-              label="Purchased"
-            />
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={Boolean(form.verified)}
-                  disabled={!userInfo.isSuper}
-                  onChange={(e) => setForm({ ...form, verified: e.target.checked })}
-                />
-              }
-              label="Verified"
-              sx={!userInfo.isSuper ? { opacity: 0.4 } : {}}
-            />
-          </div>
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={4}>
+              <TextField
+                label="Invoice No"
+                fullWidth size="small"
+                value={form.invoiceNo}
+                onChange={e => setForm({ ...form, invoiceNo: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={6} md={4}>
+              <TextField
+                label="Ordered Qty"
+                type="number"
+                fullWidth size="small"
+                value={form.quantityOrdered}
+                onChange={e => setForm({ ...form, quantityOrdered: e.target.value })}
+                InputProps={{ inputProps: { min: 0 } }}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={6} md={4}>
+              <TextField
+                label="Needed Qty"
+                type="number"
+                fullWidth size="small"
+                value={form.quantityNeeded}
+                onChange={e => setForm({ ...form, quantityNeeded: e.target.value })}
+                InputProps={{ inputProps: { min: 0 } }}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                label="Purchase ID"
+                fullWidth size="small"
+                value={form.purchaseId}
+                onChange={e => setForm({ ...form, purchaseId: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={12} md={8}>
+              <TextField
+                label="Remark"
+                fullWidth size="small"
+                value={form.remark}
+                onChange={e => setForm({ ...form, remark: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={6} md={4}>
+              <FormControlLabel
+                control={<Checkbox checked={form.purchased} onChange={e => setForm({ ...form, purchased: e.target.checked })}/>}
+                label="Purchased"
+              />
+            </Grid>
+            <Grid item xs={6} md={4}>
+              <FormControlLabel
+                control={<Checkbox checked={form.verified} onChange={e => setForm({ ...form, verified: e.target.checked })} disabled={!userInfo.isSuper}/>}
+                label="Verified"
+              />
+            </Grid>
+          </Grid>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
+        <DialogActions>
           <Button onClick={closeEdit}>Cancel</Button>
-          <Button variant="outlined" color="error" onClick={saveEdit}>
-            Save
-          </Button>
+          <Button onClick={saveEdit}>Save</Button>
         </DialogActions>
       </Dialog>
-    </div>
+    </Box>
   );
 }

@@ -993,8 +993,7 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
           setIsApproved(false);
           setNeededToPurchase(false);
           setRoundOffMode('add');
-          
-            setSuccess(true);
+          setSuccess(true);
           // navigate('/'); // Example navigation
     } catch (err) {
   console.error(err);
@@ -2482,6 +2481,15 @@ const rateWithoutGST = (itemBase - itemDiscount) / (1 + gstRate / 100);
                                 </div>
                               </div>
 
+                                  <div className="flex mb-2 mt-2 justify-between items-center">
+                                  <span className="text-xs font-semibold">
+                                    Quantity in ( Nos ):
+                                  </span>
+<p className={`text-xs font-bold ${Number.isInteger(product.quantity) ? 'text-green-500' : 'text-red-500'}`}>
+                                    {product.quantity} NOS
+                                  </p>
+                                </div>
+
                               <div className="mt-2 grid grid-cols-2 gap-2 text-xs font-bold text-gray-700">
                                 {/* GST% and GST Amt for Mobile */}
                                 <div>
@@ -2561,7 +2569,7 @@ const rateWithoutGST = (itemBase - itemDiscount) / (1 + gstRate / 100);
                                 <div className="text-xs space-y-2 px-5 truncate">
                                   <p>{product.item_id}</p>
                                   <p>{product.name}</p>
-                                  <p className="font-bold text-gray-400">
+                                  <p className={`font-bold ${product.countInStock > 0 ? 'text-green-500' : 'text-red-500' }`}>
                                     In Stock: {product.countInStock} NOS
                                   </p>
                                 </div>

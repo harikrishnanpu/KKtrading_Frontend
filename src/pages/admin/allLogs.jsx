@@ -1,120 +1,127 @@
-import React, { useEffect, useState } from 'react';
+// src/pages/AdminLogsPage.js
+import React, { useEffect, useState, forwardRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import {
-  Box,
-  Container,
-  Typography,
-  Button,
-  Table,
-  TableContainer,
-  Paper,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableBody,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  CircularProgress,
-  IconButton,
-  Stack,
+  Box, Container, Typography, Button, Table, TableContainer, Paper,
+  TableHead, TableRow, TableCell, TableBody, Dialog, DialogTitle,
+  DialogContent, DialogActions, CircularProgress, IconButton,
+  Slide, TextField, Grid, Stack, useMediaQuery, useTheme, TableSortLabel
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PersonIcon from '@mui/icons-material/Person';
 import InfoIcon from '@mui/icons-material/Info';
 import useAuth from 'hooks/useAuth';
 
+const UpTransition = forwardRef((props, ref) => <Slide direction="up" ref={ref} {...props}/>);
+
 export default function AdminLogsPage() {
   const navigate = useNavigate();
-  const {user} = useAuth();
-  const [logs, setLogs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const { user } = useAuth();
+  const theme    = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  // Logs data
+  const [logs, setLogs]         = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState(null);
+
+  // Filters & sorting
+  const [dateFrom, setDateFrom]       = useState(() => {
+    const d = new Date(); return d.toISOString().slice(0,10);
+  });
+  const [dateTo, setDateTo]           = useState(() => {
+    const d = new Date(); return d.toISOString().slice(0,10);
+  });
+  const [usernameFilter, setUsernameFilter] = useState('');
+  const [actionFilter, setActionFilter]     = useState('');
+  const [sortField, setSortField]     = useState('createdAt');
+  const [sortOrder, setSortOrder]     = useState('desc');
+
+  // Dialog
+  const [dialogOpen, setDialogOpen]       = useState(false);
   const [selectedLogDetails, setSelectedLogDetails] = useState(null);
 
+  // Fetch logs when filters or sort change
   useEffect(() => {
-    const fetchLogs = async () => {
+    let mounted = true;
+    (async () => {
+      setLoading(true);
+      setError(null);
       try {
-        const { data } = await api.get('/api/users/alllogs/all');
-        console.log(data);
+        const params = {
+          dateFrom,
+          dateTo,
+          username: usernameFilter,
+          action:   actionFilter,
+          sortField,
+          sortOrder
+        };
+        const { data } = await api.get('/api/users/alllogs/all', { params });
+        if (!mounted) return;
         setLogs(data);
-        setLoading(false);
       } catch (err) {
+        console.error(err);
+        if (!mounted) return;
         setError('Failed to fetch logs');
-        setLoading(false);
+      } finally {
+        if (mounted) setLoading(false);
       }
-    };
-    fetchLogs();
-  }, []);
+    })();
+    return () => { mounted = false; };
+  }, [dateFrom, dateTo, usernameFilter, actionFilter, sortField, sortOrder]);
 
-  // Format details using JSON parsing; fallback to raw details if parsing fails.
+  // Format details JSON
   const formatDetails = (details) => {
     try {
-      const parsedDetails = JSON.parse(details);
+      const parsed = JSON.parse(details);
       return (
         <Box>
-          {parsedDetails.params && (
+          {parsed.params && (
             <Typography variant="body2" gutterBottom>
-              <strong>Parameters:</strong>{' '}
-              {Object.entries(parsedDetails.params)
-                .map(([key, value]) => `${key}: ${value}`)
-                .join(', ')}
+              <strong>Params:</strong>{' '}
+              {Object.entries(parsed.params).map(([k,v])=>`${k}: ${v}`).join(', ')}
             </Typography>
           )}
-          {parsedDetails.query && (
+          {parsed.query && (
             <Typography variant="body2" gutterBottom>
               <strong>Query:</strong>{' '}
-              {Object.entries(parsedDetails.query)
-                .map(([key, value]) => `${key}: ${value}`)
-                .join(', ')}
+              {Object.entries(parsed.query).map(([k,v])=>`${k}: ${v}`).join(', ')}
             </Typography>
           )}
-          {parsedDetails.body && (
+          {parsed.body && (
             <Typography variant="body2" gutterBottom>
               <strong>Body:</strong>{' '}
-              {Object.entries(parsedDetails.body)
-                .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
-                .join(', ')}
+              {Object.entries(parsed.body).map(([k,v])=>`${k}: ${JSON.stringify(v)}`).join(', ')}
             </Typography>
           )}
         </Box>
       );
-    } catch (e) {
+    } catch {
       return <Typography variant="body2">{details}</Typography>;
     }
   };
 
-  // Map API actions to friendly messages.
+  // Map actions to friendly text
   const formatAction = (action) => {
-    const actionMap = [
-      { pattern: /^POST \/api\/billing\/create$/, message: 'Created a new billing entry' },
-      { pattern: /^POST \/api\/billing\/edit\/(.+)$/, message: 'Edited a billing entry' },
-      { pattern: /^GET \/api\/billing\/$/, message: 'Fetched all billing entries' },
-      { pattern: /^GET \/api\/billing\/(.+)$/, message: 'Fetched billing details' },
-      { pattern: /^DELETE \/api\/billing\/(.+)$/, message: 'Deleted a billing entry' },
-      { pattern: /^GET \/api\/products\/$/, message: 'Fetched products list' },
-      { pattern: /^POST \/api\/products\/$/, message: 'Created a new product' },
-      { pattern: /^PUT \/api\/products\/(.+)$/, message: 'Updated a product' },
-      { pattern: /^DELETE \/api\/products\/(.+)$/, message: 'Deleted a product' },
-      { pattern: /^POST \/api\/returns\/create$/, message: 'Created a new return' },
-      { pattern: /^DELETE \/api\/returns\/delete\/(.+)$/, message: 'Deleted a return' },
-      { pattern: /^POST \/api\/users\/signin$/, message: 'User signed in' },
-      { pattern: /^POST \/api\/users\/register$/, message: 'User registered' },
-      { pattern: /^PUT \/api\/users\/(.+)$/, message: 'Updated user profile' },
-      { pattern: /^DELETE \/api\/users\/(.+)$/, message: 'Deleted a user' },
-      { pattern: /^POST \/api\/users\/billing\/start-delivery/, message: 'Delivery Started' },
-      { pattern: /^POST \/api\/users\/billing\/end-delivery/, message: 'Delivery Updated (Submitted)' },
+    const map = [
+      { pat: /^POST \/api\/billing\/create$/,                         msg: 'Created billing' },
+      { pat: /^POST \/api\/billing\/edit\/.+$/,                       msg: 'Edited billing' },
+      { pat: /^GET \/api\/billing\/\s*$/,                             msg: 'Fetched all billings' },
+      { pat: /^DELETE \/api\/billing\/.+$/,                           msg: 'Deleted billing' },
+      { pat: /^POST \/api\/products\/$/,                              msg: 'Created product' },
+      { pat: /^PUT \/api\/products\/.+$/,                             msg: 'Updated product' },
+      { pat: /^DELETE \/api\/products\/.+$/,                          msg: 'Deleted product' },
+      { pat: /^POST \/api\/returns\/create$/,                         msg: 'Created return' },
+      { pat: /^DELETE \/api\/returns\/delete\/.+$/,                   msg: 'Deleted return' },
+      { pat: /^POST \/api\/users\/signin$/,                           msg: 'Signed in' },
+      { pat: /^POST \/api\/users\/register$/,                         msg: 'Registered user' },
+      { pat: /^PUT \/api\/users\/.+$/,                                 msg: 'Updated user' },
+      { pat: /^DELETE \/api\/users\/.+$/,                              msg: 'Deleted user' },
+      { pat: /^POST \/api\/users\/billing\/start-delivery/,           msg: 'Delivery started' },
+      { pat: /^POST \/api\/users\/billing\/end-delivery/,             msg: 'Delivery ended' }
     ];
-
-    for (const entry of actionMap) {
-      const match = action.match(entry.pattern);
-      if (match) {
-        return entry.message;
-      }
-    }
+    for (const e of map) if (action.match(e.pat)) return e.msg;
     return action;
   };
 
@@ -122,93 +129,129 @@ export default function AdminLogsPage() {
     setSelectedLogDetails(details);
     setDialogOpen(true);
   };
-
-  const closeDialog = () => {
-    setDialogOpen(false);
-    setSelectedLogDetails(null);
-  };
+  const closeDialog = () => setDialogOpen(false);
 
   const handleDeleteLogs = async () => {
+    if (!window.confirm('Delete ALL logs?')) return;
     try {
-      await api.post('/api/users/alllogs/all');
-      alert('All Logs Deleted');
+      await api.post('/api/users/alllogs/all'); // your delete-all endpoint
       navigate(0);
-    } catch (err) {
+    } catch {
       alert('Failed to delete logs');
     }
   };
 
-  return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      {/* Header */}
-     {user.isSuper && <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          bgcolor: 'grey.100',
-          maxWidth: 'fit-content',
-          p: 2,
-          borderRadius: 2,
-          mb: 3,
-        }}
-      >
-        <IconButton color="error" onClick={handleDeleteLogs}>
-          <DeleteIcon />
-        </IconButton>
-      </Box> }
+  // Sorting handler
+  const onSort = (field) => {
+    if (sortField === field) {
+      setSortOrder(o => o === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
 
-      {/* Logs Section */}
-      {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-          <CircularProgress />
+  return (
+    <Container maxWidth="lg" sx={{ mt:4, mb:4 }}>
+      {/* Delete all */}
+      {user.isSuper && (
+        <Box mb={2} display="flex" justifyContent="flex-end">
+          <IconButton color="error" onClick={handleDeleteLogs}>
+            <DeleteIcon />
+          </IconButton>
         </Box>
+      )}
+
+      {/* Filters */}
+      <Paper sx={{ p:2, mb:3 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} sm={6} md={3}>
+            <TextField
+              label="Date From" type="date" fullWidth size="small"
+              value={dateFrom}
+              onChange={e=>setDateFrom(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <TextField
+              label="Date To" type="date" fullWidth size="small"
+              value={dateTo}
+              onChange={e=>setDateTo(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <TextField
+              label="Username" fullWidth size="small"
+              value={usernameFilter}
+              onChange={e=>setUsernameFilter(e.target.value)}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <TextField
+              label="Action" fullWidth size="small"
+              value={actionFilter}
+              onChange={e=>setActionFilter(e.target.value)}
+            />
+          </Grid>
+        </Grid>
+      </Paper>
+
+      {/* Logs Table */}
+      {loading ? (
+        <Box textAlign="center" my={4}><CircularProgress/></Box>
       ) : error ? (
-        <Typography variant="h6" color="error" align="center">
-          {error}
-        </Typography>
+        <Typography color="error" align="center">{error}</Typography>
       ) : (
-        <Paper elevation={3} sx={{ p: 2 }}>
-          <Typography variant="subtitle1" align="right" color="text.secondary" sx={{ mb: 2 }}>
-            Activity Logs
-          </Typography>
+        <Paper elevation={3}>
           <TableContainer>
-            <Table>
+            <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>User</TableCell>
-                  <TableCell>Action</TableCell>
+                  {[
+                    { id:'username', label:'User' },
+                    { id:'action',   label:'Action' },
+                    { id:'timestamp',label:'Time' }
+                  ].map(col => (
+                    <TableCell key={col.id}>
+                      <TableSortLabel
+                        active={sortField===col.id}
+                        direction={sortField===col.id ? sortOrder : 'asc'}
+                        onClick={()=>onSort(col.id)}
+                      >
+                        {col.label}
+                      </TableSortLabel>
+                    </TableCell>
+                  ))}
                   <TableCell>Details</TableCell>
-                  <TableCell>Timestamp</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {logs.map((log) => (
+                {logs.map(log => (
                   <TableRow
                     key={log._id}
                     hover
-                    sx={{ cursor: 'pointer' }}
-                    onClick={() => openDialog(log.details)}
+                    sx={{ cursor:'pointer' }}
+                    onClick={()=>openDialog(log.details)}
                   >
                     <TableCell>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <PersonIcon color="error" fontSize="small" />
-                        <Typography variant="body2">{log?.username || 'Unknown User'}</Typography>
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        <PersonIcon fontSize="small"/>
+                        <Typography variant="body2">{log.username}</Typography>
                       </Stack>
                     </TableCell>
                     <TableCell>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <InfoIcon color="error" fontSize="small" />
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        <InfoIcon fontSize="small"/>
                         <Typography variant="body2">{formatAction(log.action)}</Typography>
                       </Stack>
                     </TableCell>
                     <TableCell>
-                      <Button variant="text" color="primary" size="small">
-                        View Details
-                      </Button>
+                      {new Date(log.timestamp).toLocaleString()}
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2">{new Date(log.timestamp).toLocaleString()}</Typography>
+                      <Button size="small">View</Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -218,20 +261,16 @@ export default function AdminLogsPage() {
         </Paper>
       )}
 
-      {/* Dialog for displaying log details */}
-      <Dialog open={dialogOpen} onClose={closeDialog} fullWidth maxWidth="sm">
+      {/* Details Dialog */}
+      <Dialog open={dialogOpen} onClose={closeDialog} TransitionComponent={UpTransition} maxWidth="sm" fullWidth>
         <DialogTitle>Log Details</DialogTitle>
         <DialogContent dividers>
-          {selectedLogDetails ? (
-            formatDetails(selectedLogDetails)
-          ) : (
-            <Typography variant="body2">No details available.</Typography>
-          )}
+          {selectedLogDetails
+            ? formatDetails(selectedLogDetails)
+            : <Typography>No details.</Typography>}
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeDialog} color="error" variant="outlined">
-            Close
-          </Button>
+          <Button onClick={closeDialog} variant="outlined" color="error">Close</Button>
         </DialogActions>
       </Dialog>
     </Container>

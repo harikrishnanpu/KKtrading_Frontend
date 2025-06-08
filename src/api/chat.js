@@ -42,9 +42,9 @@ export function useGetUsers() {
  * Fetch chat for a given user using POST /api/chat/filter
  * We use the SWR key as an array: [endpoint, body]
  */
-export function useGetUserChat(userName) {
+export function useGetUserChat(userId) {
   // If userName is empty, return null to skip fetching
-  const key = userName ? [endpoints.filter, { user: userName }] : null;
+  const key = userId ? [endpoints.filter, { user: userId }] : null;
 
   const { data, isLoading, error, isValidating } = useSWR(key, fetcherPost, {
     revalidateIfStale: false,
@@ -70,9 +70,9 @@ export function useGetUserChat(userName) {
  * Insert a new chat message with POST /api/chat
  * Also does an optimistic update of the local cache.
  */
-export async function insertChat(userName, newChat) {
+export async function insertChat(userId, newChat) {
   // The same SWR key used in `useGetUserChat` to store chat for userName
-  const swrKey = [endpoints.filter, { user: userName }];
+  const swrKey = [endpoints.filter, { user: userId }];
 
   // 1) Optimistically update local cache
   mutate(

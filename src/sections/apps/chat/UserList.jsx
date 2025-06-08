@@ -23,6 +23,7 @@ import { useGetUsers } from 'api/chat';
 
 // assets
 import { TickCircle } from 'iconsax-react';
+import useAuth from 'hooks/useAuth';
 
 const chance = new Chance();
 
@@ -30,6 +31,7 @@ const chance = new Chance();
 
 export default function UserList({ setUser, search, selectedUser }) {
   const theme = useTheme();
+  const {user: userInfo} = useAuth();
 
   const [data, setData] = useState([]);
 
@@ -37,7 +39,7 @@ export default function UserList({ setUser, search, selectedUser }) {
 
   useEffect(() => {
     if (!usersLoading) {
-      let result = users;
+      let result = users.filter((usr) => usr._id !== userInfo._id);
       if (search) {
         result = users.filter((row) => {
           let matches = true;

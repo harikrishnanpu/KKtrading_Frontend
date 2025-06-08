@@ -55,6 +55,7 @@ import {
   VolumeHigh,
   VolumeMute
 } from 'iconsax-react';
+import useAuth from 'hooks/useAuth';
 
 const drawerWidth = 320;
 
@@ -86,6 +87,7 @@ export default function Chat() {
   const { themeDirection } = useConfig();
   const matchDownSM = useMediaQuery(theme.breakpoints.down('lg'));
   const matchDownMD = useMediaQuery(theme.breakpoints.down('md'));
+  const { user: userInfo } = useAuth();
 
   // 1) Load Users
   const { usersLoading, users } = useGetUsers();
@@ -150,14 +152,14 @@ export default function Chat() {
     const d = new Date();
     const newMessage = {
       id: Number(incrementer(users.length)), // or any unique ID
-      from: user.name,                       // or your logged-in user
-      to: user.name,                       // the selected user’s name
+      from: userInfo._id,                       // or your logged-in user
+      to: user._id,                       // the selected user’s name
       text: message,
       time: d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
     // Insert chat via our SWR function
-    insertChat(user.name, newMessage);
+    insertChat(user._id, newMessage);
 
     // Clear the input
     setMessage('');
@@ -196,7 +198,7 @@ export default function Chat() {
         selectedUser={!usersLoading && user ? user.id : null}
       />
       {/* Main content area */}
-      <Main theme={theme} open={openChatDrawer}>
+      <Main sx={{}} className='fixed bottom-0' theme={theme} open={openChatDrawer}>
         <Grid container>
           <Grid
             item

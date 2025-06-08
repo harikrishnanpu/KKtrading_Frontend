@@ -55,7 +55,7 @@ export const TabsProvider = ({ children }) => {
       '/list', '/all', '/account', '/need-to-purchase',
       '/delivery', '/registry', '/update', '/report', '/payment',
       '/products/upcomming/lowstock', '/default', '/transactions',
-      '/tasks/board','/calendar', '/chat','/products'
+      '/tasks/board','/calendar', '/chat','/products', '/customer' , '/supplier' , '/transport'
     ];
   
     // If the path matches, force reload by clearing cache and bypassing navigation
