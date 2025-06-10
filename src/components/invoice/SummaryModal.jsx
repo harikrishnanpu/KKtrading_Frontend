@@ -64,7 +64,7 @@ export default function SummaryModal({
   neededToPurchase,
   setNeededToPurchase,
   roundOffMode,
-  setRoundOffMode,
+  setroundOffMode,
   amountReceived
 }) {
 
@@ -311,8 +311,8 @@ export default function SummaryModal({
         type="radio"
         name="roundOffMode"
         value="add"
-        checked={roundOffMode == 'add'}
-        onChange={(e)=> setRoundOffMode('add')}
+        checked={roundOffMode === 'add'}
+        onChange={(e)=> setroundOffMode(e.target.value)}
         className="text-red-500"
       />
       <span>+</span>
@@ -322,8 +322,8 @@ export default function SummaryModal({
         type="radio"
         name="roundOffMode"
         value="sub"
-        checked={roundOffMode == 'sub'}
-        onChange={(e)=> setRoundOffMode('sub')}        
+        checked={roundOffMode === 'sub'}
+        onChange={(e)=> setroundOffMode(e.target.value)}        
         className="text-red-500"
       />
       <span>−</span>
