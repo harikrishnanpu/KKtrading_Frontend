@@ -101,7 +101,7 @@ export default function EditBillScreen() {
   const [showSuggestionsSidebar, setShowSuggestionsSidebar] = useState(false);
   const [neededToPurchase, setNeededToPurchase] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
-  const [roundOffMode, setRoundOffMode] = useState('add'); // 'add' | 'sub'
+  const [roundOffMode, setroundOffMode] = useState('add'); // 'add' | 'sub'
   
     
   
@@ -357,7 +357,7 @@ const [printOptions, setPrintOptions] = useState({
         setRemark(data.remark);
         setIsApproved(data.isApproved);
         setNeededToPurchase(data.isneededToPurchase);
-        setRoundOffMode(data.roundoffMode)
+        setroundOffMode(data.roundOffMode)
 
         console.log(data.products);
         // Convert product numeric fields
@@ -2514,7 +2514,7 @@ const netTotal = rateWithoutGST + gstAmount;
           isSubmitting={isSubmitting}
           totalProducts={products.length}
           roundOffMode={roundOffMode}
-          setRoundOffMode={setRoundOffMode}
+          setroundOffMode={setroundOffMode}
         />
       )}
 

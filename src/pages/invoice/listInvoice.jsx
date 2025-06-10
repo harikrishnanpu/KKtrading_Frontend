@@ -1115,7 +1115,7 @@ Margin:{' '}
                         {format(new Date(billing.expectedDeliveryDate), 'dd MMM yyyy, HH:mm')}
                       </td>
                       <td className="px-2 text-xs py-2">
-                        {billing.showroom == "Moncompu - Main Office" ? 'MNCP' : 'CGNSH'}
+                        {billing.showroom == "Moncompu - Main Office" ? 'MNCP' : 'CGNRY'}
                       </td>
                       <td className="px-2 text-xs py-2">
                         {billing.salesmanName}

@@ -29,7 +29,7 @@ export default function NeedToPurchaseList() {
 
   /* Pagination */
   const [page, setPage]             = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(4);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const handleChangePage = (_e, v)  => setPage(v);
 

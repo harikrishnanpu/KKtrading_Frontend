@@ -311,8 +311,8 @@ export default function SummaryModal({
         type="radio"
         name="roundOffMode"
         value="add"
-        checked={roundOffMode === 'add'}
-        onChange={(e)=> setRoundOffMode(e.target.value)}
+        checked={roundOffMode == 'add'}
+        onChange={(e)=> setRoundOffMode('add')}
         className="text-red-500"
       />
       <span>+</span>
@@ -322,8 +322,8 @@ export default function SummaryModal({
         type="radio"
         name="roundOffMode"
         value="sub"
-        checked={roundOffMode === 'sub'}
-        onChange={(e)=> setRoundOffMode(e.target.value)}        
+        checked={roundOffMode == 'sub'}
+        onChange={(e)=> setRoundOffMode('sub')}        
         className="text-red-500"
       />
       <span>−</span>

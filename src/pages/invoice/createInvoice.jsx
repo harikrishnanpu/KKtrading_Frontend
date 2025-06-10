@@ -104,7 +104,7 @@ const [errorMessage, setErrorMessage] = useState('');
   const [neededToPurchase, setNeededToPurchase] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
   const [fetchInvoiceNo, setFetchInvoiceNo] = useState(false);
-  const [roundOffMode, setRoundOffMode] = useState('add'); // 'add' | 'sub'
+  const [roundOffMode, setroundOffMode] = useState('add'); // 'add' | 'sub'
   
 
 
@@ -992,7 +992,7 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
           handleLocalClear();
           setIsApproved(false);
           setNeededToPurchase(false);
-          setRoundOffMode('add');
+          setroundOffMode('add');
           setSuccess(true);
           // navigate('/'); // Example navigation
     } catch (err) {
@@ -2677,7 +2677,7 @@ const rateWithoutGST = (itemBase - itemDiscount) / (1 + gstRate / 100);
           totalProducts={products.length}
           handleLocalSave={handleLocalSave}
           roundOffMode={roundOffMode}
-          setRoundOffMode={setRoundOffMode}
+          setroundOffMode={setroundOffMode}
         />
       )}
 

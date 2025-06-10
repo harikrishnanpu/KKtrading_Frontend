@@ -259,12 +259,12 @@ export default function DashboardDefault() {
                 </Button>
                 <Button
                   component={RouterLink}
-                  to="/daily/report"
+                  to="/stock/update"
                   variant="outlined"
                   color="primary"
                   size="small"
                 >
-                  Daily Report
+                  Stock Update
                 </Button>
               </Stack>
             </Grid>
