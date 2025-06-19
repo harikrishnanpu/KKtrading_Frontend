@@ -263,15 +263,15 @@ export default function StockUpdatePage() {
                   </td>
                   <td className="px-3 py-2">{log.submittedBy}</td>
                   <td className="px-3 py-2">{log.remark}</td>
-                  <td className="px-3 py-2">
+                {userInfo.isSuper &&  <td className="px-3 py-2">
                     <IconButton
                       size="small"
                       color="error"
                       onClick={() => handleDelete(log._id)}
                     >
                       <Trash fontSize="inherit" />
-                    </IconButton>
-                  </td>
+                    </IconButton> 
+                  </td> }
                 </tr>
               ))
             )}
@@ -305,14 +305,14 @@ export default function StockUpdatePage() {
               </p>
               <p className="text-xs">User: {log.submittedBy}</p>
               <p className="text-xs mb-2">Remark: {log.remark}</p>
-              <Button
+               {userInfo.isSuper &&   <Button
                 variant="text"
                 color="error"
                 size="small"
                 onClick={() => handleDelete(log._id)}
               >
                 Delete
-              </Button>
+              </Button> }
             </div>
           ))
         )}

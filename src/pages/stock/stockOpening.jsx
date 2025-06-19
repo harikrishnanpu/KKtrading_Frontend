@@ -25,7 +25,7 @@ const StockRegistry = () => {
   const [invoiceNo, setInvoiceNo]       = useState('');
   const [changeType, setChangeType]     = useState('');
   const [sortField, setSortField]       = useState('date');
-  const [sortDirection, setSortDirection] = useState('asc');
+const [sortDirection, setSortDirection] = useState('desc');
 
   const itemsPerPage                    = 15;
   const [currentPage, setCurrentPage]   = useState(1);

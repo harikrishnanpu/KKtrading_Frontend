@@ -163,7 +163,7 @@ const canEditBasic = user.isEmployee && !canEditAll;
         setBillPartPrice(data.billPartPrice || '');
         setCashPartPrice(data.cashPartPrice || '');
         setType(data.type || '');
-        setCountInStock(data.countInStock || '');
+        setCountInStock(data.countInStock);
         setRating(data.rating || '');
         setNumReviews(data.numReviews || '');
         setHsnCode(data.hsnCode || '');
@@ -240,7 +240,7 @@ const canEditBasic = user.isEmployee && !canEditAll;
         hsnCode
       };
 
-      await api.put(`/api/products/${productId}`, updatedProduct);
+      const response = await api.put(`/api/products/${productId}`, updatedProduct);
       setSuccessUpdate(true);
     } catch (err) {
       setErrorUpdate(
@@ -837,14 +837,6 @@ const canEditBasic = user.isEmployee && !canEditAll;
             >
               Cancel
             </Button>
-              <Button
-                              variant="outlined"
-                              color="error"
-                              startIcon={<DeleteIcon />}
-                              onClick={deleteHandler}
-                            >
-                              Delete
-              </Button>
            {user.isSuper && <Button
               type="submit"
               variant="outlined"
