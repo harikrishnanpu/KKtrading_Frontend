@@ -4,8 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api';                           // axios instance
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
 import useAuth from 'hooks/useAuth';
 
 const StockRegistry = () => {
@@ -25,7 +23,9 @@ const StockRegistry = () => {
   const [invoiceNo, setInvoiceNo]       = useState('');
   const [changeType, setChangeType]     = useState('');
   const [sortField, setSortField]       = useState('date');
-const [sortDirection, setSortDirection] = useState('desc');
+  const [sortDirection, setSortDirection] = useState('desc');
+  const [itemId, setItemId] = useState('');
+  const [updatedBy, setUpdatedBy] = useState('');
 
   const itemsPerPage                    = 15;
   const [currentPage, setCurrentPage]   = useState(1);
@@ -33,6 +33,7 @@ const [sortDirection, setSortDirection] = useState('desc');
 
   /* ───── autocomplete suggestions (current page slice only) ─── */
   const [itemSuggestions, setItemSuggestions]         = useState([]);
+  const [itemIdSuggestions,setItemIdSuggestions] = useState([]);
   const [brandSuggestions, setBrandSuggestions]       = useState([]);
   const [categorySuggestions, setCategorySuggestions] = useState([]);
   const [invoiceSuggestions, setInvoiceSuggestions]   = useState([]);
@@ -53,7 +54,9 @@ const [sortDirection, setSortDirection] = useState('desc');
           invoiceNo,
           changeType,
           sortField,
-          sortDirection
+          sortDirection,
+          itemId,
+          updatedBy
         }
       });
 
@@ -64,6 +67,12 @@ const [sortDirection, setSortDirection] = useState('desc');
       setItemSuggestions(
         [...new Set(data.logs.map((l) => l.name))].filter(Boolean)
       );
+
+      setItemIdSuggestions(
+        [...new Set(data.logs.map((l) => l.itemId))].filter(Boolean)
+      );
+
+
       setBrandSuggestions(
         [...new Set(data.logs.map((l) => l.brand || ''))].filter(Boolean)
       );
@@ -100,55 +109,15 @@ const [sortDirection, setSortDirection] = useState('desc');
     invoiceNo,
     changeType,
     sortField,
-    sortDirection
+    sortDirection,
+    itemId,
+    updatedBy
   ]);
 
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) fetchLogs(page);
   };
 
-  /* ───── PDF ────────────────────────────────────────────────── */
-  const generatePDF = () => {
-    const doc = new jsPDF();
-    doc.text('Stock Registry Report', 14, 15);
-    doc.setFontSize(12);
-    doc.text(`Date Range: ${fromDate || 'All'} to ${toDate || 'All'}`, 14, 25);
-    doc.text(`Filters:`, 14, 32);
-    doc.text(`Item Name: ${itemName || 'All'}`, 14, 37);
-    doc.text(`Brand: ${brand || 'All'}`, 14, 42);
-    doc.text(`Category: ${category || 'All'}`, 14, 47);
-    doc.text(`Invoice No: ${invoiceNo || 'All'}`, 14, 52);
-    doc.text(`Change Type: ${changeType || 'All'}`, 14, 57);
-
-    doc.autoTable({
-      head: [
-        [
-          'Date',
-          'Item Name',
-          'Brand',
-          'Category',
-          'Change Type',
-          'Invoice No',
-          'Qty Change',
-          'Final Stock'
-        ]
-      ],
-      body: logs.map((log) => [
-        new Date(log.date).toLocaleDateString(),
-        log.name,
-        log.brand,
-        log.category,
-        log.changeType,
-        log.invoiceNo || '',
-        log.quantityChange,
-        log.finalStock
-      ]),
-      startY: 65,
-      styles: { fontSize: 8 }
-    });
-
-    doc.save('stock_registry_report.pdf');
-  };
 
   /* ───── UI ─────────────────────────────────────────────────── */
   return (
@@ -190,6 +159,24 @@ const [sortDirection, setSortDirection] = useState('desc');
             <datalist id="itemSuggestions">
               {itemSuggestions.map((name, idx) => (
                 <option key={idx} value={name} />
+              ))}
+            </datalist>
+          </div>
+
+
+                    <div>
+            <label className="block text-xs font-bold mb-1">Item Id</label>
+            <input
+              type="text"
+              value={itemId}
+              onChange={(e) => setItemId(e.target.value)}
+              list="itemIdSuggestions"
+              className="w-full border border-gray-300 rounded p-1 text-xs"
+              placeholder="Enter Item Id"
+            />
+            <datalist id="itemIdSuggestions">
+              {itemIdSuggestions.map((id, idx) => (
+                <option key={idx} value={id} />
               ))}
             </datalist>
           </div>
@@ -248,6 +235,18 @@ const [sortDirection, setSortDirection] = useState('desc');
             </datalist>
           </div>
 
+
+                    <div>
+            <label className="block text-xs font-bold mb-1">Updated By</label>
+            <input
+              type="text"
+              value={updatedBy}
+              onChange={(e) => setUpdatedBy(e.target.value)}
+              className="w-full border border-gray-300 rounded p-1 text-xs"
+              placeholder="Updated By"
+            />
+          </div>
+
           {/* Change type */}
           <div>
             <label className="block text-xs font-bold mb-1">Change Type</label>
@@ -292,15 +291,6 @@ const [sortDirection, setSortDirection] = useState('desc');
             </select>
           </div>
 
-          {/* PDF button */}
-          <div className="flex items-end">
-            <button
-              onClick={generatePDF}
-              className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-1 rounded text-xs"
-            >
-              Generate PDF
-            </button>
-          </div>
         </div>
       </div>
 
@@ -426,6 +416,7 @@ const [sortDirection, setSortDirection] = useState('desc');
               </div>
 
               {/* Pagination */}
+
               <div className="flex justify-between items-center mt-2">
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
@@ -453,6 +444,8 @@ const [sortDirection, setSortDirection] = useState('desc');
                   Next
                 </button>
               </div>
+
+
             </>
           )}
         </>

@@ -41,12 +41,14 @@ export default function PurchasePage() {
   const [itemQuantity, setItemQuantity] = useState("");
   const [itemUnit, setItemUnit] = useState("");
   const [itemBrand, setItemBrand] = useState("");
+  const [itemType, setItemType] = useState("");
   const [itemCategory, setItemCategory] = useState("");
   const [itemBillPrice, setItemBillPrice] = useState("");
   const [itemCashPrice, setItemCashPrice] = useState("");
   const [categories, setCategories] = useState([]);
   const [actLength, setActLength] = useState("");
   const [actBreadth, setActBreadth] = useState("");
+  const [ roundOff, setRoundOff ] = useState('0');
 
   // New: GST at item level
   const [itemGst, setItemGst] = useState("18");
@@ -79,6 +81,7 @@ export default function PurchasePage() {
   const [showSuggestionsSidebar, setShowSuggestionsSidebar] = useState(false);
 
   const [brands,setBrands] = useState([]);
+  const [itemTypes,setItemTypes] = useState([]);
 
 
   // Other States
@@ -109,6 +112,7 @@ export default function PurchasePage() {
   const itemUnitRef = useRef();
   const itemQuantityRef = useRef();
   const itemSunitRef = useRef();
+  const itemTypeRef = useRef();
   const itemlengthRef = useRef();
   const itemBreadthRef = useRef();
   const itemSizeRef = useRef();
@@ -116,6 +120,7 @@ export default function PurchasePage() {
   const actLengthRef = useRef();
   const actBreadthRef = useRef();
   const itemGstRef = useRef();
+  const roundOffRef = useRef();
 
   const unloadingRef = useRef();
   const insuranceRef = useRef();
@@ -181,9 +186,11 @@ export default function PurchasePage() {
       try {
         const categoryRes = await api.get("/api/billing/purchases/categories");
         const brandRes = await api.get("/api/products/allbrands");
+        const itemTypeRes = await api.get("/api/products/alltypes");
     
         setCategories(categoryRes.data.categories); // assuming response shape: { categories: [...] }
         setBrands(brandRes.data); // assuming response is just: [ "Brand1", "Brand2", ... ]
+        setItemTypes(itemTypeRes.data);
       } catch (error) {
         console.error("Error fetching categories or brands:", error);
       }
@@ -211,6 +218,8 @@ export default function PurchasePage() {
     if (value.trim() === "") {
       setSellerSuggestions([]);
       setSellerId("");
+      setSellerAddress("");
+      setSellerGst("");
       return;
     }
     try {
@@ -262,7 +271,8 @@ export default function PurchasePage() {
       length === "" ||
       breadth === "" ||
       itemGst === "" ||
-      hsnCode === "" 
+      hsnCode === "" ||
+      itemType === ""
     ) {
       setError("Please fill in all required fields before adding an item.");
       setShowErrorModal(true);
@@ -359,7 +369,8 @@ export default function PurchasePage() {
       billPriceInNumbers,
       cashPriceInNumbers,
       gstPercent: productGst, // <-- NEW FIELD
-      hsnCode: hsnCode
+      hsnCode: hsnCode,
+      itemType: itemType
     };
 
     setItems([newItem, ...items]);
@@ -388,6 +399,7 @@ export default function PurchasePage() {
     setItemStock("0");
     setHsnCode("");
     setItemGst("18"); // reset GST to default or empty
+    setItemType("");
   };
 
   // Function to handle searching for an item by ID
@@ -417,6 +429,7 @@ export default function PurchasePage() {
         setItemStock(data.countInStock);
         setActLength(data.actLength);
         setActBreadth(data.actBreadth);
+        setItemType(data.type)
         // If your backend has an item GST field, set it here; else default:
         setItemGst(data.gstPercent || "18");
         itemNameRef.current?.focus();
@@ -591,7 +604,8 @@ export default function PurchasePage() {
     const perItemOtherExpense = totalItems > 0 ? totalOtherExpenses / totalItems : 0;
 
     const totalPurchaseAmount = billPartTotal + cashPartTotal;
-    const grandTotalPurchaseAmount = totalPurchaseAmount + totalOtherExpenses;
+    const round = parseFloat(roundOff || 0);
+    const grandTotalPurchaseAmount = totalPurchaseAmount + totalOtherExpenses + round;
 
     return {
         billPartTotal,
@@ -653,6 +667,7 @@ export default function PurchasePage() {
       billingDate,
       invoiceDate,
       otherExpenses,
+      roundOff,
       submittedBy: userInfo.name,
       items: items.map((item) => ({
           itemId: item.itemId || itemId,
@@ -675,6 +690,7 @@ export default function PurchasePage() {
           cashPartPriceInNumbers: item.cashPriceInNumbers,
           allocatedOtherExpense: perItemOtherExpense * item.quantityInNumbers,
           hsnCode: item.hsnCode,
+          itemType: item.itemType,
           totalPriceInNumbers:
               item.billPriceInNumbers * (1 + item.gstPercent / 100) + item.cashPriceInNumbers + perItemOtherExpense,
           gstPercent: item.gstPercent,
@@ -746,6 +762,7 @@ export default function PurchasePage() {
       setUnloadCharge("");
       setInsurance("");
       setDamagePrice("");
+      setItemType("");
       setSuccess(true);
     } catch (error) {
       setError("Error submitting purchase. Please try again.");
@@ -817,7 +834,7 @@ export default function PurchasePage() {
         }`}
       >
         {success && (
-          <BillingSuccess isAdmin={userInfo.isAdmin} estimationNo={returnInvoice} />
+          <BillingSuccess page="purchase" isAdmin={userInfo.isAdmin} estimationNo={returnInvoice} />
         )}
         {/* Step Indicator */}
         <div className="flex justify-between mb-5">
@@ -1500,10 +1517,46 @@ export default function PurchasePage() {
                               ref={hsnCodeRef}
                               value={hsnCode}
                               onChange={(e) => setHsnCode(e.target.value)}
-                              onKeyDown={(e) => changeRef(e, itemBrandRef)}
+                              onKeyDown={(e) => changeRef(e, itemCategoryRef)}
                               className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
                               required
                             />
+                          </div>
+
+
+
+                          <div className="flex flex-col">
+                            <label className="text-xs text-gray-700 mb-1">
+                              Item Category
+                            </label>
+                            <select
+  value={itemCategory}
+  ref={itemCategoryRef}
+  onChange={(e) => {
+    const value = e.target.value;
+    if (value === '__add_new__') {
+      const newCategory = prompt('Enter new category:');
+      if (newCategory && !categories.includes(newCategory)) {
+        setCategories(prev => [...prev, newCategory]);
+        setItemCategory(newCategory);
+      }
+    } else {
+      setItemCategory(value);
+    }
+  }}
+  onKeyDown={(e) => changeRef(e, itemBrandRef)}
+  className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
+  required
+>
+  <option value="" disabled>Select Category</option>
+  {categories.map((category, index) => (
+    <option key={index} value={category}>
+      {category}
+    </option>
+  ))}
+  <option value="__add_new__">+ Add another category</option>
+</select>
+
                           </div>
 
                           <div className="flex flex-col">
@@ -1525,7 +1578,7 @@ export default function PurchasePage() {
       setItemBrand(value);
     }
   }}
-  onKeyDown={(e) => changeRef(e, itemCategoryRef)}
+  onKeyDown={(e) => changeRef(e, itemSunitRef)}
   className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
   required
 >
@@ -1540,39 +1593,6 @@ export default function PurchasePage() {
 
                           </div>
 
-                          <div className="flex flex-col">
-                            <label className="text-xs text-gray-700 mb-1">
-                              Item Category
-                            </label>
-                            <select
-  value={itemCategory}
-  ref={itemCategoryRef}
-  onChange={(e) => {
-    const value = e.target.value;
-    if (value === '__add_new__') {
-      const newCategory = prompt('Enter new category:');
-      if (newCategory && !categories.includes(newCategory)) {
-        setCategories(prev => [...prev, newCategory]);
-        setItemCategory(newCategory);
-      }
-    } else {
-      setItemCategory(value);
-    }
-  }}
-  onKeyDown={(e) => changeRef(e, itemSunitRef)}
-  className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
-  required
->
-  <option value="" disabled>Select Category</option>
-  {categories.map((category, index) => (
-    <option key={index} value={category}>
-      {category}
-    </option>
-  ))}
-  <option value="__add_new__">+ Add another category</option>
-</select>
-
-                          </div>
 
                           <div className="flex flex-col">
                             <label className="text-xs text-gray-700 mb-1">
@@ -1582,7 +1602,7 @@ export default function PurchasePage() {
                               value={sUnit}
                               onChange={(e) => setSUnit(e.target.value)}
                               ref={itemSunitRef}
-                              onKeyDown={(e) => changeRef(e, itemPsRatioRef)}
+                              onKeyDown={(e) => changeRef(e, itemTypeRef)}
                               className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
                               required
                             >
@@ -1592,10 +1612,124 @@ export default function PurchasePage() {
                               <option value="GSQFT">GSQFT</option>
                             </select>
                           </div>
+
                         </div>
 
                         {/* Dimensions and Ratios */}
-                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+
+
+                          <div className="flex flex-col">
+                            <label className="text-xs text-gray-700 mb-1">
+                             Item Type
+                            </label>
+          <select
+  value={itemType}
+  ref={itemTypeRef}
+  onChange={(e) => {
+    const value = e.target.value;
+    if (value === '__add_new__') {
+      const newItemType = prompt('Enter new Type:');
+
+if (newItemType && !itemTypes.some(t => t._id === newItemType)) {
+
+        setItemTypes(prev => [...prev, { _id: newItemType }]);
+        setItemType(newItemType);
+
+    }
+
+    } else {
+
+
+      setItemType(value);
+
+      const { lengths, breadths, actLengths, actBreadths, sizes, psRatios } = itemTypes.find(type => type._id === value);
+      
+      let frequency = {
+        lengths: [],
+        breadths: [],
+        actLengths: [],
+        actBreadths: [],
+        sizes: [],
+        psRatios
+      };
+
+
+      const length = lengths.length && lengths.forEach((len,indx)=> { 
+       if(!frequency.lengths.includes(len)){
+        frequency.lengths.push(len) 
+       }
+      })
+
+      const breadth = breadths.length && breadths.forEach((brd,indx)=> { 
+       if(!frequency.breadths.includes(brd)){
+        frequency.breadths.push(brd) 
+       }
+      })
+
+      const actLength = actLengths.length && actLengths.forEach((actLen,indx)=> { 
+       if(!frequency.actLengths.includes(actLen)){
+        frequency.actLengths.push(actLen) 
+       }
+      })
+
+      const actBreadth = actBreadths.length && actBreadths.forEach((actBreadth,indx)=> { 
+       if(!frequency.actBreadths.includes(actBreadth)){
+        frequency.actBreadths.push(actBreadth) 
+       }
+      })
+
+
+      const size = sizes.length && sizes.forEach((size,indx)=> { 
+       if(!frequency.sizes.includes(size)){
+        frequency.sizes.push(size) 
+       }
+      })
+
+      const psRatio = psRatios.length && psRatios.forEach((ps,indx)=> { 
+       if(!frequency.psRatios.includes(ps)){
+        frequency.psRatios.push(ps) 
+       }
+      })
+
+
+
+
+setLength(Array.from(new Set(frequency.lengths || [])));
+setBreadth(Array.from(new Set(frequency.breadths || [])));
+setActLength(Array.from(new Set(frequency.actLengths || [])));
+setActBreadth(Array.from(new Set(frequency.actBreadths || [])));
+setSize(Array.from(new Set(frequency.sizes || [])));
+setPsRatio(Array.from(new Set(frequency.psRatios || [])));
+
+
+
+
+
+
+
+      console.log(frequency);
+      
+
+
+
+    }
+  }}
+  onKeyDown={(e) => changeRef(e, itemPsRatioRef)}
+  className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
+  required
+>
+  <option value="" disabled>Select Item Type</option>
+  {itemTypes?.map((type, index) => (
+    <option key={index} value={type._id}>
+      {type._id}
+    </option>
+  ))}
+  <option value="__add_new__">+ Add another Type</option>
+</select>
+                          </div>
+
+
                           <div className="flex flex-col">
                             <label className="text-xs text-gray-700 mb-1">
                               P/S Ratio
@@ -1993,6 +2127,7 @@ export default function PurchasePage() {
   </button>
 </div>
 
+
                 <h2 className="text-sm font-bold text-gray-900">
                   Transportation Details
                 </h2>
@@ -2208,6 +2343,22 @@ export default function PurchasePage() {
                       </div>
                     </div>
                   </div>
+
+
+                                        <div className="w-full">
+                        <label className="text-xs text-gray-700 mb-1">
+                          RoundOff
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Enter RoundOff"
+                          value={roundOff}
+                          onChange={(e) => setRoundOff(e.target.value)}
+                          className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
+                        />
+                      </div>
+
+
                 </div>
               </div>
             )}
@@ -2233,11 +2384,11 @@ export default function PurchasePage() {
                   </p>
                 </div>
                 <div className="flex justify-between">
-                  <p className="text-xs">CGST (Sum of items' half GST):</p>
+                  <p className="text-xs">CGST:</p>
                   <p className="text-xs">{cgstItems.toFixed(2)}</p>
                 </div>
                 <div className="flex justify-between">
-                  <p className="text-xs">SGST (Sum of items' half GST):</p>
+                  <p className="text-xs">SGST:</p>
                   <p className="text-xs">{sgstItems.toFixed(2)}</p>
                 </div>
                 <div className="flex justify-between mt-2">
@@ -2262,6 +2413,15 @@ export default function PurchasePage() {
                     {totalPurchaseAmount.toFixed(2)}
                   </p>
                 </div>
+
+                              
+                <div className="flex justify-between mt-2">
+                  <p className="text-sm font-bold">Round Off:</p>
+                  <p className="text-sm font-bold">
+                    {roundOff}
+                  </p>
+                </div>
+
                 <div className="flex justify-between mt-2">
                   <p className="text-sm font-bold">Grand Total:</p>
                   <p className="text-sm font-bold">

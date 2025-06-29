@@ -43,6 +43,9 @@ export default function StockUpdatePage() {
   const [filterCategory, setFilterCategory] = useState('');
   const [sortField, setSortField]     = useState('date');
   const [sortDir, setSortDir]         = useState('desc');
+  const [ filterItemId, setFilterItemId] = useState('');
+  const [ filterRemark, setFilterRemark] = useState('');
+
 
   /* UI */
   const [drawerOpen, setDrawerOpen]   = useState(false);
@@ -58,6 +61,8 @@ export default function StockUpdatePage() {
     setLogError('');
     try {
       const { data } = await api.get('/api/stock-update/logs', {
+
+
         params: {
           page,
           limit: itemsPerPage,
@@ -66,13 +71,18 @@ export default function StockUpdatePage() {
           name: filterName,
           brand: filterBrand,
           category: filterCategory,
+          itemId: filterItemId,
           sortField,
-          sortDirection: sortDir
+          sortDirection: sortDir,
+          remark: filterRemark
         }
       });
+
+
       setLogs(data.logs);
       setTotalPages(Math.ceil(data.total / itemsPerPage));
       setCurrentPage(page);
+      
     } catch {
       setLogError('Failed to fetch logs.');
     } finally {
@@ -90,8 +100,10 @@ export default function StockUpdatePage() {
     filterName,
     filterBrand,
     filterCategory,
+    filterItemId,
     sortField,
-    sortDir
+    sortDir,
+    filterRemark
   ]);
 
   /* ───── product suggestions ───────────────────────────────── */
@@ -475,6 +487,15 @@ export default function StockUpdatePage() {
             value={filterName}
             onChange={e => setFilterName(e.target.value)}
           />
+
+          <TextField
+            label="itemId"
+            size="small"
+            fullWidth
+            value={filterItemId}
+            onChange={e => setFilterItemId(e.target.value)}
+          />
+
           <TextField
             label="Brand"
             size="small"
@@ -488,6 +509,14 @@ export default function StockUpdatePage() {
             fullWidth
             value={filterCategory}
             onChange={e => setFilterCategory(e.target.value)}
+          />
+
+                    <TextField
+            label="Remark"
+            size="small"
+            fullWidth
+            value={filterRemark}
+            onChange={e => setFilterRemark(e.target.value)}
           />
 
           <FormControl size="small" fullWidth>

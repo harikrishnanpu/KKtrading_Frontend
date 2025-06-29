@@ -23,7 +23,7 @@ const Transition = forwardRef(function Transition(props, ref) {
   return <Slide direction="up" ref={ref} {...props} />;
 });
 
-const BillingSuccess = ({ estimationNo, isAdmin }) => {
+const BillingSuccess = ({ estimationNo, isAdmin, page='estimate' }) => {
   const navigate = useNavigate();
   const audioRef = useRef(null);
   const {closeTab,activeTab} = useTabs();
@@ -48,7 +48,11 @@ const BillingSuccess = ({ estimationNo, isAdmin }) => {
   const handleClose = () => {
     setOpen(false);
     closeTab(activeTab);
-    navigate('/invoice/list/');
+    if(page == 'purchase'){
+      navigate('/purchase/list/');
+    }else{
+      navigate('/invoice/list/');
+    }
   };
 
   return (

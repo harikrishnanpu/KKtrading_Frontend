@@ -32,7 +32,14 @@ api.interceptors.request.use(
     ) {
       delete config.headers.user;
       delete config.headers.Authorization;
+    } 
+
+    const accessToken = localStorage.getItem('serviceToken');
+
+    if (accessToken) {
+      config.headers['Authorization'] = `Bearer ${accessToken}`;
     }
+
     return config;
   },
   (error) => Promise.reject(error)

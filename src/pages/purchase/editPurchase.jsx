@@ -1,5 +1,3 @@
-// src/screens/EditPurchaseScreen.jsx
-
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../api";
@@ -81,8 +79,11 @@ export default function EditPurchaseScreen() {
   const [damagePrice, setDamagePrice] = useState("");
   const [transportCompanies, setTransportCompanies] = useState([]);
   const [isCustomCompany, setIsCustomCompany] = useState(false);
+  const [ roundOff, setRoundOff ] = useState('0');
+  const [itemType, setItemType] = useState("");
 
-    const [brands,setBrands] = useState([]);
+  const [brands,setBrands] = useState([]);
+  const [itemTypes,setItemTypes] = useState([]);
   
 
   // Other States
@@ -123,7 +124,8 @@ export default function EditPurchaseScreen() {
   const actLengthRef = useRef();
   const actBreadthRef = useRef();
   const itemGstRef = useRef();
-    const hsnCodeRef = useRef();
+  const hsnCodeRef = useRef();
+  const itemTypeRef = useRef();
   
 
   // ----------------------------
@@ -162,9 +164,12 @@ export default function EditPurchaseScreen() {
       try {
         const categoryRes = await api.get("/api/billing/purchases/categories");
         const brandRes = await api.get("/api/products/allbrands");
+        const itemTypeRes = await api.get("/api/products/alltypes");
     
         setCategories(categoryRes.data.categories); // assuming response shape: { categories: [...] }
         setBrands(brandRes.data); // assuming response is just: [ "Brand1", "Brand2", ... ]
+        setItemTypes(itemTypeRes.data);
+
       } catch (error) {
         console.error("Error fetching categories or brands:", error);
       }
@@ -203,6 +208,7 @@ export default function EditPurchaseScreen() {
         setInvoiceDate(data.invoiceDate ? data.invoiceDate.substring(0, 10) : "");
         setLastItemId(response?.data);
         setOtherExpenses(data.otherExpenses || []);
+        setRoundOff(data.roundOff);
 
 
         // Map items, including item-level GST
@@ -414,7 +420,8 @@ export default function EditPurchaseScreen() {
       actBreadth === "" ||
       size === "" ||
       itemGst === "" ||
-      hsnCode === ""
+      hsnCode === "" ||
+      itemType === ""
     ) {
       setError("Please fill in all required fields before adding an item.");
       setShowErrorModal(true);
@@ -495,11 +502,11 @@ export default function EditPurchaseScreen() {
       actBreadth: productActBreadth,
       size: productSize,
       gstPercent: productGst,
-
       quantityInNumbers,
       billPriceInNumbers,
       cashPriceInNumbers,
-      hsnCode: hsnCode
+      hsnCode: hsnCode,
+      itemType: itemType
 
     };
 
@@ -527,6 +534,7 @@ export default function EditPurchaseScreen() {
     setItemStock("0");
     setHsnCode("");
     setItemGst("18"); // reset GST to default or empty
+    setItemType("");
   };
 
   const handleSearchItem = async (item) => {
@@ -557,6 +565,7 @@ export default function EditPurchaseScreen() {
         setActBreadth(data.actBreadth);
         // If your backend has an item GST field, set it here; else default:
         setItemGst(data.gstPercent || "18");
+        setItemType(data.type)
         itemNameRef.current?.focus();
       } else {
         setError("Item not found.");
@@ -694,7 +703,8 @@ export default function EditPurchaseScreen() {
     const perItemOtherExpense = totalItems > 0 ? totalOtherExpenses / totalItems : 0;
 
     const totalPurchaseAmount = billPartTotal + cashPartTotal;
-    const grandTotalPurchaseAmount = totalPurchaseAmount + totalOtherExpenses;
+     const round = parseFloat(roundOff || 0);
+    const grandTotalPurchaseAmount = totalPurchaseAmount + totalOtherExpenses + round;
 
     return {
         billPartTotal,
@@ -756,6 +766,7 @@ export default function EditPurchaseScreen() {
       billingDate,
       invoiceDate,
       otherExpenses,
+      roundOff,
       submittedBy: user.name || '',
       items: items.map((item) => ({
           itemId: item.itemId || itemId,
@@ -781,6 +792,7 @@ export default function EditPurchaseScreen() {
           totalPriceInNumbers:
               item.billPriceInNumbers * (1 + item.gstPercent / 100) + item.cashPriceInNumbers + perItemOtherExpense,
           gstPercent: item.gstPercent,
+          itemType: item.itemType
       })),
       totals: {
           billPartTotal, // Insurance is already included in billPartTotal in the updated calculation
@@ -1181,6 +1193,7 @@ export default function EditPurchaseScreen() {
                             <th className="px-2 py-2 text-left">Category</th>
                             <th className="px-2 py-2 text-left">Quantity</th>
                             <th className="px-2 py-2 text-left">Unit</th>
+                            <th className="px-2 py-2 text-left">Type</th>
                             <th className="px-2 py-2 text-left">
                               Bill Price (₹)
                             </th>
@@ -1260,6 +1273,7 @@ export default function EditPurchaseScreen() {
                                   />
                                 </td>
                                 <td className="px-2 py-2">{item.pUnit}</td>
+                                <td className="px-2 py-2">{item.itemType}</td>
                                 <td className="px-2 py-2">
                                   <input
                                     type="number"
@@ -1626,7 +1640,7 @@ export default function EditPurchaseScreen() {
                               value={sUnit}
                               onChange={(e) => setSUnit(e.target.value)}
                               ref={itemSunitRef}
-                              onKeyDown={(e) => changeRef(e, itemPsRatioRef)}
+                              onKeyDown={(e) => changeRef(e, itemTypeRef)}
                               className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
                               required
                             >
@@ -1639,7 +1653,119 @@ export default function EditPurchaseScreen() {
                         </div>
 
                         {/* Dimensions and Ratios */}
-                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+
+                          <div className="flex flex-col">
+                            <label className="text-xs text-gray-700 mb-1">
+                             Item Type
+                            </label>
+          <select
+  value={itemType}
+  ref={itemTypeRef}
+  onChange={(e) => {
+    const value = e.target.value;
+    if (value === '__add_new__') {
+      const newItemType = prompt('Enter new Type:');
+
+if (newItemType && !itemTypes.some(t => t._id === newItemType)) {
+
+        setItemTypes(prev => [...prev, { _id: newItemType }]);
+        setItemType(newItemType);
+
+    }
+
+    } else {
+
+
+      setItemType(value);
+
+      const { lengths, breadths, actLengths, actBreadths, sizes, psRatios } = itemTypes.find(type => type._id === value);
+      
+      let frequency = {
+        lengths: [],
+        breadths: [],
+        actLengths: [],
+        actBreadths: [],
+        sizes: [],
+        psRatios
+      };
+
+
+      const length = lengths.length && lengths.forEach((len,indx)=> { 
+       if(!frequency.lengths.includes(len)){
+        frequency.lengths.push(len) 
+       }
+      })
+
+      const breadth = breadths.length && breadths.forEach((brd,indx)=> { 
+       if(!frequency.breadths.includes(brd)){
+        frequency.breadths.push(brd) 
+       }
+      })
+
+      const actLength = actLengths.length && actLengths.forEach((actLen,indx)=> { 
+       if(!frequency.actLengths.includes(actLen)){
+        frequency.actLengths.push(actLen) 
+       }
+      })
+
+      const actBreadth = actBreadths.length && actBreadths.forEach((actBreadth,indx)=> { 
+       if(!frequency.actBreadths.includes(actBreadth)){
+        frequency.actBreadths.push(actBreadth) 
+       }
+      })
+
+
+      const size = sizes.length && sizes.forEach((size,indx)=> { 
+       if(!frequency.sizes.includes(size)){
+        frequency.sizes.push(size) 
+       }
+      })
+
+      const psRatio = psRatios.length && psRatios.forEach((ps,indx)=> { 
+       if(!frequency.psRatios.includes(ps)){
+        frequency.psRatios.push(ps) 
+       }
+      })
+
+
+
+
+setLength(Array.from(new Set(frequency.lengths || [])));
+setBreadth(Array.from(new Set(frequency.breadths || [])));
+setActLength(Array.from(new Set(frequency.actLengths || [])));
+setActBreadth(Array.from(new Set(frequency.actBreadths || [])));
+setSize(Array.from(new Set(frequency.sizes || [])));
+setPsRatio(Array.from(new Set(frequency.psRatios || [])));
+
+
+
+
+
+
+
+      console.log(frequency);
+      
+
+
+
+    }
+  }}
+  onKeyDown={(e) => changeRef(e, itemPsRatioRef)}
+  className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
+  required
+>
+  <option value="" disabled>Select Item Type</option>
+  {itemTypes?.map((type, index) => (
+    <option key={index} value={type._id}>
+      {type._id}
+    </option>
+  ))}
+  <option value="__add_new__">+ Add another Type</option>
+</select>
+                          </div>
+
+
                           <div className="flex flex-col">
                             <label className="text-xs text-gray-700 mb-1">
                               P/S Ratio
@@ -1850,41 +1976,7 @@ export default function EditPurchaseScreen() {
                       </div>
                     </div>
 
-                    {/* Middle Section: GST info, stock, etc. */}
-                    <div className="hidden lg:block w-44">
-                      <div className="bg-gray-100 p-6 h-full rounded-lg shadow-inner">
-                        <div className="">
-                          <div className="flex justify-between">
-                            <p className="text-sm font-bold">GST:</p>
-                            <p className="text-sm">Item-wise</p>
-                          </div>
-                          <div className="flex justify-between">
-                            <p className="text-xs font-bold">Added Products:</p>
-                            <p className="text-xs">{items?.length}</p>
-                          </div>
-                        </div>
-                        <div className="flex my-2 mx-auto text-center">
-                          <button
-                            type="button"
-                            onClick={addItem}
-                            className="bg-red-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-600 text-xs w-full md:w-auto"
-                          >
-                            Add Item
-                          </button>
-                        </div>
-                        <div className="bg-gray-300 p-5 mt-4 rounded-lg">
-                          <div className="flex justify-between">
-                            <p className="text-xs font-bold">Current Item</p>
-                          </div>
-                          <div className="flex justify-between">
-                            <p className="text-xs font-bold">Stock:</p>
-                            <p className="text-xs">
-                              {itemstock.toString().slice(0, 8)} {sUnit}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+          
 
                     {/* Right Section: Summary */}
                     <div className="w-full md:w-60 mt-4 md:mt-0">
@@ -2277,6 +2369,21 @@ export default function EditPurchaseScreen() {
                       </div>
                     </div>
                   </div>
+
+                                                          <div className="w-full">
+                        <label className="text-xs text-gray-700 mb-1">
+                          RoundOff
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Enter RoundOff"
+                          value={roundOff}
+                          onChange={(e) => setRoundOff(e.target.value)}
+                          className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
+                        />
+                      </div>
+
+
                 </div>
 
                 {/* Overall Details */}
@@ -2336,6 +2443,14 @@ export default function EditPurchaseScreen() {
                       ₹{totalPurchaseAmount.toFixed(2)}
                     </p>
                   </div>
+
+                                    <div className="flex justify-between mt-2">
+                    <p className="text-sm font-bold">Round Off:</p>
+                    <p className="text-xs font-bold">
+                      {roundOff}
+                    </p>
+                  </div>
+
                   <div className="flex justify-between mt-2">
                     <p className="text-sm font-bold">Grand Total:</p>
                     <p className="text-xs font-bold">
