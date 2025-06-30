@@ -67,6 +67,51 @@ export default function DashboardDefault() {
     fetchDashboardData();
   }, []);
 
+
+
+  const downloadExcel = async () => {
+  try {
+    const response = await api.get('/api/print/export', {
+      responseType: 'blob', // important for file downloads
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+
+    // Create a blob link to download
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'all_data.xlsx');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+  } catch (error) {
+    console.error('Download failed:', error);
+  }
+};
+
+  const handleSeedProducts = async () => {
+    if(!window.confirm('are you sure want to import products')) return;
+    try {
+      const token = localStorage.getItem('token'); // adjust based on your auth
+      const res = await api.get('/api/products/seed', {}, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      alert('Products seeded successfully!');
+      console.log(res.data);
+      // Optional: reload or navigate
+      // navigate('/products'); 
+    } catch (err) {
+      console.log(err);
+      alert(err.message);
+    }
+  };
+
   // Skeletal Loading State
   if (loading) {
     return (
@@ -269,7 +314,7 @@ export default function DashboardDefault() {
 
                 {user.isSuper  && <Button
                   component={RouterLink}
-                  to="/api/print/export"
+                  onClick={downloadExcel}
                   variant="outlined"
                   color="primary"
                   size="small"
@@ -279,10 +324,11 @@ export default function DashboardDefault() {
 
                   {user.isSuper  && <Button
                   component={RouterLink}
-                  to="/api/products/seed"
                   variant="outlined"
                   color="primary"
                   size="small"
+                   onClick={handleSeedProducts}
+
                 >
                   Import Products
                 </Button> }
