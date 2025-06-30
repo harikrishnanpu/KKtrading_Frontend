@@ -266,6 +266,27 @@ export default function DashboardDefault() {
                 >
                   Stock Update
                 </Button>
+
+                {user.isSuper  && <Button
+                  component={RouterLink}
+                  to="/api/print/export"
+                  variant="outlined"
+                  color="primary"
+                  size="small"
+                >
+                  Export
+                </Button> }
+
+                  {user.isSuper  && <Button
+                  component={RouterLink}
+                  to="/api/products/seed"
+                  variant="outlined"
+                  color="primary"
+                  size="small"
+                >
+                  Import Products
+                </Button> }
+
               </Stack>
             </Grid>
           </Grid>
