@@ -280,8 +280,7 @@ const importPass = window.prompt('Please be aware that importing products will a
                     top: -50,    
                     right: 20,     
                     width: 120,    
-                    height: 100,
-                    height: 'auto', 
+                    height: 'auto',
                   }}
                 />
         <MainCard>
