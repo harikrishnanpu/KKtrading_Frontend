@@ -33,7 +33,6 @@ export default function Login() {
             top: -38,    
             right: -41,     
             width: 120,    
-            height: 'auto', 
             opacity: 0.9,
                 height: 'auto',
     animation: 'spin 20s linear infinite',
