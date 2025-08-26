@@ -36,7 +36,7 @@ import { openSnackbar } from 'api/snackbar';
 export default function AuthLogin({ forgot }) {
   const [checked, setChecked] = useState(false);
 
-  const { isLoggedIn, login } = useAuth();
+  const { login } = useAuth();
   const scriptedRef = useScriptRef();
 
   const [showPassword, setShowPassword] = useState(false);
@@ -161,14 +161,14 @@ export default function AuthLogin({ forgot }) {
                     }
                     label={<Typography variant="h6">Keep me sign in</Typography>}
                   />
-                  <Link
+                  {/* <Link
                     variant="h6"
                     component={RouterLink}
                     to={isLoggedIn && forgot ? forgot : '/forgot-password'}
                     color="text.primary"
                   >
                     Forgot Password?
-                  </Link>
+                  </Link> */}
                 </Stack>
               </Grid>
 

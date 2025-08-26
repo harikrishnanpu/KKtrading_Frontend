@@ -97,7 +97,6 @@ export default function UserEditScreen() {
     setLoadingUpdate(true);
 
     try {
-      // Convert faceDescriptor if it's JSON
 
       await api.put(
         `/api/users/user/edit/${userId}`,
@@ -173,26 +172,31 @@ export default function UserEditScreen() {
       </div>
 
       {/* Loading & Error Messages */}
+      
       {loading && (
         <div className="mb-4 p-2 text-blue-700 border border-blue-300 rounded">
           Loading user details...
         </div>
       )}
+
       {error && (
         <div className="mb-4 p-2 text-red-700 border border-red-300 rounded">
           {error}
         </div>
       )}
+
       {loadingUpdate && (
         <div className="mb-4 p-2 text-blue-700 border border-blue-300 rounded">
           Updating user...
         </div>
       )}
+
       {errorUpdate && (
         <div className="mb-4 p-2 text-red-700 border border-red-300 rounded">
           {errorUpdate}
         </div>
       )}
+
       {successUpdate && (
         <div className="mb-4 p-2 text-green-700 border border-green-300 rounded">
           User updated successfully!

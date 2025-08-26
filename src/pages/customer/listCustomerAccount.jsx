@@ -586,12 +586,6 @@ const CustomerAccountList = () => {
                               >
                                 <i className="fa fa-eye mr-1"></i> View
                               </button>
-                              <button
-                                onClick={() => generatePDF(account)}
-                                className="bg-red-500 text-white px-2 font-bold py-1 rounded hover:bg-red-600 flex items-center text-xs"
-                              >
-                                <i className="fa fa-file-pdf-o mr-1"></i> Download
-                              </button>
                              {userInfo.isSuper && <button
                                 onClick={() => handleRemove(account._id)}
                                 className="bg-red-500 text-white px-2 font-bold py-1 rounded hover:bg-red-600 flex items-center text-xs"

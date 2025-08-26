@@ -8,16 +8,13 @@ import Typography from '@mui/material/Typography';
 // project-imports
 import Logo from 'components/logo';
 import useAuth from 'hooks/useAuth';
-import AuthSocButton from 'sections/auth/AuthSocButton';
-import AuthDivider from 'sections/auth/AuthDivider';
 import AuthWrapper from 'sections/auth/AuthWrapper';
 import AuthLogin from 'sections/auth/auth-forms/AuthLogin';
+import onam2 from '/images/onam2.png';
+
 
 // assets
-import imgFacebook from 'assets/images/auth/facebook.svg';
-import imgTwitter from 'assets/images/auth/twitter.svg';
-import imgGoogle from 'assets/images/auth/google.svg';
-import { Divider } from '@mui/material';
+import { Box, Divider } from '@mui/material';
 
 // ================================|| LOGIN ||================================ //
 
@@ -27,6 +24,26 @@ export default function Login() {
   return (
     <AuthWrapper>
       <Grid container spacing={3}>
+               <Box
+          component="img"
+          src={onam2}
+          alt="onam"
+          sx={{
+            position: 'absolute',
+            top: -38,    
+            right: -41,     
+            width: 120,    
+            height: 'auto', 
+            opacity: 0.9,
+                height: 'auto',
+    animation: 'spin 20s linear infinite',
+    '@keyframes spin': {
+      '0%': { transform: 'rotate(0deg)' },
+      '100%': { transform: 'rotate(360deg)' }
+    } 
+          }}
+        />
+
         <Grid item xs={12} sx={{ textAlign: 'center' }}>
           <Logo />
         </Grid>
@@ -49,6 +66,7 @@ export default function Login() {
           <AuthLogin forgot="/auth/forgot-password" />
         </Grid>
       </Grid>
+
     </AuthWrapper>
   );
 }

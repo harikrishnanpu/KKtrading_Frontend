@@ -217,16 +217,6 @@ const [printOptions, setPrintOptions] = useState({
       setIsLoading(true); // Set loading state
       try {
         const response = await api.get('/api/accounts/allaccounts');
-        const getPaymentMethod = response.data.map((acc) => acc.accountId);
-
-        // Check if there are any accounts and set the first account as the default
-        if (getPaymentMethod.length > 0) {
-          const firstAccountId = getPaymentMethod[0];
-          setPaymentMethod(firstAccountId); // Set the first account as default
-        } else {
-          setPaymentMethod(null); // Handle case where there are no accounts
-        }
-
         setAccounts(response.data); // Set the accounts in state
       } catch (err) {
   console.error(err);
@@ -987,7 +977,7 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
           setDiscount(0);
           setReceivedAmount(0);
           setReceivedDate('');
-          setPaymentMethod();
+          setPaymentMethod('');
           setShowSummaryModal(false);
           handleLocalClear();
           setIsApproved(false);

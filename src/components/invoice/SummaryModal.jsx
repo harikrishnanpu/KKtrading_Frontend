@@ -224,10 +224,10 @@ export default function SummaryModal({
             ref={paymentMethodRef}
               value={paymentMethod}
               onKeyDown={(e)=> changeRef(e, receivedDateRef)}
-
               onChange={(e) => setPaymentMethod(e.target.value)}
               className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
             >
+              <option value="">Select Payment Method</option>
       {accounts.map((acc) => (
         <option key={acc.accountId} value={acc.accountId}>
           {acc.accountName}

@@ -8,7 +8,7 @@ import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
 import { keyframes } from '@mui/system';
 import { Link as RouterLink } from 'react-router-dom';
-
+import onam2 from '/images/onam4.png'
 
 // project-imports
 import WelcomeBanner from 'sections/dashboard/default/WelcomeBanner';
@@ -147,15 +147,15 @@ export default function DashboardDefault() {
             <Stack spacing={2} sx={{ padding: 3 }}>
               <Skeleton variant="text" animation="wave" width="80%" height={40} />
               <Skeleton variant="text" animation="wave" width="90%" height={20} />
-              {/* <Skeleton variant="text" animation="wave" width="40%" height={20} /> */}
-              {/* <Skeleton variant="rectangular" animation="wave" width="100%" height={100} sx={{ borderRadius: 2 }} /> */}
+              <Skeleton variant="text" animation="wave" width="40%" height={20} />
+              <Skeleton variant="rectangular" animation="wave" width="100%" height={100} sx={{ borderRadius: 2 }} />
               <Skeleton variant="text" animation="wave" width="30%" height={20} />
               <Typography
               variant="h6"
               color={theme.palette.background.paper}
               sx={{ mt: 2 }}
             >
-              KK Trading 1.0.4
+              KK Trading 1.0.5
             </Typography>
             </Stack>
           </Grid>
@@ -269,7 +269,20 @@ export default function DashboardDefault() {
         <WelcomeBanner />
       </Grid>
 
-      <Grid item xs={12}>
+      <Grid sx={{ position: 'relative' }} item xs={12}>
+          <Box
+                  component="img"
+                  src={onam2}
+                  alt="onam"
+                  sx={{
+                    position: 'absolute',
+                    top: -50,    
+                    right: 20,     
+                    width: 120,    
+                    height: 100,
+                    height: 'auto', 
+                  }}
+                />
         <MainCard>
           <Grid
             container

@@ -272,11 +272,6 @@ const [printOptions, setPrintOptions] = useState({
       try {
         const response = await api.get('/api/accounts/allaccounts');
         setAccounts(response.data);
-        if (response.data.length > 0) {
-          setPaymentMethod(response.data[0].accountId);
-        } else {
-          setPaymentMethod('');
-        }
       } catch (err) {
        console.error(err);
   setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
