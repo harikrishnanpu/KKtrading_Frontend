@@ -70,6 +70,7 @@ export default function DashboardDefault() {
 
 
   const downloadExcel = async () => {
+if (!window.confirm(`Are you sure you want to export the current data as an Excel file from the database? This action will include all data up to ${new Date().toLocaleString()}.`)) return;
   try {
     const response = await api.get('/api/print/export', {
       responseType: 'blob', // important for file downloads
@@ -93,7 +94,7 @@ export default function DashboardDefault() {
 };
 
   const handleSeedProducts = async () => {
-    if(!window.confirm('are you sure want to import products')) return;
+const importPass = window.prompt('Please be aware that importing products will automatically recalculate and update all existing stock in the database. This process cannot be reversed. To continue, enter the password below.');    if(importPass !== 'kk@1234') return;
     try {
       const token = localStorage.getItem('token'); // adjust based on your auth
       const res = await api.get('/api/products/seed', {}, {
