@@ -8,7 +8,7 @@ import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
 import { keyframes } from '@mui/system';
 import { Link as RouterLink } from 'react-router-dom';
-import onam2 from '/images/onam4.png'
+import onam2 from '/images/onam5.png'
 
 // project-imports
 import WelcomeBanner from 'sections/dashboard/default/WelcomeBanner';
@@ -277,9 +277,10 @@ const importPass = window.prompt('Please be aware that importing products will a
                   alt="onam"
                   sx={{
                     position: 'absolute',
-                    top: -50,    
+                    top: -130,    
                     right: 20,     
-                    width: 120,    
+                    width: 120,
+                    zIndex: 10,    
                     height: 'auto',
                   }}
                 />

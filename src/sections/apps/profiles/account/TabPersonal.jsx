@@ -7,22 +7,18 @@ import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
-import MenuItem from '@mui/material/MenuItem';
 import FormLabel from '@mui/material/FormLabel';
 import TextField from '@mui/material/TextField';
 import InputLabel from '@mui/material/InputLabel';
 import Typography from '@mui/material/Typography';
-import Select from '@mui/material/Select';
 import CircularProgress from '@mui/material/CircularProgress';
 
 // third-party
-import { PatternFormat } from 'react-number-format';
 
 // project-imports
 import Avatar from 'components/@extended/Avatar';
 import MainCard from 'components/MainCard';
 import { ThemeMode, facebookColor, linkedInColor } from 'config';
-import defaultImages from 'assets/images/users/default.png';
 import { Apple, Camera, Facebook, Google } from 'iconsax-react';
 import useAuth from 'hooks/useAuth';
 import api from 'pages/api';
@@ -60,7 +56,7 @@ export default function TabPersonal() {
     location: '',
     status: '',
     birthdayText: '',
-    avatar: defaultImages,
+    avatar: '',
     online_status: 'offline',
   });
 
@@ -85,7 +81,7 @@ export default function TabPersonal() {
           location: data.location || '',
           status: data.status || '',
           birthdayText: data.birthdayText || '',
-          avatar: data.avatar || defaultImages,
+          avatar: data.avatar || '',
           online_status: data.online_status || 'offline',
         });
       } catch (error) {
@@ -111,14 +107,8 @@ export default function TabPersonal() {
   const uploadToCloudinary = async (file) => {
     const formData = new FormData();
     formData.append('file', file);
-    // Replace with your Cloudinary preset
-    formData.append('upload_preset', 'ml_default');
-
-    const response = await api.post(
-      'https://api.cloudinary.com/v1_1/dnde4xq0y/image/upload',
-      formData
-    );
-    return response.data.secure_url;
+    const response = await api.post('/api/uploads/profile',formData);
+    return response.data.url;
   };
 
   // Handle avatar image change and upload to Cloudinary

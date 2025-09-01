@@ -327,16 +327,6 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
       data = data.filter((b) => b.submittedBy === userInfo._id && !b.isApproved);
     }
 
-    // Search Filter: check invoiceNo, customerName, salesmanName, etc.
-    if (searchTerm) {
-      const lowerSearch = searchTerm.toLowerCase();
-      data = data.filter((b) =>
-        Object.values(b)
-          .filter((val) => val !== null && typeof val === 'string')
-          .some((val) => val.toLowerCase().includes(lowerSearch))
-      );
-    }
-
     // Date Range Filters: Invoice Date and Expected Delivery Date
     const dateFilter = (date, start, end) =>
       (!start || new Date(date) >= new Date(start)) &&
@@ -387,7 +377,6 @@ const totalOtherExpense = calculateTotalOtherExpenses(billing);
     return data;
   }, [
     billings,
-    searchTerm,
     invoiceStartDate,
     invoiceEndDate,
     deliveryStartDate,

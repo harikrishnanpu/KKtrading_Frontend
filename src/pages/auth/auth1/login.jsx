@@ -11,6 +11,8 @@ import useAuth from 'hooks/useAuth';
 import AuthWrapper from 'sections/auth/AuthWrapper';
 import AuthLogin from 'sections/auth/auth-forms/AuthLogin';
 import onam2 from '/images/onam2.png';
+import onam6 from '/images/onam6.png';
+
 
 
 // assets
@@ -42,6 +44,21 @@ export default function Login() {
     } 
           }}
         />
+
+<Box
+  component="img"
+  src={onam6}
+  alt="onam"
+  sx={{
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: { xs: "35%", sm: "30%", md: "24%", lg: '22%' }, // responsive breakpoints
+    height:{ xs: '25%' , sm: 'auto', md: 'auto' },
+    maxWidth: "100%",
+  }}
+/>
+
 
         <Grid item xs={12} sx={{ textAlign: 'center' }}>
           <Logo />

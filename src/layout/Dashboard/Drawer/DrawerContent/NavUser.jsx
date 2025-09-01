@@ -51,16 +51,31 @@ export default function UserList() {
   
   const { logout, user } = useAuth();
 
-  useEffect(async()=>{
-    if(user){
-      const { data } = await api.get(`/api/users/${user._id}`);
-      if(data.error){
-        console.error(data.error);
-      }else{
-        setAvatar(data.avatar);
+useEffect(() => {
+  let isMounted = true;
+
+  const fetchUser = async () => {
+    if (user) {
+      try {
+        const { data } = await api.get(`/api/users/${user._id}`);
+        if (!data.error && isMounted) {
+          setAvatar(data.avatar);
+        } else if (data.error) {
+          console.error(data.error);
+        }
+      } catch (err) {
+        console.error(err);
       }
     }
-  },[user]);
+  };
+
+  fetchUser();
+
+  return () => {
+    isMounted = false;
+  };
+}, [user]);
+
   
   const handleLogout = async () => {
     try {
