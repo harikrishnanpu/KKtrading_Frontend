@@ -671,6 +671,7 @@ useEffect(() => setCurrentPage(1), [
   const renderCard = (billing) => {
     const profit = calculateProfit(billing);
     return (
+      <div style={{marginBottom: '20px'}}>
       <BillingCard
         key={billing._id}
         billing={billing}
@@ -680,7 +681,8 @@ useEffect(() => setCurrentPage(1), [
         handleRemove={handleRemove}
         handleApprove={handleApprove}
         generatePDF={generatePDF}
-      />
+        />
+        </div>
     );
   };
   

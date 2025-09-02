@@ -68,7 +68,7 @@ const BillingCard = ({
       <GradientHeader>
         <Typography
           variant="h6"
-          sx={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+          sx={{ cursor: 'pointer', display: 'flex', alignItems: 'center', fontWeight: 'bold' }}
           onClick={() => navigate(`/invoice/details/${billing._id}`)}
         >
           {billing.invoiceNo}
@@ -128,8 +128,9 @@ const BillingCard = ({
             </Typography>
           </Stack>
 
-          <Stack direction="row" spacing={1} flexWrap="wrap" mt={2}>
+          <Stack direction="row" spacing={2} flexWrap="wrap" mt={2}>
             <ActionButton
+              style={{margin:'2px'}}
               variant="outlined"
               color="error"
               onClick={() => navigate(`/invoice/edit/${billing._id}`)}
@@ -139,23 +140,23 @@ const BillingCard = ({
               Edit
             </ActionButton>
             {userInfo.isAdmin && (
-              <ActionButton variant="outlined" color="error" onClick={() => generatePDF(billing)}>
+              <ActionButton style={{margin:'2px'}} variant="outlined" color="error" onClick={() => generatePDF(billing)}>
                 <i className="fa fa-truck" style={{ marginRight: 4 }}></i>
                 PDF
               </ActionButton>
             )}
-            <ActionButton variant="outlined" color="error" onClick={() => handleView(billing)}>
+            <ActionButton style={{margin:'2px'}} variant="outlined" color="error" onClick={() => handleView(billing)}>
               <i className="fa fa-eye" style={{ marginRight: 4 }}></i>
               View
             </ActionButton>
             {userInfo.isAdmin && (
-              <ActionButton variant="outlined" color="error" onClick={() => handleRemove(billing._id,billing.invoiceNo)}>
+              <ActionButton style={{margin:'2px'}} variant="outlined" color="error" onClick={() => handleRemove(billing._id,billing.invoiceNo)}>
                 <i className="fa fa-trash" style={{ marginRight: 4 }}></i>
                 Delete
               </ActionButton>
             )}
             {userInfo.isAdmin && !billing.isApproved && (
-              <ActionButton variant="contained" color="success" onClick={() => handleApprove(billing)}>
+              <ActionButton style={{margin:'2px'}} variant="outlined" color="success" onClick={() => handleApprove(billing)}>
                 Approve
               </ActionButton>
             )}

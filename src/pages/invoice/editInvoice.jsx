@@ -267,7 +267,6 @@ const [printOptions, setPrintOptions] = useState({
     };
 
     const fetchAccounts = async () => {
-      setIsLoading(false);
       setIsLoading(true);
       try {
         const response = await api.get('/api/accounts/allaccounts');
@@ -319,7 +318,6 @@ const [printOptions, setPrintOptions] = useState({
   // Fetch Billing Details by ID
   useEffect(() => {
     const fetchBillingDetails = async () => {
-      setIsLoading(false);
       setIsLoading(true);
       try {
         const { data } = await api.get(`/api/billing/${id}`);
@@ -443,7 +441,6 @@ const [printOptions, setPrintOptions] = useState({
 
   // Add Product by Selecting from Suggestions
   const addProductByItemId = async (product) => {
-    setIsLoading(false);
     setIsLoading(true);
     setError('');
     try {
@@ -525,7 +522,6 @@ const [printOptions, setPrintOptions] = useState({
     needToPurchaseFlag,             
   ) => {
     try {
-      setIsLoading(false);
       setIsLoading(true);
   
       /* 1️⃣  hit the unified update route */
@@ -904,71 +900,6 @@ const netTotal = rateWithoutGST + gstAmount;
     setShowSummaryModal(true);
   };
 
-  // Generate PDF Invoice
-  const generatePDF = async () => {
-    setIsLoading(false);
-    setIsLoading(true);
-
-    const formData = {
-      invoiceNo,
-      invoiceDate,
-      salesmanName,
-      expectedDeliveryDate,
-      deliveryStatus,
-      salesmanPhoneNumber,
-      paymentStatus,
-      billingAmount: totalAmount,
-      cgst,
-      sgst,
-      paymentAmount: receivedAmount,
-      paymentMethod,
-      paymentReceivedDate: receivedDate,
-      customerName,
-      customerAddress,
-      customerContactNumber,
-      marketedBy,
-      unloading,
-      transportation,
-      handlingcharge: handlingCharge,
-      remark,
-      discount,
-      subTotal: amountWithoutGST,
-      grandTotal,
-      products: products.map((p) => ({
-        item_id: p.item_id,
-        name: p.name,
-        category: p.category,
-        brand: p.brand,
-        quantity: p.quantity,
-        sellingPrice: p.sellingPrice,
-        enteredQty: p.enteredQty,
-        sellingPriceinQty: p.sellingPriceinQty,
-        unit: p.unit,
-        size: p.size,
-        gstRate: p.gstRate,
-      })),
-    };
-
-    try {
-      const response = await api.post('/api/print/generate-pdf', formData, {
-        responseType: 'blob',
-      });
-
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `Invoice_${formData.invoiceNo}.pdf`;
-      link.click();
-    } catch (err) {
-  console.error(err);
-  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
-  setShowErrorModal(false);        // reset so modal can reopen on same error
-  setShowErrorModal(true);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   // Print Invoice
   function printInvoice(options) {
     const formData = {
@@ -1143,14 +1074,14 @@ const netTotal = rateWithoutGST + gstAmount;
 
   return (
     <div className="container mx-auto p-2">
-<div className="fixed top-28 left-0 flex justify-start align-center gap-4 w-full p-2 font-bold">
+{!isMobile && <div className="fixed top-28 left-0 flex justify-start align-center gap-4 w-full p-2 font-bold">
   {neededToPurchase && <div className='bg-blue-500 px-2 text-center text-white'>
       <p className='text-xs'>Need to Purchase</p>
   </div>}
   {!isApproved && <div className='bg-red-500 px-2 font-bold text-center text-white'>
       <p className='text-xs'>Not Approved</p>
   </div> }
-</div>
+</div> }
 
 
       {/* Main Form */}
@@ -2786,17 +2717,20 @@ const netTotal = rateWithoutGST + gstAmount;
         </div>
       )}
 
-            <ErrorModal
-        open={showErrorModal}
-        message={errorMessage}
-        onClose={() => setShowErrorModal(false)}
-      />
+{showErrorModal && !isLoading && !isSubmitting && (
+  <ErrorModal
+    open={showErrorModal}
+    message={errorMessage}
+    onClose={() => setShowErrorModal(false)}
+  />
+)}
 
-      <BottomLoader
-            open={isLoading || isSubmitting}
-            text={isSubmitting ? 'Saving bill…' : 'Loading…'}
-            width="50%"
-          />
+<BottomLoader
+  open={isLoading || isSubmitting}
+  text="Saving bill…"
+  width="50%"
+/>
+
     </div>
   );
 }
