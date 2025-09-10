@@ -1,20 +1,12 @@
 import { createContext, useEffect, useReducer } from 'react';
 
 // third-party
-import { Chance } from 'chance';
 import { jwtDecode } from 'jwt-decode';
-
-// reducer - state management
 import { LOGIN, LOGOUT } from 'store/reducers/actions';
 import authReducer from 'store/reducers/auth';
-
-// project-imports
 import Loader from 'components/Loader';
 import axios from 'utils/axios';
 
-const chance = new Chance();
-
-// constant
 const initialState = {
   isLoggedIn: false,
   isInitialized: false,
@@ -26,10 +18,6 @@ const verifyToken = (serviceToken) => {
     return false;
   }
   const decoded = jwtDecode(serviceToken);
-
-  /**
-   * Property 'exp' does not exist on type '<T = unknown>(token: string, options?: JwtDecodeOptions | undefined) => T'.
-   */
   return decoded.exp > Date.now() / 1000;
 };
 
@@ -43,15 +31,13 @@ const setSession = (serviceToken) => {
   }
 };
 
-// ==============================|| JWT CONTEXT & PROVIDER ||============================== //
-
 const JWTContext = createContext(null);
-
 
 export const JWTProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
   useEffect(() => {
+
     const init = async () => {
       try {
         const serviceToken = localStorage.getItem('serviceToken');
@@ -67,6 +53,7 @@ export const JWTProvider = ({ children }) => {
               user
             }
           });
+
         } else {
           dispatch({
             type: LOGOUT
@@ -97,8 +84,6 @@ export const JWTProvider = ({ children }) => {
   };
 
   const register = async (email, password, firstName, lastName) => {
-    // todo: this flow need to be recode as it not verified
-    // const id = chance.bb_pin();
     const response = await axios.post('/api/users/register', {
       email,
       password,

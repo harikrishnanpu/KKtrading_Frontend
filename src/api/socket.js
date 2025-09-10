@@ -1,15 +1,10 @@
 // src/socket.js
 import { io } from 'socket.io-client';
 
-// Use your backend URL or local dev URL
-
-const socket = io({
-  transports: ['websocket'], // optional
+const socket = io(import.meta.env.VITE_APP_API_URL ,{
+  transports: ['websocket'],
   withCredentials: true,
 });
 
-// const socket = io('http://localhost:4000/',{
-//   transports: ['websocket'], // Optional: force WebSocket only
-// });
 
 export default socket;

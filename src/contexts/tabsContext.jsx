@@ -44,8 +44,6 @@ function stripTimestamp(url = '') {
 
 export const TabsProvider = ({ children }) => {
   const navigate = useNavigate();
-
-  // Each tab = { path, label }
   const [tabs, setTabs] = useState([]);
   const [activeTab, setActiveTab] = useState(null);
   const { drop } = useAliveController();
@@ -88,10 +86,7 @@ export const TabsProvider = ({ children }) => {
     navigate(newPath);
   };
   
-  
-
-  // 2) SWITCH to an existing tab by exact path
-  const switchTab = (path) => {
+    const switchTab = (path) => {
     setActiveTab(path);
     navigate(path);
   };
@@ -136,9 +131,6 @@ export const TabsProvider = ({ children }) => {
     navigate(newPath, { replace: true });
   };
 
-  // 6) DUPLICATE a tab
-  //    To avoid "ignoring _ts" conflict, add an extra "dup=..." param
-  //    so it's truly recognized as a different base path.
   const duplicateTab = (path) => {
     // Remove _ts from the original path, keep other params
     const baseIgnoringTs = stripTimestamp(path);

@@ -45,9 +45,7 @@ export default function MainLayout() {
   function deriveLabelFromPath(path) {
     if (!path || path === '/') return 'Home';
     const segments = path.split('/').filter(Boolean);
-    // Only take the first two segments
     const relevant = segments.slice(0, 2);
-    // Capitalize each segment
     const formatted = relevant.map(seg => seg.charAt(0).toUpperCase() + seg.slice(1).toLowerCase());
     return formatted.join(' ').slice(0,18);
   }
@@ -61,20 +59,15 @@ export default function MainLayout() {
 
 
   useEffect(() => {
-    // Derive label from the BASE path if you like:
     const label = deriveLabelFromPath(location.pathname);
-
-    // Always include location.search so we don't drop the query string:
     openTab(location.pathname + location.search, label);
   }, [location.pathname, location.search]);
 
   
-  // set media wise responsive drawer
   useEffect(() => {
     if (!miniDrawer) {
       handlerDrawerOpen(!downXL);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [downXL]);
 
   if (menuMasterLoading) return <Loader />;
@@ -109,7 +102,7 @@ export default function MainLayout() {
             }}
           >
             <Breadcrumbs />
-            <AliveScope max={3}>  {/* Limit cached components */}
+            <AliveScope max={3}>
   <KeepAlive id={location.pathname + location.search} when={!shouldForceReload}>
   <Outlet key={shouldForceReload ? Date.now() : location.pathname + location.search} />
 </KeepAlive>

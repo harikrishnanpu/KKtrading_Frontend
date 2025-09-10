@@ -11,10 +11,6 @@ const MaintenanceError500 = Loadable(lazy(() => import('pages/maintenance/error/
 const MaintenanceUnderConstruction = Loadable(lazy(() => import('pages/maintenance/under-construction/under-construction')));
 const MaintenanceComingSoon = Loadable(lazy(() => import('pages/maintenance/coming-soon/coming-soon')));
 
-const AppContactUS = Loadable(lazy(() => import('pages/contact-us')));
-
-
-// render - dashboard
 const DashboardDefault = Loadable(lazy(() => import('pages/dashboard/default')));
 const DashboardAnalytics = Loadable(lazy(() => import('pages/dashboard/analytics')));
 const InvoiceDashboard = Loadable(lazy(() => import('pages/invoice/dashboard')));
@@ -34,15 +30,10 @@ const EditPurchase = Loadable(lazy(() => import('pages/purchase/editPurchase')))
 const ListPurchase = Loadable(lazy(() => import('pages/purchase/listPurchases')));
 const PurchaseReport = Loadable(lazy(() => import('pages/purchase/purchaseReport')));
 
-
 const CreateReturn = Loadable(lazy(() => import('pages/return/createReturn')));
 const ListReturn = Loadable(lazy(() => import('pages/return/listReturn')));
-
-
 const CreateDamage = Loadable(lazy(() => import('pages/damage/createDamage')));
 const ListDamage = Loadable(lazy(() => import('pages/damage/listDamage')));
-
-
 
 const CustomerDashboard = Loadable(lazy(() => import('pages/customer/dashboard')));
 const CustomerAccount = Loadable(lazy(() => import('pages/customer/listCustomerAccount')));
@@ -50,18 +41,15 @@ const CreateCustomerAccount = Loadable(lazy(() => import('pages/customer/createC
 const EditCustomerAccount = Loadable(lazy(() => import('pages/customer/editCustomerAccount')));
 const BillPayment = Loadable(lazy(() => import('pages/invoice/payment')));
 
-
 const CreateSupplierAccount = Loadable(lazy(() => import('pages/supplier/createSupplierAccount')));
 const SupplierAccountList = Loadable(lazy(() => import('pages/supplier/listSupplierAccount')));
 const EditSupplierAccount = Loadable(lazy(() => import('pages/supplier/editSupplierAccount')));
 const SupplierPayment = Loadable(lazy(() => import('pages/supplier/payment')));
 
-
 const CreateTransportAccount = Loadable(lazy(() => import('pages/transport/createTransportAccount')));
 const TransportAccountList = Loadable(lazy(() => import('pages/transport/listTransportAccount')));
 const EditTransportAccount = Loadable(lazy(() => import('pages/transport/editTransportAccount')));
 const TransportPayment = Loadable(lazy(() => import('pages/transport/payment')));
-
 
 const DailyTransactions = Loadable(lazy(() => import('pages/daily/transactions')));
 const DailyReport  = Loadable(lazy(() => import('pages/daily/dailyReport')));
@@ -69,10 +57,8 @@ const DailyReport  = Loadable(lazy(() => import('pages/daily/dailyReport')));
 const ListPaymentAccount = Loadable(lazy(() => import('pages/main_accounts/listAccount')));
 const CreatePaymentAccount = Loadable(lazy(() => import('pages/main_accounts/createAccount')));
 
-
 const Delivery = Loadable(lazy(() => import('pages/driver/delivery')));
 const DeliveryTracking = Loadable(lazy(() => import('pages/driver/allDeliveries')));
-
 
 const Allproducts = Loadable(lazy(() => import('pages/products/allProducts')));
 const ProductScreen = Loadable(lazy(() => import('pages/products/product')));
@@ -81,12 +67,7 @@ const AddProduct = Loadable(lazy(() => import('pages/products/addProduct') ));
 const PreviewProduct = Loadable(lazy(() => import('pages/products/productPreview')));
 const UpcommingDeliveries = Loadable(lazy(() => import('pages/products/lowStockandDelivery')));
 
-
-
 const ListAnnouncement = Loadable(lazy(() => import('pages/announcements/ListAnnouncements')));
-
-
-
 const StockUpdateScreen = Loadable(lazy(() => import('pages/stock/updateStock')));
 const StockRegistry = Loadable(lazy(() => import('pages/stock/stockOpening')));
 
@@ -94,28 +75,13 @@ const TaskBoardScreen = Loadable(lazy(() => import('pages/tasks/taskBoard')));
 const TaskBacklogsScreen = Loadable(lazy(() => import('sections/taskBoard/Backlogs')));
 const TaskBoardMainScreen = Loadable(lazy(() => import('sections/taskBoard/Board')));
 
-
-
 const AppCalendar = Loadable(lazy(() => import('pages/calendar/calendar')));
-
 const AppChat = Loadable(lazy(() => import('pages/chat/chat')));
 
-
-
-const AdminEstimate = Loadable(lazy(() => import('pages/adminEstimate/dashboard')));
-
-
 const Notifications = Loadable(lazy(() => import('pages/notifications/notifications')));
-
-
-
 const AllUsers  = Loadable(lazy(() => import('pages/admin/allUers')));
 const EditUser = Loadable(lazy(() => import('pages/admin/editUser')));
-
-
 const EmployeeApprovalScreen = Loadable(lazy(() => import('pages/auth/auth1/employee-approval')));
-
-
 const UserProfile = Loadable(lazy(() => import('pages/apps/profiles/user')));
 const UserTabPersonal = Loadable(lazy(() => import('sections/apps/profiles/user/TabPersonal')));
 const UserTabPayment = Loadable(lazy(() => import('sections/apps/profiles/user/TabPayment')));
@@ -130,21 +96,15 @@ const AccountTabPassword = Loadable(lazy(() => import('sections/apps/profiles/ac
 const AccountTabRole = Loadable(lazy(() => import('sections/apps/profiles/account/TabRole')));
 const AccountTabSettings = Loadable(lazy(() => import('sections/apps/profiles/account/TabSettings')));
 
-
 const AllLogs = Loadable(lazy(() => import('pages/admin/allLogs')));
-
 const LeaveApplication = Loadable(lazy(() => import('pages/user/leaveApplication')));
-
 const ContactsList = Loadable(lazy(() => import('pages/contacts/contactsList')));
 const CreateContacts = Loadable(lazy(() => import('pages/contacts/createContact')));
 const EditContacts = Loadable(lazy(() => import('pages/contacts/editContacts')));
 
-
 const UpdateListPage = Loadable(lazy(()=> import('pages/UpdatesInfo/updatesList')));
-
 const CreatePurchaseRequest = Loadable(lazy(()=> import('pages/purchase/createPurchaseRequest')));
 const ListPurchaseRequest = Loadable(lazy(()=> import('pages/purchase/listPurchaseRequest')));
-
 
 const ErrorPage = Loadable(lazy(()=> import('pages/error/ErrorPage')));
 
