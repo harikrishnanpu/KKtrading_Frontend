@@ -4,7 +4,8 @@ import { lazy } from 'react';
 import Loadable from '../components/Loadable';
 import DashboardLayout from 'layout/Dashboard';
 import PagesLayout from 'layout/Pages';
-import TabsLayout from 'layout/TabsLayout';
+import TabsLayout from 'layout/Tabs/TabsLayout';
+import RoleGuard from 'utils/route-guard/RoleGuard';
 
 const MaintenanceError = Loadable(lazy(() => import('pages/maintenance/error/404')));
 const MaintenanceError500 = Loadable(lazy(() => import('pages/maintenance/error/500')));
@@ -119,10 +120,9 @@ const MainRoutes = {
         path: '/employee',
         element: <EmployeeApprovalScreen />
       },
-    {
+      {
       path: '/',
-      element: 
-      <DashboardLayout />,
+      element: <DashboardLayout />,
       children: [
         {
           path: '/search/category/:category/brand/:brand/size/:size/name/:name/min/:min/max/:max/rating/:rating/order/:order/inStock/:inStock/countInStockMin/:countInStockMin/pageNumber/:pageNumber',
@@ -496,6 +496,9 @@ const MainRoutes = {
     },
 
     {
+      element: <RoleGuard  allowedRoles={['admin']} />,
+      children: [
+        {
       path: '/admin',
       element: <DashboardLayout />,
       children:[
@@ -516,6 +519,7 @@ const MainRoutes = {
           element: <EditUser />
         }
       ]
+    } ]
     },
 
     {
@@ -560,9 +564,6 @@ const MainRoutes = {
 
 
     },
-
-
-
     {
       path: '/maintenance',
       element: <PagesLayout />,

@@ -19,6 +19,7 @@ import WelcomeImage from 'assets/images/analytics/welcome-banner.png';
 import cardBack from 'assets/images/widget/img-dropbox-bg.svg';
 import api from 'pages/api';
 import { useNavigate } from 'react-router';
+import useAuth from 'hooks/useAuth';
 
 // Define pulse animation
 const glitterEffect = keyframes`
@@ -29,7 +30,6 @@ const glitterEffect = keyframes`
   100% { background-color: rgba(255, 0, 0, 0.8); box-shadow: 0 0 5px rgba(255, 0, 0, 0.6), inset 0 0 2px rgba(255, 255, 255, 0.3); }
 `;
 
-// Styled component for the "New" badge
 const NewBadge = styled(Box)(({ theme }) => ({
   position: 'absolute',
   top: 2,
@@ -54,6 +54,7 @@ export default function WelcomeBanner() {
   const [progress, setProgress] = useState(0);
   const progressInterval = useRef(null);
   const navigate = useNavigate();
+  const {user} = useAuth();
 
   const timeAgo = (timestamp) => {
     const now = new Date();
@@ -72,7 +73,6 @@ export default function WelcomeBanner() {
     api
       .get('/api/announcements')
       .then((response) => {
-        // Sort announcements by time descending to have the latest first
         const sortedAnnouncements = response.data.sort(
           (a, b) => new Date(b.time) - new Date(a.time)
         );
@@ -135,7 +135,6 @@ export default function WelcomeBanner() {
   const latestAnnouncementId =
     announcements.length > 0 ? announcements[0]._id : null;
 
-  // Render animated Skeleton Card while loading announcements
   if (announcements.length === 0) {
     return (
       <MainCard
@@ -167,28 +166,16 @@ export default function WelcomeBanner() {
             <Stack spacing={2} sx={{ padding: 3 }}>
               <Skeleton variant="text" animation="wave" width="80%" height={40} />
               <Skeleton variant="text" animation="wave" width="90%" height={20} />
-              {/* <Skeleton variant="text" animation="wave" width="40%" height={20} /> */}
-              {/* <Skeleton variant="rectangular" animation="wave" width="100%" height={100} sx={{ borderRadius: 2 }} /> */}
               <Skeleton variant="text" animation="wave" width="30%" height={20} />
               <Typography
               variant="h6"
               color={theme.palette.background.paper}
               sx={{ mt: 2 }}
             >
-              KK Trading 1.0.4
+              KK Trading {import.meta.env.VITE_APP_VERSION}
             </Typography>
             </Stack>
           </Grid>
-          {/* Right Section Skeleton */}
-          {/* <Grid item md={6} sm={6} xs={12} sx={{ display: { xs: 'none', sm: 'block' } }}>
-            <Stack
-              sx={{ position: 'relative', pr: { sm: 3, md: 8 } }}
-              justifyContent="center"
-              alignItems="flex-end"
-            >
-              <Skeleton variant="rectangular" animation="wave" width="200px" height="200px" sx={{ borderRadius: 2 }} />
-            </Stack>
-          </Grid> */}
 
           <Grid item md={6} sm={6} xs={12} sx={{ display: { xs: 'none', sm: 'block' } }}>
           <Stack
@@ -205,7 +192,6 @@ export default function WelcomeBanner() {
     );
   }
 
-  // Render the full Welcome Banner when announcements are loaded
   return (
     <MainCard
       border={false}
@@ -231,7 +217,6 @@ export default function WelcomeBanner() {
       }}
     >
       <Grid container>
-        {/* Left Section: Announcements */}
         <Grid item md={6} sm={6} xs={12}>
           <Stack
             spacing={2}
@@ -258,6 +243,7 @@ export default function WelcomeBanner() {
                   transition: 'transform 0.6s ease-in-out',
                 }}
               >
+
                 {announcements.map((announcement, index) => (
                   <Box
                     key={announcement._id}
@@ -397,7 +383,7 @@ export default function WelcomeBanner() {
               color={theme.palette.background.paper}
               sx={{ mt: 2 }}
             >
-              KK Trading 1.0.4
+              KK Trading {import.meta.env.VITE_APP_VERSION}
             </Typography>
           </Stack>
         </Grid>

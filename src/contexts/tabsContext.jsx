@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAliveController } from 'react-activation';
 import { useNavigate } from 'react-router-dom';
 
@@ -22,15 +22,6 @@ function deriveLabelFromPath(path) {
   return formatted.join(' ').slice(0,18);
 }
 
-
-/**
- * Removes just the `_ts` parameter from a URL string so we can compare
- * the "base path" ignoring `_ts`.
- *
- * Examples:
- *   "/users?_ts=12345" => "/users"
- *   "/users?foo=bar&_ts=555" => "/users?foo=bar"
- */
 function stripTimestamp(url = '') {
   const [base, queryString] = url.split('?');
   if (!queryString) return base;
@@ -56,9 +47,8 @@ export const TabsProvider = ({ children }) => {
       '/tasks/board','/calendar', '/chat','/products', '/customer' , '/supplier' , '/transport'
     ];
   
-    // If the path matches, force reload by clearing cache and bypassing navigation
-    if (reloadRoutes.some(substr => path.includes(substr)) || path === '/products/upcomming/lowstock') {
-      drop(path); // Clear cached content of the route
+    if (reloadRoutes.some(substr => path.includes(substr))) {
+      drop(path);
       navigate(path, { replace: true });
       return;
     }

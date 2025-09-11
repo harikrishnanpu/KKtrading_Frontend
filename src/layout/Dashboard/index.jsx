@@ -24,6 +24,7 @@ import { useTabs } from 'contexts/TabsContext';
 import TabBar from './tabBar';
 import KeepAlive, { AliveScope, useAliveController } from 'react-activation';
 import { isMobile } from 'react-device-detect';
+import { DrawerProvider } from 'hooks/useDrawerState';
 
 // ==============================|| MAIN LAYOUT ||============================== //
 
@@ -83,6 +84,7 @@ export default function MainLayout() {
 
   return (
     <AuthGuard>
+       <DrawerProvider>
       <Box sx={{ display: 'flex', width: isMobile ? '100%' : '97%' }}>
         <Header />
         {!isHorizontal ? <Drawer /> : <HorizontalBar />}
@@ -102,18 +104,16 @@ export default function MainLayout() {
             }}
           >
             <Breadcrumbs />
-            <AliveScope max={3}>
+            <AliveScope max={3}>  
   <KeepAlive id={location.pathname + location.search} when={!shouldForceReload}>
   <Outlet key={shouldForceReload ? Date.now() : location.pathname + location.search} />
 </KeepAlive>
 </AliveScope>
-
-
-
             <Footer />
           </Container>
         </Box>
       </Box>
+       </DrawerProvider>
     </AuthGuard>
   );
 }

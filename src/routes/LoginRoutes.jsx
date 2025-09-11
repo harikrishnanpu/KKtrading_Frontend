@@ -1,9 +1,9 @@
 import { lazy } from 'react';
 
 // project-imports
-import AuthLayout from 'layout/Auth';
 import Loadable from 'components/Loadable';
-import TabsLayout from 'layout/TabsLayout';
+import LoginGuard from 'utils/route-guard/LoginGuard';
+import { Navigate } from 'react-router-dom';
 
 // render - login
 const AuthLogin = Loadable(lazy(() => import('pages/auth/auth1/login')));
@@ -17,17 +17,12 @@ const AuthCodeVerification = Loadable(lazy(() => import('pages/auth/auth1/code-v
 
 const LoginRoutes = {
   path: '/',
-  element: <TabsLayout />,
+  element: <LoginGuard />,
   children: [
     {
-      path: '/',
-      element: 
-      <AuthLayout />,
-      children: [
-        {
-          path: '/',
-          element: <AuthLogin />
-        },
+      index: true,
+      element: <Navigate to="/login" replace />
+    },
         {
           path: 'login',
           element: <AuthLogin />
@@ -53,8 +48,6 @@ const LoginRoutes = {
           element: <AuthCodeVerification />
         }
       ]
-    }
-  ]
 };
 
 export default LoginRoutes;

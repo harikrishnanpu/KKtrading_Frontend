@@ -1,5 +1,4 @@
 // DashboardDefault.jsx
-
 import { useTheme } from '@mui/material/styles';
 import { useEffect, useState } from 'react';
 import Grid from '@mui/material/Grid';
@@ -8,11 +7,12 @@ import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
 import { keyframes } from '@mui/system';
 import { Link as RouterLink } from 'react-router-dom';
-import onam2 from '/images/onam5.png'
+import { Avatar, Button, Stack } from '@mui/material';
+import { motion } from 'framer-motion';
 
 // project-imports
 import WelcomeBanner from 'sections/dashboard/default/WelcomeBanner';
-import LowStockPreview from 'components/dashboard/lowstockPreview';   // Ensure this path is correct
+import LowStockPreview from 'components/dashboard/lowstockPreview';
 import MainCard from 'components/MainCard';
 import { ThemeMode } from 'config';
 
@@ -20,23 +20,14 @@ import { ThemeMode } from 'config';
 import WelcomeImage from 'assets/images/analytics/welcome-banner.png';
 import cardBack from 'assets/images/widget/img-dropbox-bg.svg';
 
-
-
-// API instance
-import api from 'pages/api'; // Adjust to your actual API import if needed
-import { Avatar, Button, Stack } from '@mui/material';
+// API + auth
+import api from 'pages/api';
 import useAuth from 'hooks/useAuth';
 
-// Define a simple fade-in animation for the skeleton cards
+// fade-in keyframes for skeletons
 const fadeIn = keyframes`
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 `;
 
 export default function DashboardDefault() {
@@ -44,10 +35,13 @@ export default function DashboardDefault() {
   const { user } = useAuth();
 
   const [dashboardData, setDashboardData] = useState(null);
+  const [userData, setUserData] = useState(null);
+  const [bills, setBills] = useState([]);
+  const [leaves, setLeaves] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Fetch data on mount
+  // fetch dashboard stats
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
@@ -59,176 +53,166 @@ export default function DashboardDefault() {
         }
       } catch (err) {
         setError('Error fetching dashboard stats');
+      }
+    };
+    fetchDashboardData();
+  }, []);
+
+  // fetch user-related data
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        if (!user?._id) {
+          setLoading(false);
+          return;
+        }
+        // 1) User data
+        const userRes = await api.get(`/api/users/${user._id}`);
+        const fetchedUser = userRes.data;
+        setUserData(fetchedUser);
+
+        // 2) Bills (salesman)
+        const billsRes = await api.get(
+          `/api/billing/bill/profile?salesmanName=${encodeURIComponent(
+            fetchedUser.name
+          )}`
+        );
+        setBills(billsRes.data);
+
+        // 3) Leaves
+        const leavesRes = await api.get(`/api/leaves?userId=${user._id}`);
+        setLeaves(leavesRes.data);
+      } catch (error) {
+        console.error('Error fetching user data:', error);
       } finally {
         setLoading(false);
       }
     };
+    fetchData();
+  }, [user]);
 
-    fetchDashboardData();
-  }, []);
-
-
-
+  // download excel
   const downloadExcel = async () => {
-if (!window.confirm(`Are you sure you want to export the current data as an Excel file from the database? This action will include all data up to ${new Date().toLocaleString()}.`)) return;
-  try {
-    const response = await api.get('/api/print/export', {
-      responseType: 'blob', // important for file downloads
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`
-      }
-    });
-
-    // Create a blob link to download
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'all_data.xlsx');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-  } catch (error) {
-    console.error('Download failed:', error);
-  }
-};
-
-  const handleSeedProducts = async () => {
-const importPass = window.prompt('Please be aware that importing products will automatically recalculate and update all existing stock in the database. This process cannot be reversed. To continue, enter the password below.');    if(importPass !== 'kk@1234') return;
+    if (
+      !window.confirm(
+        `Are you sure you want to export the current data as an Excel file from the database? This action will include all data up to ${new Date().toLocaleString()}.`
+      )
+    )
+      return;
     try {
-      const token = localStorage.getItem('token'); // adjust based on your auth
-      const res = await api.get('/api/products/seed', {}, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+      const response = await api.get('/api/print/export', {
+        responseType: 'blob',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'all_data.xlsx');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Download failed:', error);
+    }
+  };
 
+  // seed products
+  const handleSeedProducts = async () => {
+    const importPass = window.prompt(
+      'Please be aware that importing products will automatically recalculate and update all existing stock in the database. This process cannot be reversed. To continue, enter the password below.'
+    );
+    if (importPass !== 'kk@1234') return;
+    try {
+      const token = localStorage.getItem('token');
+      await api.get('/api/products/seed', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       alert('Products seeded successfully!');
-      console.log(res.data);
-      // Optional: reload or navigate
-      // navigate('/products'); 
     } catch (err) {
       console.log(err);
       alert(err.message);
     }
   };
 
-  // Skeletal Loading State
-  if (loading) {
+  // loading skeleton
+  if (loading && !userData) {
     return (
       <Grid container rowSpacing={4.5} columnSpacing={2.75} sx={{ p: 3 }}>
-        {/* Skeleton for Welcome Banner */}
         <Grid item xs={12}>
-        <MainCard
-        border={false}
-        sx={{
-          color: 'common.white',
-          bgcolor:
-            theme.palette.mode === ThemeMode.DARK
-              ? 'primary.400'
-              : 'primary.darker',
-          position: 'relative',
-          overflow: 'hidden',
-          '&:after': {
-            content: '""',
-            background: `url("${cardBack}") 100% 100% / cover no-repeat`,
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 1,
-            opacity: 0.5,
-          },
-        }}
-      >
-        <Grid container>
-          {/* Left Section Skeleton */}
-          <Grid item md={6} sm={6} xs={12}>
-            <Stack spacing={2} sx={{ padding: 3 }}>
-              <Skeleton variant="text" animation="wave" width="80%" height={40} />
-              <Skeleton variant="text" animation="wave" width="90%" height={20} />
-              <Skeleton variant="text" animation="wave" width="40%" height={20} />
-              <Skeleton variant="rectangular" animation="wave" width="100%" height={100} sx={{ borderRadius: 2 }} />
-              <Skeleton variant="text" animation="wave" width="30%" height={20} />
-              <Typography
-              variant="h6"
-              color={theme.palette.background.paper}
-              sx={{ mt: 2 }}
-            >
-              KK Trading 1.0.5
-            </Typography>
-            </Stack>
-          </Grid>
-          {/* Right Section Skeleton */}
-          {/* <Grid item md={6} sm={6} xs={12} sx={{ display: { xs: 'none', sm: 'block' } }}>
-            <Stack
-              sx={{ position: 'relative', pr: { sm: 3, md: 8 } }}
-              justifyContent="center"
-              alignItems="flex-end"
-            >
-              <Skeleton variant="rectangular" animation="wave" width="200px" height="200px" sx={{ borderRadius: 2 }} />
-            </Stack>
-          </Grid> */}
-
-          <Grid item md={6} sm={6} xs={12} sx={{ display: { xs: 'none', sm: 'block' } }}>
-          <Stack
-            sx={{ position: 'relative', pr: { sm: 3, md: 8 }, zIndex: 2, height: '100%' }}
-            justifyContent="center"
-            alignItems="flex-end"
+          <MainCard
+            border={false}
+            sx={{
+              color: 'common.white',
+              bgcolor:
+                theme.palette.mode === ThemeMode.DARK
+                  ? 'primary.400'
+                  : 'primary.darker',
+              position: 'relative',
+              overflow: 'hidden',
+              '&:after': {
+                content: '""',
+                background: `url("${cardBack}") 100% 100% / cover no-repeat`,
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 1,
+                opacity: 0.5,
+              },
+            }}
           >
-            <img src={WelcomeImage} alt="Welcome" width="200px" />
-          </Stack>
+            <Grid container>
+              <Grid item md={6} sm={6} xs={12}>
+                <Stack spacing={2} sx={{ padding: 3 }}>
+                  <Skeleton variant="text" width="80%" height={40} />
+                  <Skeleton variant="text" width="90%" height={20} />
+                  <Skeleton variant="text" width="40%" height={20} />
+                  <Skeleton
+                    variant="rectangular"
+                    width="100%"
+                    height={100}
+                    sx={{ borderRadius: 2 }}
+                  />
+                </Stack>
+              </Grid>
+              <Grid
+                item
+                md={6}
+                sm={6}
+                xs={12}
+                sx={{ display: { xs: 'none', sm: 'block' } }}
+              >
+                <Stack
+                  sx={{
+                    position: 'relative',
+                    pr: { sm: 3, md: 8 },
+                    zIndex: 2,
+                    height: '100%',
+                  }}
+                  justifyContent="center"
+                  alignItems="flex-end"
+                >
+                  <img src={WelcomeImage} alt="Welcome" width="200px" />
+                </Stack>
+              </Grid>
+            </Grid>
+          </MainCard>
         </Grid>
-
-        </Grid>
-      </MainCard>
-        </Grid>
-
-
-        {/* Skeletons for the Dashboard Cards */}
-        {Array.from(new Array(8)).map((_, index) => (
+        {Array.from(new Array(6)).map((_, index) => (
           <Grid item xs={12} sm={6} lg={3} key={index}>
-            <Box 
-              sx={{ 
-                p: 2, 
-                borderRadius: '12px', 
-                backgroundColor: theme.palette.background.paper, 
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: '12px',
+                backgroundColor: theme.palette.background.paper,
                 boxShadow: 2,
-                animation: `${fadeIn} 0.5s ease-in-out`
+                animation: `${fadeIn} 0.5s ease-in-out`,
               }}
             >
-              {/* Title Skeleton */}
-              <Skeleton 
-                variant="text" 
-                animation="wave" 
-                width="70%" 
-                height={30} 
-                sx={{ borderRadius: '8px', mb: 1 }} 
-              />
-              {/* Count Skeleton */}
-              {/* <Skeleton 
-                variant="text" 
-                animation="wave" 
-                width="50%" 
-                height={25} 
-                sx={{ borderRadius: '8px', mb: 1 }} 
-              /> */}
-              {/* Sparkline/Chart Skeleton */}
-              <Skeleton 
-                variant="rectangular" 
-                animation="wave" 
-                height={50} 
-                sx={{ borderRadius: '8px', mb: 1 }} 
-              />
-              {/* Percentage/Detail Skeleton */}
-              <Skeleton 
-                variant="text" 
-                animation="wave" 
-                width="30%" 
-                height={20} 
-                sx={{ borderRadius: '8px' }} 
-              />
+              <Skeleton variant="text" width="70%" height={30} />
+              <Skeleton variant="rectangular" height={50} sx={{ mb: 1 }} />
+              <Skeleton variant="text" width="30%" height={20} />
             </Box>
           </Grid>
         ))}
@@ -236,7 +220,7 @@ const importPass = window.prompt('Please be aware that importing products will a
     );
   }
 
-  // Error state
+  // error state
   if (error) {
     return (
       <Grid container justifyContent="center" sx={{ p: 3 }}>
@@ -247,22 +231,6 @@ const importPass = window.prompt('Please be aware that importing products will a
     );
   }
 
-  // No data case
-  if (!dashboardData) return null;
-
-  /**
-   * Prepare an array of cards to loop through.
-   * Each card's config object:
-   * - key (unique identifier)
-   * - title
-   * - count (the total, default 0 if missing)
-   * - monthly data array (12 numbers, default to array of 12 zeros)
-   * - iconPrimary
-   * - color
-   * - optional percentage or arrow icon
-   */
-
-
   return (
     <Grid container rowSpacing={4.5} columnSpacing={2.75}>
       {/* Welcome Banner */}
@@ -270,94 +238,100 @@ const importPass = window.prompt('Please be aware that importing products will a
         <WelcomeBanner />
       </Grid>
 
-      <Grid sx={{ position: 'relative' }} item xs={12}>
-          <Box
-                  component="img"
-                  src={onam2}
-                  alt="onam"
-                  sx={{
-                    position: 'absolute',
-                    top: -130,    
-                    right: 20,     
-                    width: 120,
-                    zIndex: 10,    
-                    height: 'auto',
-                  }}
-                />
-        <MainCard>
-          <Grid
-            container
-            spacing={2}
-            alignItems="center"
-            justifyContent="space-between"
-          >
-            <Grid item>
-              <Stack direction="row" spacing={2} alignItems="center">
-                <Avatar>{user?.name?.[0] || 'U'}</Avatar>
-                <div>
-                  <Typography variant="subtitle2">
-                    {user?.name || 'User'}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {user?.role || ''}
-                  </Typography>
-                </div>
-              </Stack>
+      {/* User Details */}
+      <Grid item xs={12}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          <MainCard sx={{ p: 3 }}>
+            <Grid
+              container
+              spacing={2}
+              alignItems="center"
+              justifyContent="space-between"
+            >
+              <Grid item>
+                <Stack direction="row" spacing={2} alignItems="center">
+                  <Avatar
+                    sx={{ bgcolor: 'primary.main', fontWeight: 'bold' }}
+                  >
+                    {user?.name?.[0] || 'U'}
+                  </Avatar>
+                  <div>
+                    <Typography variant="h6" fontWeight="bold">
+                      {user?.name || 'User'}
+                    </Typography>
+                    <div className='flex gap-4'>
+                    <Typography variant="body2">
+                      Total Bills: <strong>{bills?.length || 0}</strong>
+                    </Typography>
+                    <Typography variant="body2">
+                      Total Leaves: <strong>{leaves?.length || 0}</strong>
+                    </Typography>
+                    </div>
+                  </div>
+                </Stack>
+              </Grid>
+
+              <Grid item>
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    component={RouterLink}
+                    to="/invoice/create"
+                    variant="contained"
+                    color="primary"
+                    size="small"
+                  >
+                    Create Estimate
+                  </Button>
+                  <Button
+                    component={RouterLink}
+                    to="/stock/update"
+                    variant="outlined"
+                    color="primary"
+                    size="small"
+                  >
+                    Stock Update
+                  </Button>
+                  {user.isSuper && (
+                    <>
+                      <Button
+                        onClick={downloadExcel}
+                        variant="outlined"
+                        color="primary"
+                        size="small"
+                      >
+                        Export
+                      </Button>
+                      <Button
+                        onClick={handleSeedProducts}
+                        variant="outlined"
+                        color="primary"
+                        size="small"
+                      >
+                        Import Products
+                      </Button>
+                    </>
+                  )}
+                </Stack>
+              </Grid>
             </Grid>
-
-            <Grid item>
-              <Stack direction="row" spacing={1}>
-                <Button
-                  component={RouterLink}
-                  to="/invoice/create"
-                  variant="contained"
-                  color="primary"
-                  size="small"
-                >
-                  Create Estimate
-                </Button>
-                <Button
-                  component={RouterLink}
-                  to="/stock/update"
-                  variant="outlined"
-                  color="primary"
-                  size="small"
-                >
-                  Stock Update
-                </Button>
-
-                {user.isSuper  && <Button
-                  component={RouterLink}
-                  onClick={downloadExcel}
-                  variant="outlined"
-                  color="primary"
-                  size="small"
-                >
-                  Export
-                </Button> }
-
-                  {user.isSuper  && <Button
-                  component={RouterLink}
-                  variant="outlined"
-                  color="primary"
-                  size="small"
-                   onClick={handleSeedProducts}
-
-                >
-                  Import Products
-                </Button> }
-
-              </Stack>
-            </Grid>
-          </Grid>
-        </MainCard>
+          </MainCard>
+        </motion.div>
       </Grid>
 
-      {/* Low Stock Preview Section */}
-      <Grid item xs={12} md={12}>
-        <LowStockPreview />
+      {/* Low Stock Preview */}
+      <Grid item xs={12}>
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7 }}
+        >
+          <LowStockPreview />
+        </motion.div>
       </Grid>
-      
     </Grid>
   );
 }

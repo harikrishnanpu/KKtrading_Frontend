@@ -63,7 +63,7 @@ export let DropzopType;
 // ==============================|| THEME CONFIG ||============================== //
 
 const config = {
-  fontFamily: `Inter var`,
+  fontFamily: `default`,
   i18n: 'en',
   menuOrientation: MenuOrientation.HORIZONTAL,
   menuCaption: true,

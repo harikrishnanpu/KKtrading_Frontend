@@ -26,10 +26,10 @@ import Transitions from 'components/@extended/Transitions';
 
 import { MenuOrientation, ThemeMode } from 'config';
 import useConfig from 'hooks/useConfig';
-import { useGetMenuMaster } from 'api/menu';
 
 // assets
 import { ArrowDown2, ArrowUp2, ArrowRight2, Copy } from 'iconsax-react';
+import { useDrawer } from 'hooks/useDrawerState';
 
 // mini-menu - wrapper
 const PopperStyled = styled(Popper)(({ theme }) => ({
@@ -55,8 +55,7 @@ export default function NavCollapse({ menu, level, parentId, setSelectedItems, s
   const navigation = useNavigate();
 
   const downLG = useMediaQuery(theme.breakpoints.down('lg'));
-  const { menuMaster } = useGetMenuMaster();
-  const drawerOpen = menuMaster.isDashboardDrawerOpened;
+  const { isDashboardDrawerOpened, setDashboardDrawerOpened } = useDrawer();
   const { mode, menuOrientation } = useConfig();
 
   const [open, setOpen] = useState(false);
@@ -76,7 +75,7 @@ export default function NavCollapse({ menu, level, parentId, setSelectedItems, s
   const handleClick = (event, isRedirect) => {
     setAnchorEl(null);
     setSelectedLevel(level);
-    if (drawerOpen) {
+    if (isDashboardDrawerOpened) {
       setOpen(!open);
       setSelected(!selected ? menu.id : null);
       setSelectedItems(!selected ? menu.id : '');
@@ -87,7 +86,7 @@ export default function NavCollapse({ menu, level, parentId, setSelectedItems, s
   };
 
   const handlerIconLink = () => {
-    if (!drawerOpen) {
+    if (!isDashboardDrawerOpened) {
       if (menu.url) navigation(`${menu.url}`);
       setSelected(menu.id);
     }
@@ -95,7 +94,7 @@ export default function NavCollapse({ menu, level, parentId, setSelectedItems, s
 
   const handleHover = (event) => {
     setAnchorEl(event?.currentTarget);
-    if (!drawerOpen) {
+    if (!isDashboardDrawerOpened) {
       setSelected(menu.id);
     }
   };
@@ -118,12 +117,12 @@ export default function NavCollapse({ menu, level, parentId, setSelectedItems, s
     } else {
       if (level === selectedLevel) {
         setOpen(false);
-        if ((!miniMenuOpened && !drawerOpen && !selected) || drawerOpen) {
+        if ((!miniMenuOpened && !isDashboardDrawerOpened && !selected) || isDashboardDrawerOpened) {
           setSelected(null);
         }
       }
     }
-  }, [selectedItems, level, selected, miniMenuOpened, drawerOpen, selectedLevel]);
+  }, [selectedItems, level, selected, miniMenuOpened, isDashboardDrawerOpened, selectedLevel]);
 
   const { pathname } = useLocation();
 
@@ -206,11 +205,11 @@ export default function NavCollapse({ menu, level, parentId, setSelectedItems, s
   });
 
   const isSelected = selected === menu.id;
-  const borderIcon = level === 1 ? <Copy variant="Bulk" size={drawerOpen ? 22 : 24} /> : false;
+  const borderIcon = level === 1 ? <Copy variant="Bulk" size={isDashboardDrawerOpened ? 22 : 24} /> : false;
   const Icon = menu.icon;
-  const menuIcon = menu.icon ? <Icon variant="Bulk" size={drawerOpen ? 22 : 24} /> : borderIcon;
+  const menuIcon = menu.icon ? <Icon variant="Bulk" size={isDashboardDrawerOpened ? 22 : 24} /> : borderIcon;
   const textColor = mode === ThemeMode.DARK ? theme.palette.secondary[400] : theme.palette.secondary.main;
-  const iconSelectedColor = mode === ThemeMode.DARK && drawerOpen ? theme.palette.text.primary : theme.palette.primary.main;
+  const iconSelectedColor = mode === ThemeMode.DARK && isDashboardDrawerOpened ? theme.palette.text.primary : theme.palette.primary.main;
   const popperId = miniMenuOpened ? `collapse-pop-${menu.id}` : undefined;
   const FlexBox = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' };
 
@@ -221,19 +220,19 @@ export default function NavCollapse({ menu, level, parentId, setSelectedItems, s
           <ListItemButton
             id={`${menu.id}-button`}
             selected={isSelected}
-            {...(!drawerOpen && { onMouseEnter: (e) => handleClick(e, true), onMouseLeave: handleClose })}
+            {...(!isDashboardDrawerOpened && { onMouseEnter: (e) => handleClick(e, true), onMouseLeave: handleClose })}
             onClick={(e) => handleClick(e, true)}
             sx={{
-              pl: drawerOpen ? `${level === 1 ? 20 : level * 20 - 10}px` : 1.5,
-              py: !drawerOpen && level === 1 ? 1.25 : 1,
-              ...(drawerOpen && {
+              pl: isDashboardDrawerOpened ? `${level === 1 ? 20 : level * 20 - 10}px` : 1.5,
+              py: !isDashboardDrawerOpened && level === 1 ? 1.25 : 1,
+              ...(isDashboardDrawerOpened && {
                 mx: 1.25,
                 my: 0.5,
                 borderRadius: 1,
                 '&:hover': { bgcolor: mode === ThemeMode.DARK ? 'divider' : 'secondary.200' },
                 '&.Mui-selected': { color: iconSelectedColor }
               }),
-              ...(!drawerOpen && {
+              ...(!isDashboardDrawerOpened && {
                 px: 2.75,
                 justifyContent: 'center',
                 '&:hover': { bgcolor: 'transparent' },
@@ -243,7 +242,7 @@ export default function NavCollapse({ menu, level, parentId, setSelectedItems, s
                 }
               })
             }}
-            {...(drawerOpen &&
+            {...(isDashboardDrawerOpened &&
               menu.isDropdown && {
                 'aria-controls': openCollapse ? `${menu.id}-menu` : undefined,
                 'aria-haspopup': true,
@@ -257,7 +256,7 @@ export default function NavCollapse({ menu, level, parentId, setSelectedItems, s
                 sx={{
                   minWidth: 38,
                   color: isSelected ? 'primary.main' : textColor,
-                  ...(!drawerOpen && {
+                  ...(!isDashboardDrawerOpened && {
                     borderRadius: 1,
                     width: 46,
                     height: 46,
@@ -265,7 +264,7 @@ export default function NavCollapse({ menu, level, parentId, setSelectedItems, s
                     justifyContent: 'center',
                     '&:hover': { bgcolor: mode === ThemeMode.DARK ? 'secondary.light' : 'secondary.200' }
                   }),
-                  ...(!drawerOpen &&
+                  ...(!isDashboardDrawerOpened &&
                     isSelected && {
                       bgcolor: mode === ThemeMode.DARK ? 'secondary.100' : 'primary.lighter',
                       '&:hover': { bgcolor: mode === ThemeMode.DARK ? 'secondary.200' : 'primary.lighter' }
@@ -276,13 +275,13 @@ export default function NavCollapse({ menu, level, parentId, setSelectedItems, s
               </ListItemIcon>
             )}
 
-            {!menuIcon && drawerOpen && (
+            {!menuIcon && isDashboardDrawerOpened && (
               <ListItemIcon sx={{ minWidth: 30 }}>
                 <Dot size={isSelected ? 6 : 5} color={isSelected ? 'primary' : 'secondary'} />
               </ListItemIcon>
             )}
 
-            {(drawerOpen || (!drawerOpen && level !== 1)) && (
+            {(isDashboardDrawerOpened || (!isDashboardDrawerOpened && level !== 1)) && (
               <ListItemText
                 primary={
                   <Typography variant="h6" color={isSelected ? 'primary' : textColor} sx={{ fontWeight: isSelected ? 500 : 400 }}>
@@ -298,7 +297,7 @@ export default function NavCollapse({ menu, level, parentId, setSelectedItems, s
                 }
               />
             )}
-            {(drawerOpen || (!drawerOpen && level !== 1)) &&
+            {(isDashboardDrawerOpened || (!isDashboardDrawerOpened && level !== 1)) &&
               (menu?.url ? (
                 <IconButton
                   onClick={(event) => {
@@ -345,7 +344,7 @@ export default function NavCollapse({ menu, level, parentId, setSelectedItems, s
                 </>
               ))}
 
-            {!drawerOpen && (
+            {!isDashboardDrawerOpened && (
               <PopperStyled
                 open={miniMenuOpened}
                 anchorEl={anchorEl}
@@ -384,12 +383,12 @@ export default function NavCollapse({ menu, level, parentId, setSelectedItems, s
               </PopperStyled>
             )}
           </ListItemButton>
-          {drawerOpen && !menu?.isDropdown && (
+          {isDashboardDrawerOpened && !menu?.isDropdown && (
             <Collapse in={open} timeout="auto" unmountOnExit>
               <List sx={{ p: 0 }}>{navCollapse}</List>
             </Collapse>
           )}
-          {drawerOpen && menu?.isDropdown && (
+          {isDashboardDrawerOpened && menu?.isDropdown && (
             <Menu
               id={`${menu.id}-menu`}
               aria-labelledby={`${menu.id}-button`}
