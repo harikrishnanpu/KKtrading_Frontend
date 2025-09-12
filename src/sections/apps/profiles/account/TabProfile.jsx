@@ -44,7 +44,6 @@ import MainCard from 'components/MainCard';
 import Avatar from 'components/@extended/Avatar';
 
 // Assets
-import defaultImages from 'assets/images/users/default.png';
 import api from 'pages/api';
 
 // -------------------------- Helper for Accessibility --------------------------

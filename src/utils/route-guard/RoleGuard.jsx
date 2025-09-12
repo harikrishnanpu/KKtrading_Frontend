@@ -10,11 +10,18 @@ const RoleGuard = ({ allowedRoles }) => {
     return <Navigate to="/login" replace />;
   }
 
-  const hasAccess = user.role && allowedRoles.includes(user.role);
-
-  if (!hasAccess) {
-    return <Navigate to="/unauthorized" replace />;
+  if(!user.isEmployee){
+    return <Navigate to="/employee" replace />;
   }
+
+  
+  if(allowedRoles){
+    const hasAccess = user.role && allowedRoles.includes(user.role);  
+    if (!hasAccess) {
+      return <Navigate to="/unauthorized" replace />;
+    }
+  }
+
 
   return <Outlet />;
 };

@@ -120,6 +120,11 @@ const MainRoutes = {
         path: '/employee',
         element: <EmployeeApprovalScreen />
       },
+
+      {
+        path: '/',
+        element: <RoleGuard />,
+        children: [
       {
       path: '/',
       element: <DashboardLayout />,
@@ -653,6 +658,8 @@ const MainRoutes = {
       }
       ]
     },
+
+  ]}
 
   ]
 };

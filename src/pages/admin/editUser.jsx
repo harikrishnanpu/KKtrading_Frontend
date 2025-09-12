@@ -32,6 +32,8 @@ export default function UserEditScreen() {
   const [status, setStatus] = useState('');
   const [birthdayText, setBirthdayText] = useState('');
   const [onlineStatus, setOnlineStatus] = useState('offline');
+  const [accounts, setAccounts] = useState([]);
+  
 
   // UI States
   const [loading, setLoading] = useState(false);
@@ -39,20 +41,29 @@ export default function UserEditScreen() {
   const [error, setError] = useState('');
   const [errorUpdate, setErrorUpdate] = useState('');
   const [successUpdate, setSuccessUpdate] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('');
+  const paymentMethodRef = React.useRef();
+
+
+    useEffect(() => {
+
+      const fetchAccounts = async () => {
+        try {
+          const response = await api.get('/api/accounts/allaccounts');
+          setAccounts(response.data);
+        } catch (err) {     
+            setShowErrorModal(true);
+        }
+      };
+  
+      fetchAccounts();
+    }, [])
 
   useEffect(() => {
     const fetchUserDetails = async () => {
       try {
         setLoading(true);
         setError('');
-
-        // If you need auth header:
-        // const config = {
-        //   headers: {
-        //     Authorization: `Bearer ${userInfo.token}`,
-        //   },
-        // };
-
         const { data } = await api.get(`/api/users/${userId}`);
         setName(data.name || '');
         setEmail(data.email || '');
@@ -76,6 +87,7 @@ export default function UserEditScreen() {
         setStatus(data.status || '');
         setBirthdayText(data.birthdayText || '');
         setOnlineStatus(data.online_status || 'offline');
+        setPaymentMethod(data.paymentAccount || '');
       } catch (err) {
         setError(
           err.response?.data?.message
@@ -89,6 +101,9 @@ export default function UserEditScreen() {
 
     fetchUserDetails();
   }, [userId]);
+
+
+  
 
   const submitHandler = async (e) => {
     e.preventDefault();
@@ -118,6 +133,7 @@ export default function UserEditScreen() {
           status,
           birthdayText,
           online_status: onlineStatus,
+          paymentAcc: paymentMethod,
         }
         // config
       );
@@ -235,8 +251,8 @@ export default function UserEditScreen() {
           />
         </div>
 
-        {/* Password (optional reset) */}
-        <div>
+        <div className='flex  justify-between'>
+        <div className="w-1/2 mr-2">
           <label className="block font-medium text-gray-700" htmlFor="password">
             Password (leave empty if no change)
           </label>
@@ -250,7 +266,31 @@ export default function UserEditScreen() {
           />
         </div>
 
+                  <div className='w-1/2 ml-2'>
+          <label className="block font-medium text-gray-700" htmlFor="paymentAcc">
+            Payment Account
+          </label>
+                      <select
+            ref={paymentMethodRef}
+              value={paymentMethod}
+              onKeyDown={(e)=> changeRef(e, receivedDateRef)}
+              onChange={(e) => setPaymentMethod(e.target.value)}
+              className="w-full mt-1 block border border-gray-300 p-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
+            >
+              <option value="">Select Payment Method</option>
+      {accounts.map((acc) => (
+        <option key={acc.accountId} value={acc._id}>
+          {acc.accountName} - Bal.Rs. {acc.balanceAmount}
+        </option>
+      ))}
+            </select>
+        </div>
+
+        </div>
+
         {/* isEmployee */}
+
+        <div className='flex space-x-6'>
         <div className="flex items-center">
           <input
             id="isEmployee"
@@ -291,9 +331,10 @@ export default function UserEditScreen() {
             Is Super
           </label>
         </div>
+        </div>
 
-        {/* role */}
-        <div>
+         <div className='flex  justify-between'>
+        <div className="w-1/2 mr-2">
           <label className="block font-medium text-gray-700" htmlFor="role">
             Role
           </label>
@@ -307,8 +348,7 @@ export default function UserEditScreen() {
           />
         </div>
 
-        {/* contactNumber */}
-        <div>
+        <div className="w-1/2 ml-2">
           <label className="block font-medium text-gray-700" htmlFor="contactNumber">
             Contact Number
           </label>
@@ -321,10 +361,11 @@ export default function UserEditScreen() {
             className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
           />
         </div>
+        </div>
 
 
-        {/* work_email */}
-        <div>
+               <div className='flex  justify-between'>
+        <div className="w-1/2 mr-2">
           <label className="block font-medium text-gray-700" htmlFor="workEmail">
             Work Email
           </label>
@@ -337,9 +378,7 @@ export default function UserEditScreen() {
             className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
           />
         </div>
-
-        {/* personal_email */}
-        <div>
+        <div className="w-1/2 ml-2">
           <label className="block font-medium text-gray-700" htmlFor="personalEmail">
             Personal Email
           </label>
@@ -352,9 +391,11 @@ export default function UserEditScreen() {
             className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
           />
         </div>
+        </div>
 
-        {/* work_phone */}
-        <div>
+
+        <div className='flex  justify-between'>
+        <div  className="w-1/2 mr-2">
           <label className="block font-medium text-gray-700" htmlFor="workPhone">
             Work Phone
           </label>
@@ -367,9 +408,7 @@ export default function UserEditScreen() {
             className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
           />
         </div>
-
-        {/* personal_phone */}
-        <div>
+        <div className="w-1/2 ml-2">
           <label className="block font-medium text-gray-700" htmlFor="personalPhone">
             Personal Phone
           </label>
@@ -382,9 +421,10 @@ export default function UserEditScreen() {
             className="mt-1 block w-full p-2 border border-gray-300 rounded-md"
           />
         </div>
+        </div>
 
-        {/* location */}
-        <div>
+        <div className='flex  justify-between'>
+        <div  className="w-1/2 mr-2">
           <label className="block font-medium text-gray-700" htmlFor="location">
             Location
           </label>
@@ -398,8 +438,7 @@ export default function UserEditScreen() {
           />
         </div>
 
-        {/* avatar */}
-        <div>
+        <div className="w-1/2 ml-2">
           <label className="block font-medium text-gray-700" htmlFor="avatar">
             Avatar URL
           </label>
@@ -413,8 +452,11 @@ export default function UserEditScreen() {
           />
         </div>
 
-        {/* status */}
-        <div>
+        </div>
+
+
+        <div className='flex  justify-between'>
+        <div className="w-1/2 mr-2">
           <label className="block font-medium text-gray-700" htmlFor="status">
             Status
           </label>
@@ -428,8 +470,7 @@ export default function UserEditScreen() {
           />
         </div>
 
-        {/* birthdayText */}
-        <div>
+        <div  className="w-1/2 ml-2">
           <label className="block font-medium text-gray-700" htmlFor="birthdayText">
             Birthday
           </label>
@@ -443,8 +484,10 @@ export default function UserEditScreen() {
           />
         </div>
 
-        {/* online_status */}
-        <div>
+        </div>
+
+        <div className='flex  justify-between'>
+        <div className="w-1/2 mr-2">
           <label className="block font-medium text-gray-700" htmlFor="onlineStatus">
             Online Status
           </label>
@@ -459,6 +502,7 @@ export default function UserEditScreen() {
             <option value="busy">Busy</option>
             <option value="idle">Idle</option>
           </select>
+        </div>
         </div>
 
         <div className="flex justify-between mt-6">

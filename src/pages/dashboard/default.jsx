@@ -1,13 +1,13 @@
 // DashboardDefault.jsx
 import { useTheme } from '@mui/material/styles';
-import { useEffect, useState } from 'react';
+import { forwardRef, useEffect, useState } from 'react';
 import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Skeleton from '@mui/material/Skeleton';
 import { keyframes } from '@mui/system';
 import { Link as RouterLink } from 'react-router-dom';
-import { Avatar, Button, Stack } from '@mui/material';
+import { Avatar, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Slide, Stack, TextField } from '@mui/material';
 import { motion } from 'framer-motion';
 
 // project-imports
@@ -19,10 +19,20 @@ import { ThemeMode } from 'config';
 // Asset imports
 import WelcomeImage from 'assets/images/analytics/welcome-banner.png';
 import cardBack from 'assets/images/widget/img-dropbox-bg.svg';
+import CloseIcon from '@mui/icons-material/Close';
+
 
 // API + auth
 import api from 'pages/api';
 import useAuth from 'hooks/useAuth';
+import PaymentHistory from 'sections/widget/data/PaymentHistory';
+import ProjectAnalytics from 'sections/widget/chart/ProjectAnalytics';
+import ProductOverview from 'sections/widget/chart/ProductOverview';
+import LanguagesSupport from 'sections/widget/chart/LanguagesSupport';
+import EcommerceIncome from 'sections/widget/chart/EcommerceIncome';
+import DropboxStorage from 'sections/widget/statistics/DropboxStorage';
+import SwitchBalanace from 'sections/widget/statistics/SwitchBalanace';
+import Visitors from 'sections/widget/chart/Visitors';
 
 // fade-in keyframes for skeletons
 const fadeIn = keyframes`
@@ -30,33 +40,47 @@ const fadeIn = keyframes`
   to { opacity: 1; transform: scale(1); }
 `;
 
+const Transition = forwardRef(function Transition(props, ref) {
+  return <Slide direction="up" ref={ref} {...props} />;
+});
+
 export default function DashboardDefault() {
   const theme = useTheme();
   const { user } = useAuth();
 
-  const [dashboardData, setDashboardData] = useState(null);
   const [userData, setUserData] = useState(null);
   const [bills, setBills] = useState([]);
   const [leaves, setLeaves] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+
+    const [openDialog, setOpenDialog] = useState(false);
+    const [dialogMode, setDialogMode] = useState('add'); // 'add' or 'edit'
+    const [editLeaveId, setEditLeaveId] = useState(null);
+    const [reason, setReason] = useState('');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [errorMessage, setErrorMessage] = useState('');
+    const [successMessage, setSuccessMessage] = useState('');
+    const [deleteMessage, setDeleteMessage] = useState('');
+
   // fetch dashboard stats
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        const { data } = await api.get('/api/chart/dashboard/dashboard-stats');
-        if (data.success) {
-          setDashboardData(data.stats);
-        } else {
-          setError('Failed to load dashboard stats');
-        }
-      } catch (err) {
-        setError('Error fetching dashboard stats');
-      }
-    };
-    fetchDashboardData();
-  }, []);
+
+
+    const openAddDialog = () => {
+    setDialogMode('add');
+    setEditLeaveId(null);
+    setReason('');
+    setStartDate('');
+    setEndDate('');
+    setErrorMessage('');
+    setOpenDialog(true);
+  };
+
+    const closeDialog = () => {
+    setOpenDialog(false);
+  };
 
   // fetch user-related data
   useEffect(() => {
@@ -80,8 +104,13 @@ export default function DashboardDefault() {
         setBills(billsRes.data);
 
         // 3) Leaves
-        const leavesRes = await api.get(`/api/leaves?userId=${user._id}`);
-        setLeaves(leavesRes.data);
+const leavesRes = await api.get(`/api/leaves?userId=${user._id}`);
+let currentMonth = new Date().getMonth(); // 0–11
+let filteredLeaves = leavesRes.data.filter((lv) => {
+  let leaveMonth = new Date(lv.startDate).getMonth();
+  return leaveMonth >= currentMonth;
+});
+        setLeaves(filteredLeaves);
       } catch (error) {
         console.error('Error fetching user data:', error);
       } finally {
@@ -133,6 +162,49 @@ export default function DashboardDefault() {
       alert(err.message);
     }
   };
+
+
+    const handleSubmitLeave = async () => {
+      if (!reason || !startDate || !endDate) {
+        setErrorMessage('Please fill all fields.');
+        return;
+      }
+      setErrorMessage('');
+      try {
+        if (dialogMode === 'add') {
+          await api.post('/api/leaves', {
+            userId: user._id,
+            userName: userData?.name,
+            reason,
+            startDate,
+            endDate
+          });
+          setSuccessMessage('Leave application submitted successfully!');
+        } else {
+          await api.put(`/api/leaves/${editLeaveId}`, {
+            reason,
+            startDate,
+            endDate
+          });
+          setSuccessMessage('Leave application updated successfully!');
+        }
+        closeDialog();
+const leavesRes = await api.get(`/api/leaves?userId=${user._id}`);
+let currentMonth = new Date().getMonth();
+let filteredLeaves = leavesRes.data.filter((lv) => {
+  let leaveMonth = new Date(lv.startDate).getMonth();
+  return leaveMonth >= currentMonth;
+});
+        setLeaves(filteredLeaves);
+      } catch (err) {
+        setErrorMessage(
+          dialogMode === 'add'
+            ? 'Failed to submit leave application.'
+            : 'Failed to update leave application.'
+        );
+      }
+    };
+  
 
   // loading skeleton
   if (loading && !userData) {
@@ -233,26 +305,11 @@ export default function DashboardDefault() {
 
   return (
     <Grid container rowSpacing={4.5} columnSpacing={2.75}>
-      {/* Welcome Banner */}
+
       <Grid item xs={12}>
         <WelcomeBanner />
-      </Grid>
-
-      {/* User Details */}
-      <Grid item xs={12}>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-        >
-          <MainCard sx={{ p: 3 }}>
-            <Grid
-              container
-              spacing={2}
-              alignItems="center"
-              justifyContent="space-between"
-            >
-              <Grid item>
+        <Grid sx={{alignItems: 'center',justifyContent: 'center',marginBlock: '2px'}} container spacing={2}>   
+        <Grid className='my-1 mx-auto' xs={12} sm={6} item>
                 <Stack direction="row" spacing={2} alignItems="center">
                   <Avatar
                     sx={{ bgcolor: 'primary.main', fontWeight: 'bold' }}
@@ -261,19 +318,61 @@ export default function DashboardDefault() {
                   </Avatar>
                   <div>
                     <Typography variant="h6" fontWeight="bold">
-                      {user?.name || 'User'}
+                     {new Date().getHours() < 12 
+  ? 'Good Morning' 
+  : new Date().getHours() < 16 
+    ? 'Good Afternoon' 
+    : 'Good Evening'}, {user?.name || 'User'}
                     </Typography>
                     <div className='flex gap-4'>
                     <Typography variant="body2">
-                      Total Bills: <strong>{bills?.length || 0}</strong>
+                      Created Estimates: <strong>{bills?.length || 0}</strong>
                     </Typography>
                     <Typography variant="body2">
-                      Total Leaves: <strong>{leaves?.length || 0}</strong>
+                      Leaves Applied: <strong>{leaves?.length || 0}</strong>
                     </Typography>
                     </div>
                   </div>
                 </Stack>
               </Grid>
+          <Grid sm={6} item xs={12}>
+            <SwitchBalanace />
+          </Grid>   
+              </Grid>
+      </Grid>
+
+
+      <Grid item xs={12}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          <MainCard sx={{ p: 1 }}>
+            <Grid
+              container
+              spacing={2}
+              alignItems="center"
+              justifyContent="space-between"
+            >
+
+               <Grid item>
+                <Stack direction="row" spacing={1}>
+                    <Button
+                    component={RouterLink}
+                    to="/apps/profiles/account/basic"
+                    variant="contained"
+                    color="primary"
+                    size="small"
+                  >
+                     View Profile
+                  </Button>
+            <Button variant="outlined" color="error" onClick={openAddDialog}>
+              Add Leave
+            </Button>
+                  </Stack>
+              </Grid>
+
 
               <Grid item>
                 <Stack direction="row" spacing={1}>
@@ -289,7 +388,7 @@ export default function DashboardDefault() {
                   <Button
                     component={RouterLink}
                     to="/stock/update"
-                    variant="outlined"
+                    variant="contained"
                     color="primary"
                     size="small"
                   >
@@ -317,12 +416,12 @@ export default function DashboardDefault() {
                   )}
                 </Stack>
               </Grid>
+
             </Grid>
           </MainCard>
         </motion.div>
       </Grid>
 
-      {/* Low Stock Preview */}
       <Grid item xs={12}>
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -332,6 +431,79 @@ export default function DashboardDefault() {
           <LowStockPreview />
         </motion.div>
       </Grid>
+
+
+            <Dialog
+              open={openDialog}
+              onClose={closeDialog}
+              TransitionComponent={Transition}
+              fullWidth
+              maxWidth="xs"
+            >
+              <DialogTitle>
+                {dialogMode === 'add' ? 'Add Leave Application' : 'Edit Leave Application'}
+                <IconButton
+                  aria-label="close"
+                  onClick={closeDialog}
+                  sx={{
+                    position: 'absolute',
+                    right: 8,
+                    top: 8,
+                    color: (theme) => theme.palette.grey[500]
+                  }}
+                >
+                  <CloseIcon />
+                </IconButton>
+              </DialogTitle>
+              <DialogContent dividers>
+                {errorMessage && (
+                  <Alert severity="error" sx={{ mb: 1 }}>
+                    {errorMessage}
+                  </Alert>
+                )}
+                <TextField
+                  label="Reason"
+                  multiline
+                  rows={3}
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  variant="outlined"
+                  fullWidth
+                  margin="normal"
+                  size="small"
+                />
+                <TextField
+                  label="Start Date"
+                  type="datetime-local"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  variant="outlined"
+                  fullWidth
+                  margin="normal"
+                  size="small"
+                  InputLabelProps={{ shrink: true }}
+                />
+                <TextField
+                  label="End Date"
+                  type="datetime-local"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  variant="outlined"
+                  fullWidth
+                  margin="normal"
+                  size="small"
+                  InputLabelProps={{ shrink: true }}
+                />
+              </DialogContent>
+              <DialogActions sx={{ px: 3, pb: 2 }}>
+                <Button onClick={closeDialog} color="inherit">
+                  Cancel
+                </Button>
+                <Button variant="outlined" color="error" onClick={handleSubmitLeave}>
+                  {dialogMode === 'add' ? 'Submit' : 'Save Changes'}
+                </Button>
+              </DialogActions>
+            </Dialog>
     </Grid>
   );
 }

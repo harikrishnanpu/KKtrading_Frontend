@@ -12,7 +12,7 @@ import Breadcrumbs from 'components/@extended/Breadcrumbs';
 import { APP_DEFAULT_PATH } from 'config';
 
 // assets
-import { DocumentText, Lock, Profile, Profile2User, Setting3, TableDocument } from 'iconsax-react';
+import { DocumentText, Profile } from 'iconsax-react';
 
 // ==============================|| PROFILE - ACCOUNT ||============================== //
 

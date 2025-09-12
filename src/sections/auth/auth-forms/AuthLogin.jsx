@@ -27,7 +27,6 @@ import { Eye, EyeSlash } from 'iconsax-react';
 import { openSnackbar } from 'api/snackbar';
 import { useNavigate } from 'react-router-dom';
 
-// ============================|| JWT - LOGIN ||============================ //
 
 export default function AuthLogin({ forgot }) {
   const [checked, setChecked] = useState(false);
@@ -68,16 +67,13 @@ export default function AuthLogin({ forgot }) {
               err.message || 'An error occurred';
             setErrors({ submit: errorMsg });
             setSubmitting(false);       
-
-                        // Show error snackbar
                         openSnackbar({
                           open: true,
                           message: errorMsg,
                           variant: 'alert',
                           alert: { color: 'error' },
-                         anchorOrigin: { vertical: 'top', horizontal: 'left' }, // Change position
-                         autoHideDuration: 3000 // Snackbar will disappear after 3 seconds
-            
+                         anchorOrigin: { vertical: 'top', horizontal: 'left' },
+                         autoHideDuration: 3000
                         });
           }
         }}
@@ -87,7 +83,7 @@ export default function AuthLogin({ forgot }) {
             <Grid container spacing={3}>
               <Grid item xs={12}>
                 <Stack spacing={1}>
-                  <InputLabel htmlFor="email-login">Email Address</InputLabel>
+                  <InputLabel htmlFor="email-login">User Id</InputLabel>
                   <OutlinedInput
                     id="email-login"
                     type="email"
