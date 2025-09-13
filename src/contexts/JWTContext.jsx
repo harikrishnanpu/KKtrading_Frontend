@@ -1,20 +1,12 @@
 import { createContext, useEffect, useReducer } from 'react';
 
 // third-party
-import { Chance } from 'chance';
 import { jwtDecode } from 'jwt-decode';
-
-// reducer - state management
 import { LOGIN, LOGOUT } from 'store/reducers/actions';
 import authReducer from 'store/reducers/auth';
-
-// project-imports
 import Loader from 'components/Loader';
 import axios from 'utils/axios';
 
-const chance = new Chance();
-
-// constant
 const initialState = {
   isLoggedIn: false,
   isInitialized: false,
@@ -26,10 +18,6 @@ const verifyToken = (serviceToken) => {
     return false;
   }
   const decoded = jwtDecode(serviceToken);
-
-  /**
-   * Property 'exp' does not exist on type '<T = unknown>(token: string, options?: JwtDecodeOptions | undefined) => T'.
-   */
   return decoded.exp > Date.now() / 1000;
 };
 
@@ -43,10 +31,8 @@ const setSession = (serviceToken) => {
   }
 };
 
-// ==============================|| JWT CONTEXT & PROVIDER ||============================== //
 
 const JWTContext = createContext(null);
-
 
 export const JWTProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
@@ -67,6 +53,7 @@ export const JWTProvider = ({ children }) => {
               user
             }
           });
+
         } else {
           dispatch({
             type: LOGOUT
@@ -83,6 +70,23 @@ export const JWTProvider = ({ children }) => {
     init();
   }, []);
 
+
+   const refreshUser = async () => {
+    try {
+      const response = await axios.get('/api/users/auth/check-token');
+      dispatch({
+        type: LOGIN,
+        payload: {
+          isLoggedIn: true,
+          user: response.data.user
+        }
+      });
+    } catch (err) {
+      console.error('Failed to refresh user:', err);
+      dispatch({ type: LOGOUT });
+    }
+  };
+
   const login = async (email, password) => {
     const response = await axios.post('/api/users/signin', { email, password });
     const { serviceToken, user } = response.data;
@@ -97,8 +101,6 @@ export const JWTProvider = ({ children }) => {
   };
 
   const register = async (email, password, firstName, lastName) => {
-    // todo: this flow need to be recode as it not verified
-    // const id = chance.bb_pin();
     const response = await axios.post('/api/users/register', {
       email,
       password,
@@ -133,7 +135,7 @@ export const JWTProvider = ({ children }) => {
     return <Loader />;
   }
 
-  return <JWTContext.Provider value={{ ...state, login, logout, register, resetPassword, updateProfile }}>{children}</JWTContext.Provider>;
+  return <JWTContext.Provider value={{ ...state, login, logout, register, resetPassword, updateProfile, refreshUser }}>{children}</JWTContext.Provider>;
 };
 
 export default JWTContext;

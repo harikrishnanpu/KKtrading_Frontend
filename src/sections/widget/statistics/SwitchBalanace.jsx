@@ -11,9 +11,16 @@ import { ThemeMode } from 'config';
 
 // assets
 import { ArrowSwapHorizontal } from 'iconsax-react';
+import useAuth from 'hooks/useAuth';
+import { useEffect } from 'react';
 
 export default function SwitchBalanace() {
   const theme = useTheme();
+  const {user, refreshUser} = useAuth();
+
+  useEffect(()=>{
+    refreshUser();
+  },[])
 
   return (
     <MainCard
@@ -36,10 +43,17 @@ export default function SwitchBalanace() {
     >
       <Box sx={{ p: 2, position: 'inherit', zIndex: 2 }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
-          <Stack>
-            <Typography>Available Balance</Typography>
-            <Typography variant="h4">$1,234.90</Typography>
+          {user.paymentAccount ? ( <Stack>
+            <Typography sx={{fontWeight: 'bold'}}>Available Balance: {user.paymentAccount?.accountName}</Typography>
+            <Typography variant="h4">₹{user.paymentAccount?.balanceAmount.toFixed(2)}</Typography>
+          </Stack> ) : (
+
+            <Stack>
+            <Typography sx={{fontWeight: 'bold'}}>Account not Linked</Typography>
+            <Typography variant="h4">₹0.00</Typography>
           </Stack>
+
+           ) }
           <Avatar
             variant="rounded"
             type="filled"

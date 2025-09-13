@@ -13,15 +13,15 @@ import menuItem from 'menu-items';
 
 import useConfig from 'hooks/useConfig';
 import { HORIZONTAL_MAX_ITEM, MenuOrientation } from 'config';
-import { useGetMenuMaster } from 'api/menu';
 import useAuth from 'hooks/useAuth';
+import { useDrawer } from 'hooks/useDrawerState';
 
 // ==============================|| DRAWER CONTENT - NAVIGATION ||============================== //
 
 export default function Navigation() {
   const { menuOrientation } = useConfig();
-  const { menuMaster } = useGetMenuMaster();
-  const drawerOpen = menuMaster.isDashboardDrawerOpened;
+    const { isDashboardDrawerOpened, setDashboardDrawerOpened } = useDrawer();
+
   const downLG = useMediaQuery((theme) => theme.breakpoints.down('lg'));
 const {user} = useAuth();
   const [selectedID, setSelectedID] = useState('');
@@ -103,7 +103,7 @@ items: menuItem.items.filter(item => {
   return (
     <Box
       sx={{
-        pt: drawerOpen ? (isHorizontal ? 0 : 2) : 0,
+        pt: isDashboardDrawerOpened ? (isHorizontal ? 0 : 2) : 0,
         ...(!isHorizontal && { '& > ul:first-of-type': { mt: 0 } }),
         display: isHorizontal ? { xs: 'block', lg: 'flex' } : 'block'
       }}

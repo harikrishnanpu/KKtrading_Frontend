@@ -17,7 +17,6 @@ export default defineConfig(({ mode }) => {
       open: true,
       port: PORT,
       host: true, // Added missing comma here
-      // historyApiFallback is handled by Vite automatically in dev mode.
     },
     preview: {
       open: true,

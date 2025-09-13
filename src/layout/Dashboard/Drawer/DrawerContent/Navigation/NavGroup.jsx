@@ -27,10 +27,10 @@ import Transitions from 'components/@extended/Transitions';
 
 import { MenuOrientation, ThemeMode } from 'config';
 import useConfig from 'hooks/useConfig';
-import { useGetMenuMaster } from 'api/menu';
 
 // assets
 import { More2 } from 'iconsax-react';
+import { useDrawer } from 'hooks/useDrawerState';
 
 const PopperStyled = styled(Popper)(({ theme }) => ({
   overflow: 'visible',
@@ -73,8 +73,7 @@ export default function NavGroup({
   const { pathname } = useLocation();
 
   const { mode, menuOrientation, menuCaption } = useConfig();
-  const { menuMaster } = useGetMenuMaster();
-  const drawerOpen = menuMaster.isDashboardDrawerOpened;
+  const { isDashboardDrawerOpened, setDashboardDrawerOpened } = useDrawer();
 
   const downLG = useMediaQuery(theme.breakpoints.down('lg'));
 
@@ -246,7 +245,7 @@ export default function NavGroup({
           subheader={
             <>
               {item.title ? (
-                drawerOpen && (
+                isDashboardDrawerOpened && (
                   <Box sx={{ pl: 3, mb: 1.5 }}>
                     <Typography
                       variant="h5"
@@ -267,7 +266,7 @@ export default function NavGroup({
               )}
             </>
           }
-          sx={{ mt: drawerOpen && menuCaption && item.title ? 1.5 : 0, py: 0, zIndex: 0 }}
+          sx={{ mt: isDashboardDrawerOpened && menuCaption && item.title ? 1.5 : 0, py: 0, zIndex: 0 }}
         >
           {navCollapse}
         </List>

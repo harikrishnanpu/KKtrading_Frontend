@@ -16,12 +16,12 @@ import MenuItem from '@mui/material/MenuItem';
 // project import
 import Avatar from 'components/@extended/Avatar';
 import useAuth from 'hooks/useAuth';
-import { useGetMenuMaster } from 'api/menu';
 
 // assets
 import { ArrowRight2 } from 'iconsax-react';
 
 import api from 'pages/api';
+import { useDrawer } from 'hooks/useDrawerState';
 
 const ExpandMore = styled(IconButton, { shouldForwardProp: (prop) => prop !== 'theme' && prop !== 'expand' && prop !== 'drawerOpen' })(
   ({ theme, expand, drawerOpen }) => ({
@@ -46,8 +46,7 @@ export default function UserList() {
   const navigate = useNavigate();
   const [avatar, setAvatar] = useState();
   
-  const { menuMaster } = useGetMenuMaster();
-  const drawerOpen = menuMaster.isDashboardDrawerOpened;
+  const { isDashboardDrawerOpened, setDashboardDrawerOpened } = useDrawer();
   
   const { logout, user } = useAuth();
 
@@ -101,7 +100,7 @@ useEffect(() => {
   };
 
   return (
-    <Box sx={{ p: 1.25, px: !drawerOpen ? 1.25 : 3, borderTop: '2px solid ', borderTopColor: 'divider' }}>
+    <Box sx={{ p: 1.25, px: !isDashboardDrawerOpened ? 1.25 : 3, borderTop: '2px solid ', borderTopColor: 'divider' }}>
       <List disablePadding>
         <ListItem
           disablePadding
@@ -109,7 +108,7 @@ useEffect(() => {
             <ExpandMore
               theme={theme}
               expand={open}
-              drawerOpen={drawerOpen}
+              drawerOpen={isDashboardDrawerOpened}
               id="basic-button"
               aria-controls={open ? 'basic-menu' : undefined}
               aria-haspopup="true"
@@ -121,14 +120,14 @@ useEffect(() => {
             </ExpandMore>
           }
           sx={{
-            ...(!drawerOpen && { display: 'flex', justifyContent: 'flex-end' }),
-            '& .MuiListItemSecondaryAction-root': { right: !drawerOpen ? 16 : -16 }
+            ...(!isDashboardDrawerOpened && { display: 'flex', justifyContent: 'flex-end' }),
+            '& .MuiListItemSecondaryAction-root': { right: !isDashboardDrawerOpened ? 16 : -16 }
           }}
         >
           <ListItemAvatar>
-            <Avatar alt="Avatar" src={avatar} sx={{ ...(drawerOpen && { width: 46, height: 46 }) }} />
+            <Avatar alt="Avatar" src={avatar} sx={{ ...(isDashboardDrawerOpened && { width: 46, height: 46 }) }} />
           </ListItemAvatar>
-          <ListItemText primary={user?.name} sx={{ ...(!drawerOpen && { display: 'none' }) }} secondary={user.role} />
+          <ListItemText primary={user?.name} sx={{ ...(!isDashboardDrawerOpened && { display: 'none' }) }} secondary={user.role} />
         </ListItem>
       </List>
       <Menu

@@ -18,7 +18,7 @@ import IconButton from 'components/@extended/IconButton';
 
 import useConfig from 'hooks/useConfig';
 import { MenuOrientation, ThemeMode, NavActionType } from 'config';
-import { handlerDrawerOpen, useGetMenuMaster } from 'api/menu';
+import { useDrawer } from 'hooks/useDrawerState';
 
 // ==============================|| NAVIGATION - ITEM ||============================== //
 
@@ -26,8 +26,8 @@ export default function NavItem({ item, level, isParents = false }) {
   const theme = useTheme();
   const downLG = useMediaQuery(theme.breakpoints.down('lg'));
 
-  const { menuMaster } = useGetMenuMaster();
-  const drawerOpen = menuMaster.isDashboardDrawerOpened;
+
+  const { isDashboardDrawerOpened, setDashboardDrawerOpened } = useDrawer();
   const { mode, menuOrientation } = useConfig();
 
   let itemTarget = '_self';
@@ -39,7 +39,7 @@ export default function NavItem({ item, level, isParents = false }) {
   const itemIcon = item.icon ? (
     <Icon
       variant="Bulk"
-      size={drawerOpen ? 20 : 22}
+      size={isDashboardDrawerOpened ? 20 : 22}
       style={{ ...(menuOrientation === MenuOrientation.HORIZONTAL && isParents && { fontSize: 20, stroke: '1.5' }) }}
     />
   ) : (
@@ -64,13 +64,13 @@ export default function NavItem({ item, level, isParents = false }) {
             selected={isSelected}
             sx={{
               zIndex: 1201,
-              pl: drawerOpen ? `${level * 20}px` : 1.5,
-              py: !drawerOpen && level === 1 ? 1.25 : 1,
-              ...(drawerOpen && {
+              pl: isDashboardDrawerOpened ? `${level * 20}px` : 1.5,
+              py: !isDashboardDrawerOpened && level === 1 ? 1.25 : 1,
+              ...(isDashboardDrawerOpened && {
                 '&:hover': { bgcolor: 'transparent' },
                 '&.Mui-selected': { '&:hover': { bgcolor: 'transparent' }, bgcolor: 'transparent' }
               }),
-              ...(drawerOpen &&
+              ...(isDashboardDrawerOpened &&
                 level === 1 && {
                   mx: 1.25,
                   my: 0.5,
@@ -78,21 +78,21 @@ export default function NavItem({ item, level, isParents = false }) {
                   '&:hover': { bgcolor: mode === ThemeMode.DARK ? 'divider' : 'secondary.200' },
                   '&.Mui-selected': { color: iconSelectedColor, '&:hover': { color: iconSelectedColor } }
                 }),
-              ...(!drawerOpen && {
+              ...(!isDashboardDrawerOpened && {
                 px: 2.75,
                 justifyContent: 'center',
                 '&:hover': { bgcolor: 'transparent' },
                 '&.Mui-selected': { '&:hover': { bgcolor: 'transparent' }, bgcolor: 'transparent' }
               })
             }}
-            {...(downLG && { onClick: () => handlerDrawerOpen(false) })}
+            {...(downLG && { onClick: () => setDashboardDrawerOpened(false) })}
           >
             {itemIcon && (
               <ListItemIcon
                 sx={{
                   minWidth: 38,
                   color: isSelected ? iconSelectedColor : textColor,
-                  ...(!drawerOpen &&
+                  ...(!isDashboardDrawerOpened &&
                     level === 1 && {
                       borderRadius: 1,
                       width: 46,
@@ -101,7 +101,7 @@ export default function NavItem({ item, level, isParents = false }) {
                       justifyContent: 'center',
                       '&:hover': { bgcolor: mode === ThemeMode.DARK ? 'secondary.light' : 'secondary.200' }
                     }),
-                  ...(!drawerOpen &&
+                  ...(!isDashboardDrawerOpened &&
                     isSelected && {
                       bgcolor: mode === ThemeMode.DARK ? 'secondary.100' : 'primary.lighter',
                       '&:hover': {
@@ -114,7 +114,7 @@ export default function NavItem({ item, level, isParents = false }) {
               </ListItemIcon>
             )}
 
-            {!itemIcon && drawerOpen && (
+            {!itemIcon && isDashboardDrawerOpened && (
               <ListItemIcon
                 sx={{
                   minWidth: 30
@@ -124,7 +124,7 @@ export default function NavItem({ item, level, isParents = false }) {
               </ListItemIcon>
             )}
 
-            {(drawerOpen || (!drawerOpen && level !== 1)) && (
+            {(isDashboardDrawerOpened || (!isDashboardDrawerOpened && level !== 1)) && (
               <ListItemText
                 primary={
                   <Typography variant="h6" sx={{ color: isSelected ? iconSelectedColor : textColor, fontWeight: isSelected ? 500 : 400 }}>
@@ -133,7 +133,7 @@ export default function NavItem({ item, level, isParents = false }) {
                 }
               />
             )}
-            {(drawerOpen || (!drawerOpen && level !== 1)) && item.chip && (
+            {(isDashboardDrawerOpened || (!isDashboardDrawerOpened && level !== 1)) && item.chip && (
               <Chip
                 color={item.chip.color}
                 variant={item.chip.variant}
@@ -143,7 +143,7 @@ export default function NavItem({ item, level, isParents = false }) {
               />
             )}
           </ListItemButton>
-          {(drawerOpen || (!drawerOpen && level !== 1)) &&
+          {(isDashboardDrawerOpened || (!isDashboardDrawerOpened && level !== 1)) &&
             item?.actions &&
             item?.actions.map((action, index) => {
               const ActionIcon = action?.icon;
@@ -208,7 +208,7 @@ export default function NavItem({ item, level, isParents = false }) {
             <ListItemIcon
               sx={{
                 minWidth: 36,
-                ...(!drawerOpen && {
+                ...(!isDashboardDrawerOpened && {
                   borderRadius: 1,
                   width: 36,
                   height: 26,
@@ -216,7 +216,7 @@ export default function NavItem({ item, level, isParents = false }) {
                   justifyContent: 'flex-start',
                   '&:hover': { bgcolor: 'transparent' }
                 }),
-                ...(!drawerOpen && isSelected && { bgcolor: 'transparent', '&:hover': { bgcolor: 'transparent' } })
+                ...(!isDashboardDrawerOpened && isSelected && { bgcolor: 'transparent', '&:hover': { bgcolor: 'transparent' } })
               }}
             >
               {itemIcon}
@@ -230,7 +230,7 @@ export default function NavItem({ item, level, isParents = false }) {
               </Typography>
             }
           />
-          {(drawerOpen || (!drawerOpen && level !== 1)) && item.chip && (
+          {(isDashboardDrawerOpened || (!isDashboardDrawerOpened && level !== 1)) && item.chip && (
             <Chip
               color={item.chip.color}
               variant={item.chip.variant}
