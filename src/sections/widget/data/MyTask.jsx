@@ -20,24 +20,47 @@ import { Folder, Send2, TickCircle } from 'iconsax-react';
 
 // ===========================|| DATA WIDGET - MY TASK ||=========================== //
 
-export default function MyTask() {
+export default function MyTask({ leaveRes, userTasks }) {
   const [anchorEl, setAnchorEl] = useState(null);
-
   const open = Boolean(anchorEl);
 
-  const handleClick = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
+  const handleClick = (event) => setAnchorEl(event.currentTarget);
+  const handleClose = () => setAnchorEl(null);
 
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
+  console.log(leaveRes, userTasks);
+
+  // Combine feed (leave + tasks)
+  const feedItems = [
+    ...(leaveRes?.pendingLeaves || []).map((lv) => ({
+      id: lv._id,
+      title: `Leave Request: ${lv.reason}`,
+      subText: `${new Date(lv.startDate).toDateString()} → ${new Date(lv.endDate).toDateString()}`,
+      type: 'leave-pending',
+      status: lv.status
+    })),
+    ...(leaveRes?.approvedLeaves || []).map((lv) => ({
+      id: lv._id,
+      title: `Upcoming Leave: ${lv.reason}`,
+      subText: `${new Date(lv.startDate).toDateString()} → ${new Date(lv.endDate).toDateString()}`,
+      type: 'leave-approved',
+      status: lv.status
+    })),
+    ...(userTasks || []).map((task) => ({
+      id: task.id,
+      title: task.title,
+      subText: `Due Date: ${task.dueDate ? new Date(task.dueDate).toDateString() : 'No due date'}`,
+      type: 'task',
+      dueDate: task.dueDate,
+      priority: task.priority,
+      status: task.status
+    }))
+  ];
 
   return (
     <MainCard content={false}>
       <Box sx={{ p: 3, pb: 0 }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
-          <Typography variant="h5">My Task</Typography>
+          <Typography variant="h5">My Feed</Typography>
           <IconButton
             color="secondary"
             id="wallet-button"
@@ -63,69 +86,44 @@ export default function MyTask() {
           </Menu>
         </Stack>
       </Box>
+
       <List sx={{ '& .MuiListItem-root': { pl: 3 } }}>
-        <ListItem
-          divider
-          secondaryAction={
-            <IconButton aria-label="delete" color="success">
-              <TickCircle />
-            </IconButton>
-          }
-        >
-          <Stack>
-            <ListItemText primary={<Typography variant="subtitle1">Follow up client for feedback</Typography>} />
-            <Stack spacing={0.5}>
-              <Stack direction="row" alignItems="center" spacing={0.5}>
-                <Send2 size={12} />
-                <Typography>Sending report</Typography>
+        {feedItems.length === 0 ? (
+          <Typography sx={{ px: 3, py: 2, color: 'text.secondary' }}>No feeds available</Typography>
+        ) : (
+          feedItems.map((item,idx) => (
+            <ListItem
+              key={item.id}
+              divider={feedItems.length > 1 && idx < feedItems.length - 1}
+              secondaryAction={
+                <IconButton aria-label="mark-done" color={item.type == 'task' || item.type == 'leave-pending' ? 'secondary' : 'success'}>
+                  <TickCircle />
+                </IconButton>
+              }
+            >
+              <Stack>
+                <ListItemText
+                  primary={<Typography variant="subtitle1">{item.title}</Typography>}
+                  secondary={<Typography variant="body2" color="text.secondary">{item.subText}</Typography>}
+                />
+                <Stack spacing={0.5} direction="row" alignItems="center">
+                  {item.type == 'task' || item.type == 'leave-pending' ? (
+                    <Send2 size={12} />
+                  ) : (
+                    <Folder size={12} />
+                  )}
+                  <Typography>{item.status}</Typography>
+                  <Chip
+                    label={item.type == 'task' ? item.priority : item.status}
+                    color={item.type == 'task' || item.type == 'leave-pending' ? 'error' : 'success'}
+                    variant="filled"
+                    size="small"
+                  />
+                </Stack>
               </Stack>
-              <Box>
-                <Chip label="00 : 15" color="error" variant="filled" size="small" />
-              </Box>
-            </Stack>
-          </Stack>
-        </ListItem>
-        <ListItem
-          divider
-          secondaryAction={
-            <IconButton aria-label="delete" color="secondary">
-              <TickCircle />
-            </IconButton>
-          }
-        >
-          <Stack>
-            <ListItemText primary={<Typography variant="subtitle1">Follow up client for feedback</Typography>} />
-            <Stack spacing={0.5}>
-              <Stack direction="row" alignItems="center" spacing={0.5}>
-                <Folder size={12} />
-                <Typography>Received report</Typography>
-              </Stack>
-              <Box>
-                <Chip label="00 : 15" color="success" variant="filled" size="small" />
-              </Box>
-            </Stack>
-          </Stack>
-        </ListItem>
-        <ListItem
-          secondaryAction={
-            <IconButton aria-label="delete" color="secondary">
-              <TickCircle />
-            </IconButton>
-          }
-        >
-          <Stack>
-            <ListItemText primary={<Typography variant="subtitle1">Follow up client for feedback</Typography>} />
-            <Stack spacing={0.5}>
-              <Stack direction="row" alignItems="center" spacing={0.5}>
-                <Send2 size={12} />
-                <Typography>Sending report</Typography>
-              </Stack>
-              <Box>
-                <Chip label="00 : 15" color="error" variant="filled" size="small" />
-              </Box>
-            </Stack>
-          </Stack>
-        </ListItem>
+            </ListItem>
+          ))
+        )}
       </List>
     </MainCard>
   );

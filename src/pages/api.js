@@ -1,13 +1,10 @@
 import axios from 'axios';
 
-// Initialize axios instance
 const api = axios.create({
-  baseURL: 'http://localhost:4000/', // https://kk-back-end-kappa.vercel.app/
+  baseURL: import.meta.env.VITE_APP_API_URL,
 });
 
-// Function to attach auth headers
 export const setAuthHeaders = (userData) => {
-  // Eject existing interceptor if needed or reset headers directly
   if (userData) {
     api.defaults.headers.common['user'] = JSON.stringify({
       _id: userData._id,
@@ -22,10 +19,8 @@ export const setAuthHeaders = (userData) => {
   }
 };
 
-// Request interceptor (for other URL checks)
 api.interceptors.request.use(
   (config) => {
-    // Check if the URL is Cloudinary or Google, then remove auth headers.
     if (
       config.url === 'https://api.cloudinary.com/v1_1/dnde4xq0y/image/upload' ||
       config.url === 'https://script.google.com/macros/s/AKfycbzroBYkyoKev_IxlEum8cRIt4UTNkE2A9hyLCtzlcRjLNpxI57oHogqa0FB-gcD8ra43A/exec'

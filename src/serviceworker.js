@@ -11,7 +11,6 @@ const FILES_TO_CACHE = [
   '/',
   '/index.html',
   '/offline.html',
-  // add other assets you want to precache here (e.g. CSS, JS, fonts)
 ];
 
 // INSTALL: Cache core assets

@@ -44,7 +44,6 @@ import MainCard from 'components/MainCard';
 import Avatar from 'components/@extended/Avatar';
 
 // Assets
-import defaultImages from 'assets/images/users/default.png';
 import api from 'pages/api';
 
 // -------------------------- Helper for Accessibility --------------------------
@@ -332,7 +331,7 @@ export default function ProfileTabsPage() {
 
         {/* Bills Info */}
         <Grid item xs={12} sm={7} md={8} xl={9}>
-          <MainCard title="Your Bills (As Salesman)">
+          <MainCard title="Created Estimates (As Salesman)">
             <Typography variant="subtitle1" sx={{ mb: 2 }}>
               Total Bills: {bills.length}
             </Typography>

@@ -1,14 +1,11 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
-import { preload } from 'swr';
 
 // material-ui
 import Grid from '@mui/material/Grid';
 import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
 import Stack from '@mui/material/Stack';
-import Link from '@mui/material/Link';
 import InputLabel from '@mui/material/InputLabel';
 import Typography from '@mui/material/Typography';
 import OutlinedInput from '@mui/material/OutlinedInput';
@@ -22,22 +19,20 @@ import { Formik } from 'formik';
 
 // project-imports
 import useAuth from 'hooks/useAuth';
-import useScriptRef from 'hooks/useScriptRef';
 import IconButton from 'components/@extended/IconButton';
 import AnimateButton from 'components/@extended/AnimateButton';
-import { fetcher } from 'utils/axios';
 
 // assets
 import { Eye, EyeSlash } from 'iconsax-react';
 import { openSnackbar } from 'api/snackbar';
+import { useNavigate } from 'react-router-dom';
 
-// ============================|| JWT - LOGIN ||============================ //
 
 export default function AuthLogin({ forgot }) {
   const [checked, setChecked] = useState(false);
+  const navigate = useNavigate();
 
   const { login } = useAuth();
-  const scriptedRef = useScriptRef();
 
   const [showPassword, setShowPassword] = useState(false);
   const handleClickShowPassword = () => {
@@ -63,28 +58,22 @@ export default function AuthLogin({ forgot }) {
         onSubmit={async (values, { setErrors, setStatus, setSubmitting }) => {
           try {
             await login(values.email, values.password);
-            // For debugging, bypass the scriptedRef check
             setStatus({ success: true });
             setSubmitting(false);
-            preload('/api/chart/dashboard/dashboard-stats', fetcher);
+            navigate('/dashboard/default' , { replace: true });
           } catch (err) {
-            console.error('Error in onSubmit:', err);
             const errorMsg =
               (err.response && err.response.data && err.response.data.message) ||
-              err.message ||
-              'An error occurred';
+              err.message || 'An error occurred';
             setErrors({ submit: errorMsg });
             setSubmitting(false);       
-
-                        // Show error snackbar
                         openSnackbar({
                           open: true,
                           message: errorMsg,
                           variant: 'alert',
                           alert: { color: 'error' },
-                         anchorOrigin: { vertical: 'top', horizontal: 'left' }, // Change position
-                         autoHideDuration: 6000 // Snackbar will disappear after 3 seconds
-            
+                         anchorOrigin: { vertical: 'top', horizontal: 'left' },
+                         autoHideDuration: 3000
                         });
           }
         }}
@@ -94,7 +83,7 @@ export default function AuthLogin({ forgot }) {
             <Grid container spacing={3}>
               <Grid item xs={12}>
                 <Stack spacing={1}>
-                  <InputLabel htmlFor="email-login">Email Address</InputLabel>
+                  <InputLabel htmlFor="email-login">User Id</InputLabel>
                   <OutlinedInput
                     id="email-login"
                     type="email"
@@ -161,19 +150,8 @@ export default function AuthLogin({ forgot }) {
                     }
                     label={<Typography variant="h6">Keep me sign in</Typography>}
                   />
-                  {/* <Link
-                    variant="h6"
-                    component={RouterLink}
-                    to={isLoggedIn && forgot ? forgot : '/forgot-password'}
-                    color="text.primary"
-                  >
-                    Forgot Password?
-                  </Link> */}
                 </Stack>
               </Grid>
-
-              {/* Wrap the error in a Grid item */}
-
 
               <Grid item xs={12}>
                 <AnimateButton>

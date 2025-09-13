@@ -41,7 +41,7 @@ export default function DropboxStorage() {
       <Grid container spacing={2}>
         <Grid item xs={12}>
           <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
-            <Typography variant="h5">Dropbox Storage</Typography>
+            <Typography variant="h5">Points Table</Typography>
             <Typography variant="h4">150GB</Typography>
           </Stack>
           <Avatar color="secondary" variant="rounded" sx={{ mt: 0.75, bgcolor: 'secondary.dark' }}>

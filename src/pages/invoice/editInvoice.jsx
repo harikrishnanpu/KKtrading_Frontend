@@ -186,35 +186,9 @@ const [printOptions, setPrintOptions] = useState({
   const [billingsuggestions, setBillingSuggestions] = useState([]);
   const [selectedBillingSuggestions, setSelectedBillingSuggestions] = useState();
 
-  /** BILLING SUGGESTIONS (for searching invoiceNo if no ID param is provided) */
-  useEffect(() => {
-    if (!id) {
-      const fetchSuggestions = async () => {
-        if (invoiceNo) {
-          try {
-            const response = await api.get(
-            `/api/billing/billing/suggestions?search=${invoiceNo}`
-            );
-            setBillingSuggestions(response.data);
-          } catch (err) {
-             console.error(err);
-  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
-  setShowErrorModal(false);        // reset so modal can reopen on same error
-  setShowErrorModal(true);
-          }
-        } else {
-          setBillingSuggestions([]);
-        }
-      };
-      fetchSuggestions();
-    }
-  }, [invoiceNo, id]);
 
     const generatecustomerid = async () => {
-      const { data } = await api.get('/api/billing/lastOrder/id');
-      const  lastCustomerNumber =
-      parseInt(data.lastCustomerId.slice(3), 10) || 0;
-     let Id = 'CUS' + (lastCustomerNumber + 1).toString().padStart(3, '0') + Date.now().toString().slice(5,10);
+     let Id = 'CUS' + Date.now().toString().slice(5,10);
      setCustomerId(Id);
     };
 
@@ -254,36 +228,73 @@ const [printOptions, setPrintOptions] = useState({
 
   // Fetch Salesmen and Accounts on Mount
   useEffect(() => {
-    const fetchSalesmen = async () => {
-      try {
-        const { data } = await api.get('/api/users/salesmen/all');
-        setSalesmen(data);
-      } catch (err) {
-         console.error(err);
-  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
-  setShowErrorModal(false);        // reset so modal can reopen on same error
-  setShowErrorModal(true);
-      }
-    };
+  const fetchInitialData = async () => {
+    setIsLoading(true);
+    try {
+      const [salesmenRes, accountsRes] = await Promise.all([
+        api.get('/api/users/salesmen/all'),
+        api.get('/api/accounts/allaccounts'),
+      ]);
 
-    const fetchAccounts = async () => {
-      setIsLoading(true);
-      try {
-        const response = await api.get('/api/accounts/allaccounts');
-        setAccounts(response.data);
-      } catch (err) {
-       console.error(err);
-  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
-  setShowErrorModal(false);        // reset so modal can reopen on same error
-  setShowErrorModal(true);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      setSalesmen(salesmenRes.data);
+      setAccounts(accountsRes.data);
 
-    fetchSalesmen();
-    fetchAccounts();
-  }, []);
+      if (id) {
+        // Fetch billing details after other data is loaded
+        const { data } = await api.get(`/api/billing/${id}`);
+        setInvoiceNo(data.invoiceNo);
+        setInvoiceDate(new Date(data.invoiceDate).toISOString().split('T')[0]);
+        setAmountReceived(parseFloat(data.billingAmountReceived));
+
+        const formattedExpectedDeliveryDate = new Date(data.expectedDeliveryDate).toISOString().slice(0, 16);
+        setExpectedDeliveryDate(formattedExpectedDeliveryDate);
+
+        setReceivedDate(new Date(data.paymentReceivedDate || new Date()).toISOString().split('T')[0]);
+        setDeliveryStatus(data.deliveryStatus);
+        setPaymentStatus(data.paymentStatus);
+        setCustomerName(data.customerName);
+        setCustomerAddress(data.customerAddress);
+        setCustomerContactNumber(data.customerContactNumber);
+        setCustomerId(data.customerId);
+        setMarketedBy(data.marketedBy);
+        setDiscount(parseFloat(data.discount) || 0);
+        setReceivedAmount(parseFloat(data.paymentAmount) || 0);
+        setUnloading(parseFloat(data.unloading) || 0);
+        setTransportation(parseFloat(data.transportation) || 0);
+        setHandlingCharge(parseFloat(data.handlingCharge) || 0);
+        setshowRoom(data.showroom);
+        setRoundOff(data.roundOff);
+        setRemark(data.remark);
+        setIsApproved(data.isApproved);
+        setNeededToPurchase(data.isneededToPurchase);
+        setroundOffMode(data.roundOffMode);
+
+        const selectedSalesman = salesmenRes.data.find((s) => s.name === data.salesmanName);
+        if (selectedSalesman && selectedSalesman.contactNumber) {
+          setSalesmanPhoneNumber(selectedSalesman.contactNumber);
+        } else {
+          setSalesmanPhoneNumber('');
+        }
+
+        const fetchedProducts = data.products.map((p) => ({
+          ...p,
+          quantity: parseFloat(p.quantity) || 0,
+          sellingPriceinQty: parseFloat(p.sellingPriceinQty) || 0,
+          gstRate: p.gstRate !== undefined ? parseFloat(p.gstRate) : 18,
+        }));
+        setProducts(fetchedProducts);
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
+      setShowErrorModal(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  fetchInitialData();
+}, [id]);
 
 
 
@@ -314,80 +325,6 @@ const [printOptions, setPrintOptions] = useState({
    }, [unit, selectedProduct]);
 
 
-
-  // Fetch Billing Details by ID
-  useEffect(() => {
-    const fetchBillingDetails = async () => {
-      setIsLoading(true);
-      try {
-        const { data } = await api.get(`/api/billing/${id}`);
-        setInvoiceNo(data.invoiceNo);
-        setInvoiceDate(new Date(data.invoiceDate).toISOString().split('T')[0]);
-        setAmountReceived(parseFloat(data.billingAmountReceived));
-
-        const formattedExpectedDeliveryDate = new Date(data.expectedDeliveryDate)
-          .toISOString()
-          .slice(0, 16);
-        setExpectedDeliveryDate(formattedExpectedDeliveryDate);
-
-        setReceivedDate(
-          new Date(data.paymentReceivedDate || new Date()).toISOString().split('T')[0]
-        );
-        setDeliveryStatus(data.deliveryStatus);
-        setPaymentStatus(data.paymentStatus);
-        setCustomerName(data.customerName);
-        setCustomerAddress(data.customerAddress);
-        setCustomerContactNumber(data.customerContactNumber);
-        setCustomerId(data.customerId);
-        setMarketedBy(data.marketedBy);
-        setDiscount(parseFloat(data.discount) || 0);
-        setReceivedAmount(parseFloat(data.paymentAmount) || 0);
-        setUnloading(parseFloat(data.unloading) || 0);
-        setTransportation(parseFloat(data.transportation) || 0);
-        setHandlingCharge(parseFloat(data.handlingCharge) || 0);
-        setshowRoom(data.showroom);
-        setRoundOff(data.roundOff);
-        setRemark(data.remark);
-        setIsApproved(data.isApproved);
-        setNeededToPurchase(data.isneededToPurchase);
-        setroundOffMode(data.roundOffMode)
-
-        console.log(data.products);
-        // Convert product numeric fields
-        const fetchedProducts = data.products.map((p) => ({
-          ...p,
-          quantity: parseFloat(p.quantity) || 0,
-          sellingPriceinQty: parseFloat(p.sellingPriceinQty) || 0,
-          // If there's a product-level GST in the DB, we keep it; otherwise default 18:
-          gstRate: p.gstRate !== undefined ? parseFloat(p.gstRate) : 18,
-        }));
-        setProducts(fetchedProducts);
-
-        setSalesmanName(data.salesmanName);
-
-        // If there's a matching salesman, set phone
-        const selectedSalesman = salesmen.find(
-          (s) => s.name === data.salesmanName
-        );
-        if (selectedSalesman && selectedSalesman.contactNumber) {
-          setSalesmanPhoneNumber(selectedSalesman.contactNumber);
-        } else {
-          setSalesmanPhoneNumber('');
-        }
-      } catch (err) {
-  console.error(err);
-  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
-  setShowErrorModal(false);        // reset so modal can reopen on same error
-  setShowErrorModal(true);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (id && salesmen.length > 0) {
-      fetchBillingDetails();
-    }
-  }, [id, salesmen]);
 
   // Fetch Suggestions for Item ID
   const itemIdChange = async (e) => {
@@ -1449,30 +1386,25 @@ const netTotal = rateWithoutGST + gstAmount;
                         <table className="table-auto w-full border-collapse rounded-xl shadow-md">
                           <thead>
                             <tr className="bg-red-500 text-white text-xs">
-                              <th className="px-2 py-2 text-left">
-                                <i className="fa fa-cube" aria-hidden="true"></i>{' '}
-                                Name
-                              </th>
-                              <th className='px-2 py-2 text-center'>Remark</th>
-                              <th className="px-2 py-2 text-center">Quantity</th>
-                              <th className="px-2 py-2 text-left">Unit</th>
-                              <th className="px-2 py-2 text-center">
-                                Selling Price
-                              </th>
-                              <th className="px-2 py-2 text-center">
-                                Qty (per Nos)
-                              </th>
-                              <th className="px-2 py-2 text-center">
-                                Rate
-                              </th>
-                              {/* NEW columns: GST% and GST Amt */}
-                              <th className="px-2 py-2 text-center">GST %</th>
-                              <th className="px-2 py-2 text-center">GST Amt</th>
-                              <th className="px-2 py-2 text-center">Discount</th>
-                              <th className="px-2 py-2 text-left">Net Total</th>
-                              <th className="px-2 py-2 text-center">
-                                <i className="fa fa-trash" aria-hidden="true"></i>
-                              </th>
+                                    <th className="px-2 py-2 text-left" style={{ minWidth: '10px' }}>
+           Sl.
+          </th>
+                                    <th className="px-2 py-2 text-left" style={{ minWidth: '150px' }}>
+            <i className="fa fa-cube" aria-hidden="true" /> Name
+          </th>
+          <th className="px-2 py-2 text-center" style={{ minWidth: '80px' }}>Remark</th>
+          <th className="px-2 py-2 text-center" style={{ minWidth: '80px' }}>Quantity</th>
+          <th className="px-2 py-2 text-left" style={{ minWidth: '60px' }}>Unit</th>
+          <th className="px-2 py-2 text-center" style={{ minWidth: '100px' }}>Selling Price</th>
+          <th className="px-2 py-2 text-center" style={{ minWidth: '80px' }}>Qty (per Nos)</th>
+          <th className="px-2 py-2 text-center" style={{ minWidth: '100px' }}>Rate</th>
+          <th className="px-2 py-2 text-center" style={{ minWidth: '40px' }}>GST %</th>
+          <th className="px-2 py-2 text-center" style={{ minWidth: '50px' }}>GST Amt</th>
+          <th className="px-2 py-2 text-center" style={{ minWidth: '90px' }}>Discount</th>
+          <th className="px-2 py-2 text-left" style={{ minWidth: '100px' }}>Net Total</th>
+          <th className="px-2 py-2 text-center" style={{ minWidth: '40px' }}>
+            <i className="fa fa-trash" aria-hidden="true" />
+          </th>
                             </tr>
                           </thead>
                           <tbody className="divide-x">
@@ -1516,117 +1448,72 @@ const netTotal = rateWithoutGST + gstAmount;
 
 
                                 return (
-                                  <tr
-                                    key={index}
-                                    className={`divide-x ${
-                                      index % 2 === 0 ? 'bg-gray-100' : 'bg-white'
-                                    } border-b hover:bg-red-50 transition duration-150`}
-                                  >
-                                    <td className="px-4 py-4 text-xs font-medium">
-                                      {product.name} - {product.item_id}
-                                    </td>
-                                    <td className="px-2 py-2 text-center text-xs">
-                                      <input
-                                        type="text"
-                                        value={product.itemRemark}
-                                        onChange={(e) =>
-                                          handleEditProduct(
-                                            index,
-                                            'itemRemark',
-                                            e.target.value
-                                          )
-                                        }
-                                        className="w-16 text-center px-2 py-1 border rounded-md"
-                                      />
-                                    </td>
-                                    <td className="px-2 py-2 text-center text-xs">
-                                      <input
-                                        type="number"
-                                        min={1}
-                                        value={product.enteredQty}
-                                        onChange={(e) =>
-                                          handleEditProduct(
-                                            index,
-                                            'enteredQty',
-                                            e.target.value
-                                          )
-                                        }
-                                        className="w-16 text-center px-2 py-1 border rounded-md"
-                                      />
-                                    </td>
-                                    <td className="px-2 py-2 text-xs">
-                                      {product.unit}
-                                    </td>
-                                    <td className="px-2 py-2 text-xs text-center">
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        value={product.sellingPrice}
-                                        onChange={(e) =>
-                                          handleEditProduct(
-                                            index,
-                                            'sellingPrice',
-                                            e.target.value
-                                          )
-                                        }
-                                        className="w-16 text-center px-2 py-1 border rounded-md"
-                                      />
-                                      <p className="text-center mt-2">
-                                        {product.unit === 'NOS'
-                                          ? '(NOS)'
-                                          : '(SQFT)'}
-                                      </p>
-                                    </td>
-                                    <td className="px-2 py-2 text-center text-xs">
-                                      {product.quantity.toFixed(2)}
-                                    </td>
-                                    <td className="px-2 py-2 text-xs">
-                                      ₹{parseFloat(rateWithoutGST).toFixed(2)}
-                                    </td>
-                                    {/* GST% */}
-                                    <td className="px-2 py-2 text-xs text-center">
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        value={product.gstRate}
-                                        onChange={(e) =>
-                                          handleEditProduct(
-                                            index,
-                                            'gstRate',
-                                            e.target.value
-                                          )
-                                        }
-                                        className="w-16 text-center px-2 py-1 border rounded-md"
-                                      />
-                                    </td>
-                                    {/* GST Amt */}
-
-                                    {/* Base Total */}
-                                    {/* <td className="px-2 py-2 text-xs">
-                                      ₹{baseTotal.toFixed(2)}
-                                    </td> */}
-<td> ₹{gstAmount.toFixed(2)}</td>
-              <td> ₹{itemDiscount.toFixed(2)}</td>
-<td>₹{netTotal.toFixed(2)}</td>
-                                    <td className="px-3 py-2 text-xs text-center">
-                                      <button
-                                        onClick={() => {
-                                          if (
-                                            window.confirm(
-                                              `Are you sure you want to delete ${product.name} from the bill?`
-                                            )
-                                          )
-                                            deleteProduct(index);
-                                        }}
-                                        className="text-red-500 font-bold hover:text-red-700"
-                                      >
-                                        <i
-                                          className="fa fa-trash"
-                                          aria-hidden="true"
-                                        ></i>
-                                      </button>
-                                    </td>
-                                  </tr>
+ <tr key={index} className="divide-x text-center border-b hover:bg-red-50 transition duration-150">
+                  <td className="px-2 py-2 text-xs font-medium" style={{ maxWidth: '10px' }}>
+                  {products.length - index}
+                </td>
+                <td className="px-2 py-2 text-xs font-medium" style={{ maxWidth: '350px', whiteSpace: 'normal' }}>
+                  {product.name} - {product.item_id}
+                </td>
+                <td className="px-2 py-2 text-center text-xs">
+                  <input
+                    type="text"
+                    value={product.itemRemark}
+                    onChange={(e) => handleEditProduct(index, 'itemRemark', e.target.value)}
+                    className="w-full text-center px-2 py-1 border rounded-md"
+                  />
+                </td>
+                <td className="px-2 py-2 text-center text-xs">
+                  <input
+                    type="number"
+                    min={1}
+                    value={product.enteredQty}
+                    onChange={(e) => handleEditProduct(index, 'enteredQty', e.target.value)}
+                    className="w-full text-center px-2 py-1 border rounded-md"
+                  />
+                </td>
+                <td className="px-2 py-2 text-xs">{product.unit}</td>
+                <td className="px-2 py-2 text-xs text-center">
+                  <input
+                    type="number"
+                    min={0}
+                    value={product.sellingPrice}
+                    onChange={(e) => handleEditProduct(index, 'sellingPrice', e.target.value)}
+                    className="w-full text-center px-2 py-1 border rounded-md"
+                  />
+                  <p className="text-center mt-2">
+                    {product.unit == 'NOS' ? '(NOS)' : '(SQFT)'}
+                  </p>
+                </td>
+                <td className="px-2 py-2 text-center text-xs">
+                  {product.quantity.toFixed(2)}
+                </td>
+                <td className="px-2 py-2 text-xs">₹{parseFloat(rateWithoutGST).toFixed(2)}</td>
+                <td className="px-2 py-2 text-xs text-center">
+                  <input
+                    type="number"
+                    min={0}
+                    value={product.gstRate}
+                    onChange={(e) => handleEditProduct(index, 'gstRate', e.target.value)}
+                    className="w-full text-center px-2 py-1 border rounded-md"
+                  />
+                </td>
+                <td>₹{gstAmount.toFixed(2)}</td>
+                <td>₹{itemDiscount.toFixed(2)}</td>
+                <td>₹{netTotal.toFixed(2)}</td>
+                <td className="px-3 py-2 text-xs text-center">
+                  <button
+                    onClick={() => {
+                      if (window.confirm(`Are you sure you want to delete ${product.name} from the bill?`)) {
+                        deleteProduct(index);
+                      }
+                    }}
+                    className="text-red-500 font-bold hover:text-red-700"
+                  >
+                    <i className="fa fa-trash" aria-hidden="true" />
+                  </button>
+                </td>
+              </tr>
                                 );
                               })}
                           </tbody>
@@ -2388,7 +2275,7 @@ const netTotal = rateWithoutGST + gstAmount;
       </div>
 
       {/* Success Modal */}
-      {showSuccessModal && <SuccessModal page="edit_invoice" message="Bill Edited Successfully!" />}
+      {showSuccessModal && <SuccessModal page="edit_invoice" message="Edited Successfully!" />}
 
       {/* Summary Modal */}
       {showSummaryModal && (

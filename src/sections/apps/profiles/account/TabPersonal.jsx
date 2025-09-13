@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
@@ -18,20 +17,14 @@ import CircularProgress from '@mui/material/CircularProgress';
 // project-imports
 import Avatar from 'components/@extended/Avatar';
 import MainCard from 'components/MainCard';
-import { ThemeMode, facebookColor, linkedInColor } from 'config';
-import { Apple, Camera, Facebook, Google } from 'iconsax-react';
+import { ThemeMode, } from 'config';
+import { Camera } from 'iconsax-react';
 import useAuth from 'hooks/useAuth';
 import api from 'pages/api';
 
 const ITEM_HEIGHT = 48;
 const ITEM_PADDING_TOP = 8;
-const MenuProps = {
-  PaperProps: {
-    style: {
-      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
-    },
-  },
-};
+
 
 export default function TabPersonal() {
   const theme = useTheme();
@@ -46,7 +39,7 @@ export default function TabPersonal() {
   const [formValues, setFormValues] = useState({
     name: '',
     email: '',
-    password: '', // password field remains empty unless updating
+    password: '',
     role: '',
     contactNumber: '',
     personal_email: '',
@@ -71,7 +64,7 @@ export default function TabPersonal() {
         setFormValues({
           name: data.name || '',
           email: data.email || '',
-          password: '', // do not preload password
+          password: '',
           role: data.role || '',
           contactNumber: data.contactNumber || '',
           personal_email: data.personal_email || '',

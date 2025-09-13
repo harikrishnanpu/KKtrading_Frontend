@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAliveController } from 'react-activation';
 import { useNavigate } from 'react-router-dom';
 
@@ -22,15 +22,6 @@ function deriveLabelFromPath(path) {
   return formatted.join(' ').slice(0,18);
 }
 
-
-/**
- * Removes just the `_ts` parameter from a URL string so we can compare
- * the "base path" ignoring `_ts`.
- *
- * Examples:
- *   "/users?_ts=12345" => "/users"
- *   "/users?foo=bar&_ts=555" => "/users?foo=bar"
- */
 function stripTimestamp(url = '') {
   const [base, queryString] = url.split('?');
   if (!queryString) return base;
@@ -44,8 +35,6 @@ function stripTimestamp(url = '') {
 
 export const TabsProvider = ({ children }) => {
   const navigate = useNavigate();
-
-  // Each tab = { path, label }
   const [tabs, setTabs] = useState([]);
   const [activeTab, setActiveTab] = useState(null);
   const { drop } = useAliveController();
@@ -58,9 +47,8 @@ export const TabsProvider = ({ children }) => {
       '/tasks/board','/calendar', '/chat','/products', '/customer' , '/supplier' , '/transport'
     ];
   
-    // If the path matches, force reload by clearing cache and bypassing navigation
-    if (reloadRoutes.some(substr => path.includes(substr)) || path === '/products/upcomming/lowstock') {
-      drop(path); // Clear cached content of the route
+    if (reloadRoutes.some(substr => path.includes(substr))) {
+      drop(path);
       navigate(path, { replace: true });
       return;
     }
@@ -88,10 +76,7 @@ export const TabsProvider = ({ children }) => {
     navigate(newPath);
   };
   
-  
-
-  // 2) SWITCH to an existing tab by exact path
-  const switchTab = (path) => {
+    const switchTab = (path) => {
     setActiveTab(path);
     navigate(path);
   };
@@ -136,9 +121,6 @@ export const TabsProvider = ({ children }) => {
     navigate(newPath, { replace: true });
   };
 
-  // 6) DUPLICATE a tab
-  //    To avoid "ignoring _ts" conflict, add an extra "dup=..." param
-  //    so it's truly recognized as a different base path.
   const duplicateTab = (path) => {
     // Remove _ts from the original path, keep other params
     const baseIgnoringTs = stripTimestamp(path);

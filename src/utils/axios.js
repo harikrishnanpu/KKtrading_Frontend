@@ -17,23 +17,19 @@ axiosServices.interceptors.request.use(
   }
 );
 
-axiosServices.interceptors.response.use(
-  (response) => response,
+axiosServices.interceptors.response.use((response) => response,
   (error) => {
     if (error.response.status === 401 && !window.location.href.includes('/login')) {
       window.location.pathname = '/login';
     }
     return Promise.reject((error.response && error.response.data) || 'Wrong Services');
-  }
-);
+});
 
 export default axiosServices;
 
 export const fetcher = async (args) => {
   const [url, config] = Array.isArray(args) ? args : [args];
-
   const res = await axiosServices.get(url, { ...config });
-
   return res.data;
 };
 

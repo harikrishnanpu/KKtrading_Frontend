@@ -10,22 +10,10 @@ import Typography from '@mui/material/Typography';
 export default function Footer() {
   return (
     <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: '24px 16px 0px', mt: 'auto' }}>
-      <Typography variant="caption">&copy;  KK Trading 0.0.1</Typography>
+      <Typography variant="caption">&copy;  KK Trading {import.meta.env.VITE_APP_VERSION}</Typography>
       <Stack spacing={1.5} direction="row" justifyContent="space-between" alignItems="center">
-        <Link component={RouterLink} to="/" target="_blank" variant="caption" color="text.primary">
-          Home
-        </Link>
-        <Link
-          component={RouterLink}
-          to="#"
-          target="_blank"
-          variant="caption"
-          color="text.primary"
-        >
-          Documentation
-        </Link>
-        <Link component={RouterLink} to="#" target="_blank" variant="caption" color="text.primary">
-          Support
+        <Link component={RouterLink} to="tel:7994211778" variant="caption" color="text.primary">
+          Contact Support
         </Link>
       </Stack>
     </Stack>

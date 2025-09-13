@@ -50,7 +50,6 @@ import { styled } from '@mui/material/styles';
 
 // Your custom API instance
 import api from 'pages/api';
-import useAuth from 'hooks/useAuth';
 import { TickCircle } from 'iconsax-react';
 
 // Styled DataGrid
@@ -90,7 +89,6 @@ export default function UserListScreen() {
     setActiveTab(newValue);
   };
 
-  const {user} = useAuth();
 
   // =====================================
   // =========== USERS TAB STATE =========
@@ -426,16 +424,25 @@ export default function UserListScreen() {
   };
 
   // Show "Edit Leave" dialog
-  const openEditDialog = (leave) => {
-    setDialogMode('edit');
-    setEditLeaveId(leave.id);
-    setSelectedUserId(leave.userId || ''); // from the row
-    setReason(leave.reason);
-    setStartDate(leave.startDate.split('T')[0]);
-    setEndDate(leave.endDate.split('T')[0]);
-    setLeaveErrorMessage('');
-    setOpenDialog(true);
+const openEditDialog = (leave) => {
+  setDialogMode('edit');
+  setEditLeaveId(leave.id);
+  setSelectedUserId(leave.userId || '');
+  setReason(leave.reason);
+
+
+  const formatDateTime = (dateString) => {
+    const dt = new Date(dateString);
+    const iso = dt.toISOString();
+    return iso.substring(0, 16);
   };
+
+  setStartDate(formatDateTime(leave.startDate));
+  setEndDate(formatDateTime(leave.endDate));
+  setLeaveErrorMessage('');
+  setOpenDialog(true);
+};
+
 
   const closeDialog = () => {
     setOpenDialog(false);

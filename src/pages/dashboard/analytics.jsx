@@ -66,6 +66,7 @@ export default function DashboardAnalytics() {
           </Grid>
         </Grid>
       </Grid>
+      
       <Grid item xs={12} md={6}>
         <ProductOverview />
       </Grid>
