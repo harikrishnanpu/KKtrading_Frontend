@@ -268,6 +268,7 @@ const [printOptions, setPrintOptions] = useState({
         setIsApproved(data.isApproved);
         setNeededToPurchase(data.isneededToPurchase);
         setroundOffMode(data.roundOffMode);
+        setSalesmanName(data.salesmanName);
 
         const selectedSalesman = salesmenRes.data.find((s) => s.name === data.salesmanName);
         if (selectedSalesman && selectedSalesman.contactNumber) {
