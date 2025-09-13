@@ -31,13 +31,13 @@ const setSession = (serviceToken) => {
   }
 };
 
+
 const JWTContext = createContext(null);
 
 export const JWTProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
   useEffect(() => {
-
     const init = async () => {
       try {
         const serviceToken = localStorage.getItem('serviceToken');
@@ -69,6 +69,23 @@ export const JWTProvider = ({ children }) => {
 
     init();
   }, []);
+
+
+   const refreshUser = async () => {
+    try {
+      const response = await axios.get('/api/users/auth/check-token');
+      dispatch({
+        type: LOGIN,
+        payload: {
+          isLoggedIn: true,
+          user: response.data.user
+        }
+      });
+    } catch (err) {
+      console.error('Failed to refresh user:', err);
+      dispatch({ type: LOGOUT });
+    }
+  };
 
   const login = async (email, password) => {
     const response = await axios.post('/api/users/signin', { email, password });
@@ -118,7 +135,7 @@ export const JWTProvider = ({ children }) => {
     return <Loader />;
   }
 
-  return <JWTContext.Provider value={{ ...state, login, logout, register, resetPassword, updateProfile }}>{children}</JWTContext.Provider>;
+  return <JWTContext.Provider value={{ ...state, login, logout, register, resetPassword, updateProfile, refreshUser }}>{children}</JWTContext.Provider>;
 };
 
 export default JWTContext;

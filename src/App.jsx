@@ -7,12 +7,10 @@ import ThemeCustomization from 'themes';
 import Locales from 'components/Locales';
 import ScrollTop from 'components/ScrollTop';
 import Snackbar from 'components/@extended/Snackbar';
-
 // auth-provider
 import { JWTProvider as AuthProvider } from 'contexts/JWTContext';
 import { AliveScope } from 'react-activation';
 
-// ==============================|| APP - THEME, ROUTER, LOCAL  ||============================== //
 
 export default function App() {
   return (

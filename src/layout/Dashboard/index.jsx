@@ -74,6 +74,7 @@ export default function MainLayout() {
   if (menuMasterLoading) return <Loader />;
 
   const forceReloadRoutes = [
+    '/dashboard/default',
     '/list', '/all', '/account', '/need-to-purchase',
     '/delivery', '/registry', '/update', '/report', '/payment',
     '/products/upcomming/lowstock', '/default', '/transactions',

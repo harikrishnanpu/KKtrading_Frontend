@@ -501,9 +501,11 @@ const MainRoutes = {
     },
 
     {
+      path: '/',
       element: <RoleGuard  allowedRoles={['admin']} />,
       children: [
-        {
+        
+    {
       path: '/admin',
       element: <DashboardLayout />,
       children:[

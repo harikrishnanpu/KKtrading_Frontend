@@ -2,11 +2,12 @@
 import React, { useState, useEffect, useRef, forwardRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SuccessModal from 'components/invoice/SccessModal';
-import SummaryModal from 'components/invoice/SummaryModal';
 import api from '../api';
 import OutOfStockModal from 'components/invoice/itemAddingModal';
 import BillingSuccess from 'components/invoice/billingsuccess';
 import useAuth from 'hooks/useAuth';
+const SummaryModal = React.lazy(() => import('components/invoice/SummaryModal'));
+
 import { 
   Dialog,
   DialogTitle,
@@ -34,7 +35,6 @@ const Transition = forwardRef(function Transition(props, ref) {
 export default function BillingScreen() {
   const navigate = useNavigate();
 
-  // Billing Information States
   const [invoiceNo, setInvoiceNo] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(
     new Date().toISOString().substring(0, 10)
@@ -60,7 +60,6 @@ export default function BillingScreen() {
   const [remark, setRemark] = useState('');
   const [receivedDate, setReceivedDate] = useState(
     () => {
-      // Default to current local datetime in input's value format (YYYY-MM-DDTHH:MM)
       const now = new Date();
       return new Date(now.getTime() - now.getTimezoneOffset() * 60000)
         .toISOString()
@@ -73,8 +72,8 @@ const [errorMessage, setErrorMessage] = useState('');
   const [lastBillId, setLastBillId] = useState(null);
   const [itemName, setItemName] = useState('');
   const [itemCategory, setItemCategory] = useState('');
+  const [mobileViewItemQuantityInNos, setMobileViewItemQuantityInNos] = useState(0);
   const [itemBrand, setItemBrand] = useState('');
-  // Product Information States
   const [itemId, setItemId] = useState('');
   const [products, setProducts] = useState([]);
   const [error, setError] = useState('');
@@ -85,8 +84,6 @@ const [errorMessage, setErrorMessage] = useState('');
   const [unit, setUnit] = useState('SQFT');
   const [sellingPrice, setSellingPrice] = useState('');
   const [filterText, setFilterText] = useState('');
-  const [sqPrice, setSqPrice] = useState(0);
-  const [customerSq, setCustomerSQ] = useState(0);
   const [fetchQuantity, setFetchQuantity] = useState(0);
   const [showOutOfStockModal, setShowOutOfStockModal] = useState(false);
   const [outofStockProduct, setOutofstockProduct] = useState(null);
@@ -142,7 +139,6 @@ const [errorMessage, setErrorMessage] = useState('');
   const itemQuantityMobileRef = useRef();
   const outofStockRef = useRef();
   const itemUnitRef = useRef();
-  const itemUnitMobileRef = useRef();
   const sellingPriceRef = useRef();
   const sellingPriceMobileRef = useRef();
   const customerContactNumberRef = useRef();
@@ -199,39 +195,40 @@ const [printOptions, setPrintOptions] = useState({
     discountRef.current?.focus();
   }, [showSummaryModal]);
 
-  useEffect(() => {
-    const fetchSalesmen = async () => {
-      try {
-        const { data } = await api.get('/api/users/salesmen/all'); // Adjust the API endpoint as needed
-        setSalesmen(data);
-      } catch (err) {
-  console.error(err);
-  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
-  setShowErrorModal(false);        // reset so modal can reopen on same error
-  setShowErrorModal(true);
-      }
-    };
+useEffect(() => {
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const [salesmenRes, accountsRes, lastBillRes] = await Promise.all([
+        api.get('/api/users/salesmen/all'),
+        api.get('/api/accounts/allaccounts'),
+        api.get('/api/billing/lastOrder/id'),
+      ]);
 
-    const fetchAccounts = async () => {
+      setSalesmen(salesmenRes.data);
+      setAccounts(accountsRes.data);
+
+      const lastInvoiceNumber = parseInt(lastBillRes.data.lastInvoice.slice(2), 10) || 0;
+      const nextInvoiceNo = 'KK' + (lastInvoiceNumber + 1).toString().padStart(2, '0');
+
+      setLastBillId(lastBillRes.data.lastInvoice);
+      setCustomerId(
+        'CUS' + (parseInt(lastBillRes.data.lastCustomerId.slice(3), 10) || 0) + 1
+      );
+      setInvoiceNo(nextInvoiceNo);
+    } catch (err) {
+      console.error(err);
+      setErrorMessage(
+        err.response?.data?.message || err.message || 'Unexpected error'
+      );
+      setShowErrorModal(true);
+    } finally {
       setIsLoading(false);
-      setIsLoading(true); // Set loading state
-      try {
-        const response = await api.get('/api/accounts/allaccounts');
-        setAccounts(response.data); // Set the accounts in state
-      } catch (err) {
-  console.error(err);
-  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
-  setShowErrorModal(false);        // reset so modal can reopen on same error
-  setShowErrorModal(true);
+    }
+  };
 
-      } finally {
-        setIsLoading(false); // Stop loading
-      }
-    };
-
-    fetchAccounts();
-    fetchSalesmen();
-  }, []);
+  fetchData();
+}, []);
 
   // Handle Salesman Selection
   const handleSalesmanChange = (e) => {
@@ -275,7 +272,6 @@ const [printOptions, setPrintOptions] = useState({
 
     // Provide feedback to the user
     setError('');
-    alert('Billing data and products cleared successfully.');
     setSaveModal(false);
   };
 
@@ -356,46 +352,8 @@ const [printOptions, setPrintOptions] = useState({
     loadSavedProducts();
   }, []);
 
-  // Fetch Last Bill ID on Mount
-  useEffect(() => {
-    const fetchLastBill = async () => {
-      setIsLoading(false);
-      setIsLoading(true);
-      try {
-        const { data } = await api.get('/api/billing/lastOrder/id');
-
-        // Generate the next invoice number
-        const lastInvoiceNumber = parseInt(data.lastInvoice.slice(2), 10) || 0; // Extract the number part after "KK"
-        const nextInvoiceNo =
-          'KK' + (lastInvoiceNumber + 1).toString().padStart(2, '0'); // Ensures at least two digits
-
-        // Generate the next customer ID
-       const  lastCustomerNumber =
-          parseInt(data.lastCustomerId.slice(3), 10) || 0; // Extract the number part after "CUS"
-        const nextCustomer =
-          'CUS' + (lastCustomerNumber + 1).toString().padStart(3, '0') + Date.now().toString().slice(5,10); // Ensures at least three digits
-
-        setLastBillId(data.lastInvoice);
-        setCustomerId(nextCustomer);
-        setInvoiceNo(nextInvoiceNo);
-      } catch (err) {
-  console.error(err);
-  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
-  setShowErrorModal(false);        // reset so modal can reopen on same error
-  setShowErrorModal(true);
-
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchLastBill();
-  }, []);
-
   const generatecustomerid = async () => {
-    const { data } = await api.get('/api/billing/lastOrder/id');
-    const  lastCustomerNumber =
-    parseInt(data.lastCustomerId.slice(3), 10) || 0;
-   let Id = 'CUS' + (lastCustomerNumber + 1).toString().padStart(3, '0') + Date.now().toString().slice(5,10);
+   let Id = 'CUS'  + Date.now().toString().slice(5,10);
    setCustomerId(Id);
   };
 
@@ -407,18 +365,18 @@ const [printOptions, setPrintOptions] = useState({
           parseFloat(quantity) *
           parseFloat(selectedProduct.length * selectedProduct.breadth)
         ).toFixed(2);
-        setFetchQuantity(adjustedquantity);
+        setFetchQuantity(adjustedquantity || 0);
         setQuantity(0);
       } else if (unit === 'BOX') {
         const quantity = selectedProduct.countInStock;
         const adjustedquantity = (
           parseFloat(quantity) / parseFloat(selectedProduct.psRatio)
         ).toFixed(2);
-        setFetchQuantity(adjustedquantity);
+        setFetchQuantity(adjustedquantity || 0);
         setQuantity(0);
       } else {
         const quantity = selectedProduct.countInStock;
-        setFetchQuantity(quantity);
+        setFetchQuantity(quantity || 0);
         setQuantity(0);
       }
     }
@@ -509,7 +467,6 @@ const handleproductUpdate = async (
   try {
     setIsLoading(true);
 
-    /* 1️⃣  hit the unified update route */
     const res = await api.put(`/api/products/update-stock/${product._id}`, {
       newQty: qty,
       userName:     userInfo.name,
@@ -585,7 +542,7 @@ const handleproductUpdate = async (
       const adjustedquantity = (
         parseFloat(quantity) * parseFloat(data.length * data.breadth)
       ).toFixed(2);
-      setFetchQuantity(adjustedquantity);
+      setFetchQuantity(adjustedquantity || 0);
       setSuggestions([]);
       itemNameRef.current?.focus();
     } catch (err) {
@@ -598,6 +555,43 @@ const handleproductUpdate = async (
     }
   };
 
+
+  useEffect(()=>{
+
+    if(!selectedProduct) return;
+
+    const parsedQuantity = parseFloat(quantity);
+    if(isNaN(parsedQuantity) || parsedQuantity <= 0){
+      setMobileViewItemQuantityInNos(0);
+      return;
+    } 
+
+    const productLength = parseFloat(selectedProduct.length || 0);
+    const productBreadth = parseFloat(selectedProduct.breadth || 0);
+    const productSize = parseFloat(selectedProduct.size || 0);
+    const productPsRatio = parseFloat(selectedProduct.psRatio || 0);
+
+    let adjustedQuantity = parsedQuantity;
+
+    if (unit === 'SQFT' && productLength && productBreadth) {
+      const area = productLength * productBreadth;
+      if (area > 0) {
+        adjustedQuantity = parsedQuantity / area;
+      }
+    } else if (
+      unit === 'BOX' &&
+      productSize &&
+      productPsRatio &&
+      productLength &&
+      productBreadth
+    ) {
+      adjustedQuantity = parsedQuantity * productPsRatio;
+    }
+
+    setMobileViewItemQuantityInNos(parseFloat(adjustedQuantity.toFixed(2)));
+
+  },[selectedProduct,quantity])
+
   // Handle Adding Product with Quantity and Selling Price
   const handleAddProductWithQuantity = () => {
     // Check if a product is selected
@@ -606,28 +600,24 @@ const handleproductUpdate = async (
       return;
     }
 
-    // Validate quantity
     const parsedQuantity = parseFloat(quantity);
     if (isNaN(parsedQuantity) || parsedQuantity <= 0) {
       setError('Please enter a valid quantity.');
       return;
     }
 
-    // Validate selling price
     const parsedSellingPrice = parseFloat(sellingPrice);
     if (isNaN(parsedSellingPrice) || parsedSellingPrice <= 0) {
       setError('Please enter a valid selling price.');
       return;
     }
 
-    // Validate GST% (from our new gstRateInput)
     const parsedGstRate = parseFloat(gstRateInput);
     if (isNaN(parsedGstRate) || parsedGstRate < 0) {
       setError('Please enter a valid GST%');
       return;
     }
 
-    // Extract product details for calculations
     const productLength = parseFloat(selectedProduct.length || 0);
     const productBreadth = parseFloat(selectedProduct.breadth || 0);
     const productSize = parseFloat(selectedProduct.size || 0);
@@ -636,7 +626,6 @@ const handleproductUpdate = async (
     let adjustedQuantity = parsedQuantity;
     let adjustedSellingPrice = parsedSellingPrice;
 
-    // Calculate Adjusted Quantity and Selling Price based on the Unit
     if (unit === 'SQFT' && productLength && productBreadth) {
       const area = productLength * productBreadth;
       if (area > 0) {
@@ -1653,33 +1642,28 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
                       <table className="table-auto w-full border-collapse rounded-xl shadow-md">
                           <thead>
                             <tr className="bg-red-500 text-white text-xs">
-                              <th className="px-2 py-2 text-left">
-                                <i className="fa fa-cube" aria-hidden="true"></i>{' '}
-                                Name
-                              </th>
-                              <th className="px-2 py-2 text-center">Remark</th>
-                              <th className="px-2 py-2 text-center">Quantity</th>
-                              <th className="px-2 py-2 text-left">Unit</th>
-                              <th className="px-2 py-2 text-center">
-                                Selling Price
-                              </th>
-                              <th className="px-2 py-2 text-center">
-                                Qty (per Nos)
-                              </th>
-                              <th className="px-2 py-2 text-center">
-                                Rate
-                              </th>
-                              {/* NEW columns: GST% and GST Amt */}
-                              <th className="px-2 py-2 text-center">GST %</th>
-                              <th className="px-2 py-2 text-center">GST Amt</th>
-                              <th className="px-2 py-2 text-center">Discount</th>
-                              <th className="px-2 py-2 text-left">Net Total</th>
-                              <th className="px-2 py-2 text-center">
-                                <i className="fa fa-trash" aria-hidden="true"></i>
-                              </th>
+          <th className="px-2 py-2 text-left" style={{ minWidth: '10px' }}>
+           Sl.
+          </th>
+                                    <th className="px-2 py-2 text-left" style={{ minWidth: '150px' }}>
+            <i className="fa fa-cube" aria-hidden="true" /> Name
+          </th>
+          <th className="px-2 py-2 text-center" style={{ minWidth: '80px' }}>Remark</th>
+          <th className="px-2 py-2 text-center" style={{ minWidth: '80px' }}>Quantity</th>
+          <th className="px-2 py-2 text-left" style={{ minWidth: '60px' }}>Unit</th>
+          <th className="px-2 py-2 text-center" style={{ minWidth: '100px' }}>Selling Price</th>
+          <th className="px-2 py-2 text-center" style={{ minWidth: '80px' }}>Qty (per Nos)</th>
+          <th className="px-2 py-2 text-center" style={{ minWidth: '100px' }}>Rate</th>
+          <th className="px-2 py-2 text-center" style={{ minWidth: '40px' }}>GST %</th>
+          <th className="px-2 py-2 text-center" style={{ minWidth: '50px' }}>GST Amt</th>
+          <th className="px-2 py-2 text-center" style={{ minWidth: '90px' }}>Discount</th>
+          <th className="px-2 py-2 text-left" style={{ minWidth: '100px' }}>Net Total</th>
+          <th className="px-2 py-2 text-center" style={{ minWidth: '40px' }}>
+            <i className="fa fa-trash" aria-hidden="true" />
+          </th>
                             </tr>
                           </thead>
-                          <tbody className="divide-x">
+                          <tbody className="divide-x text-center">
                             {products
                               .filter(
                                 (p) =>
@@ -1719,119 +1703,72 @@ const netTotal = rateWithoutGST + gstAmount;
 
 
                                 return (
-                                  <tr
-                                    key={index}
-                                    className={`divide-x ${
-                                      index % 2 === 0 ? 'bg-gray-100' : 'bg-white'
-                                    } border-b hover:bg-red-50 transition duration-150`}
-                                  >
-                                    <td className="px-4 py-4 text-xs font-medium">
-                                      {product.name} - {product.item_id}
-                                    </td>
-                                    
-                                    <td className="px-2 py-2 text-center text-xs">
-                                      <input
-                                        type="text"
-                                        value={product.itemRemark}
-                                        onChange={(e) =>
-                                          handleEditProduct(
-                                            index,
-                                            'itemRemark',
-                                            e.target.value
-                                          )
-                                        }
-                                        className="w-16 text-center px-2 py-1 border rounded-md"
-                                      />
-                                    </td>
-
-                                    <td className="px-2 py-2 text-center text-xs">
-                                      <input
-                                        type="number"
-                                        min={1}
-                                        value={product.enteredQty}
-                                        onChange={(e) =>
-                                          handleEditProduct(
-                                            index,
-                                            'enteredQty',
-                                            e.target.value
-                                          )
-                                        }
-                                        className="w-16 text-center px-2 py-1 border rounded-md"
-                                      />
-                                    </td>
-                                    <td className="px-2 py-2 text-xs">
-                                      {product.unit}
-                                    </td>
-                                    <td className="px-2 py-2 text-xs text-center">
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        value={product.sellingPrice}
-                                        onChange={(e) =>
-                                          handleEditProduct(
-                                            index,
-                                            'sellingPrice',
-                                            e.target.value
-                                          )
-                                        }
-                                        className="w-16 text-center px-2 py-1 border rounded-md"
-                                      />
-                                      <p className="text-center mt-2">
-                                        {product.unit === 'NOS'
-                                          ? '(NOS)'
-                                          : '(SQFT)'}
-                                      </p>
-                                    </td>
-                                    <td className="px-2 py-2 text-center text-xs">
-                                      {product.quantity.toFixed(2)}
-                                    </td>
-                                    <td className="px-2 py-2 text-xs">
-                                      ₹{parseFloat(rateWithoutGST).toFixed(2)}
-                                    </td>
-                                    {/* GST% */}
-                                    <td className="px-2 py-2 text-xs text-center">
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        value={product.gstRate}
-                                        onChange={(e) =>
-                                          handleEditProduct(
-                                            index,
-                                            'gstRate',
-                                            e.target.value
-                                          )
-                                        }
-                                        className="w-16 text-center px-2 py-1 border rounded-md"
-                                      />
-                                    </td>
-                                    {/* GST Amt */}
-
-                                    {/* Base Total */}
-                                    {/* <td className="px-2 py-2 text-xs">
-                                      ₹{baseTotal.toFixed(2)}
-                                    </td> */}
-<td> ₹{gstAmount.toFixed(2)}</td>
-              <td> ₹{itemDiscount.toFixed(2)}</td>
-<td>₹{netTotal.toFixed(2)}</td>
-                                    <td className="px-3 py-2 text-xs text-center">
-                                      <button
-                                        onClick={() => {
-                                          if (
-                                            window.confirm(
-                                              `Are you sure you want to delete ${product.name} from the bill?`
-                                            )
-                                          )
-                                            deleteProduct(index);
-                                        }}
-                                        className="text-red-500 font-bold hover:text-red-700"
-                                      >
-                                        <i
-                                          className="fa fa-trash"
-                                          aria-hidden="true"
-                                        ></i>
-                                      </button>
-                                    </td>
-                                  </tr>
+ <tr key={index} className="divide-x text-center border-b hover:bg-red-50 transition duration-150">
+                  <td className="px-2 py-2 text-xs font-medium" style={{ maxWidth: '10px' }}>
+                  {products.length - index}
+                </td>
+                <td className="px-2 py-2 text-xs font-medium" style={{ maxWidth: '350px', whiteSpace: 'normal' }}>
+                  {product.name} - {product.item_id}
+                </td>
+                <td className="px-2 py-2 text-center text-xs">
+                  <input
+                    type="text"
+                    value={product.itemRemark}
+                    onChange={(e) => handleEditProduct(index, 'itemRemark', e.target.value)}
+                    className="w-full text-center px-2 py-1 border rounded-md"
+                  />
+                </td>
+                <td className="px-2 py-2 text-center text-xs">
+                  <input
+                    type="number"
+                    min={1}
+                    value={product.enteredQty}
+                    onChange={(e) => handleEditProduct(index, 'enteredQty', e.target.value)}
+                    className="w-full text-center px-2 py-1 border rounded-md"
+                  />
+                </td>
+                <td className="px-2 py-2 text-xs">{product.unit}</td>
+                <td className="px-2 py-2 text-xs text-center">
+                  <input
+                    type="number"
+                    min={0}
+                    value={product.sellingPrice}
+                    onChange={(e) => handleEditProduct(index, 'sellingPrice', e.target.value)}
+                    className="w-full text-center px-2 py-1 border rounded-md"
+                  />
+                  <p className="text-center mt-2">
+                    {product.unit == 'NOS' ? '(NOS)' : '(SQFT)'}
+                  </p>
+                </td>
+                <td className="px-2 py-2 text-center text-xs">
+                  {product.quantity.toFixed(2)}
+                </td>
+                <td className="px-2 py-2 text-xs">₹{parseFloat(rateWithoutGST).toFixed(2)}</td>
+                <td className="px-2 py-2 text-xs text-center">
+                  <input
+                    type="number"
+                    min={0}
+                    value={product.gstRate}
+                    onChange={(e) => handleEditProduct(index, 'gstRate', e.target.value)}
+                    className="w-full text-center px-2 py-1 border rounded-md"
+                  />
+                </td>
+                <td>₹{gstAmount.toFixed(2)}</td>
+                <td>₹{itemDiscount.toFixed(2)}</td>
+                <td>₹{netTotal.toFixed(2)}</td>
+                <td className="px-3 py-2 text-xs text-center">
+                  <button
+                    onClick={() => {
+                      if (window.confirm(`Are you sure you want to delete ${product.name} from the bill?`)) {
+                        deleteProduct(index);
+                      }
+                    }}
+                    className="text-red-500 font-bold hover:text-red-700"
+                  >
+                    <i className="fa fa-trash" aria-hidden="true" />
+                  </button>
+                </td>
+              </tr>
                                 );
                               })}
                           </tbody>
@@ -2243,7 +2180,7 @@ const netTotal = rateWithoutGST + gstAmount;
                           : 'text-red-700'
                       }`}
                     >
-                      In stock: {fetchQuantity || 'error'} {unit}
+                      In stock: {fetchQuantity} {unit}
                     </p>
                     <div className="mb-2">
                       <label className="block text-xs mb-1 text-gray-700">Quantity</label>
@@ -2272,6 +2209,14 @@ const netTotal = rateWithoutGST + gstAmount;
                           <option value="TNOS">Tiles NOS</option>
                         </select>
                       </div>
+                    </div>
+                  <div className="flex mb-2 mt-2 justify-between items-center">
+                                  <span className="text-xs font-semibold">
+                                    Quantity in ( Nos ):
+                                  </span>
+<p className={`text-xs font-bold ${Number.isInteger(mobileViewItemQuantityInNos) && mobileViewItemQuantityInNos > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                    {mobileViewItemQuantityInNos} NOS
+                                  </p>
                     </div>
                     <div className="mb-2">
                       <label className="block text-xs mb-1 text-gray-700">

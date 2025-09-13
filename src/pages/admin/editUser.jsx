@@ -2,16 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from 'pages/api';
 
-// Optional: If you have your own loading and message components, import them
-// import LoadingBox from '../components/LoadingBox';
-// import MessageBox from '../components/MessageBox';
-
 export default function UserEditScreen() {
   const navigate = useNavigate();
   const { id: userId } = useParams();
-
-  // Example: If you store token locally after signin:
-  // const userInfo = JSON.parse(localStorage.getItem('userInfo')) || null;
 
   // Form States (mapping to your user schema)
   const [name, setName] = useState('');
@@ -45,8 +38,9 @@ export default function UserEditScreen() {
   const paymentMethodRef = React.useRef();
 
 
-    useEffect(() => {
 
+
+    useEffect(() => {
       const fetchAccounts = async () => {
         try {
           const response = await api.get('/api/accounts/allaccounts');

@@ -12,10 +12,15 @@ import { ThemeMode } from 'config';
 // assets
 import { ArrowSwapHorizontal } from 'iconsax-react';
 import useAuth from 'hooks/useAuth';
+import { useEffect } from 'react';
 
 export default function SwitchBalanace() {
   const theme = useTheme();
-  const {user} = useAuth();
+  const {user, refreshUser} = useAuth();
+
+  useEffect(()=>{
+    refreshUser();
+  },[])
 
   return (
     <MainCard

@@ -269,11 +269,6 @@ export default function SearchScreen() {
             <div className="p-4 pt-6 lg:pt-0 bg-white lg:bg-transparent">
               <h2 className="text-lg font-bold mb-4">Filters</h2>
 
-              {/* Search Box */}
-              <div className="mb-4">
-                <SearchBox />
-              </div>
-
               {/* Category Filter */}
               <div className="mb-4">
                 <h3 className="font-bold mb-2">Category</h3>

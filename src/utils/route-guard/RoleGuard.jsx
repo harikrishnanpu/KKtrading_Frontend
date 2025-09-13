@@ -1,6 +1,4 @@
-// utils/route-guard/RoleGuard.tsx
 import { Navigate, Outlet } from 'react-router-dom';
-import PropTypes from 'prop-types';
 import useAuth from 'hooks/useAuth';
 
 const RoleGuard = ({ allowedRoles }) => {
@@ -26,8 +24,5 @@ const RoleGuard = ({ allowedRoles }) => {
   return <Outlet />;
 };
 
-RoleGuard.propTypes = {
-  allowedRoles: PropTypes.arrayOf(PropTypes.string).isRequired
-};
 
 export default RoleGuard;

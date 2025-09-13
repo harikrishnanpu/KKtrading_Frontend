@@ -1,6 +1,4 @@
-// utils/route-guard/LoginGuard.tsx
 import { Navigate, Outlet } from 'react-router-dom';
-import PropTypes from 'prop-types';
 import useAuth from 'hooks/useAuth';
 
 const LoginGuard = () => {
@@ -15,10 +13,6 @@ const LoginGuard = () => {
 }
 
 return <Outlet />;
-};
-
-LoginGuard.propTypes = {
-  allowedRoles: PropTypes.arrayOf(PropTypes.string).isRequired
 };
 
 export default LoginGuard;
