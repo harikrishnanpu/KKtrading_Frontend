@@ -3,12 +3,22 @@ import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import useAuth from 'hooks/useAuth';
 import { setAuthHeaders } from 'pages/api';
+import { useAliveController } from 'react-activation'; 
 
 
 export default function AuthGuard({ children }) {
   const { isLoggedIn, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { dropScope } = useAliveController(); 
+
+    useEffect(() => {
+    if (!sessionStorage.getItem('appReloaded')) {
+      sessionStorage.setItem('appReloaded', 'true');
+      dropScope();
+      console.log('Cache cleared after full reload');
+    }
+  }, [dropScope]);
 
   useEffect(() => {
     if (user) {
