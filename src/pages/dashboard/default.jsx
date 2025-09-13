@@ -25,14 +25,8 @@ import CloseIcon from '@mui/icons-material/Close';
 // API + auth
 import api from 'pages/api';
 import useAuth from 'hooks/useAuth';
-import PaymentHistory from 'sections/widget/data/PaymentHistory';
-import ProjectAnalytics from 'sections/widget/chart/ProjectAnalytics';
-import ProductOverview from 'sections/widget/chart/ProductOverview';
-import LanguagesSupport from 'sections/widget/chart/LanguagesSupport';
-import EcommerceIncome from 'sections/widget/chart/EcommerceIncome';
-import DropboxStorage from 'sections/widget/statistics/DropboxStorage';
+import MyTask from 'sections/widget/data/MyTask';
 import SwitchBalanace from 'sections/widget/statistics/SwitchBalanace';
-import Visitors from 'sections/widget/chart/Visitors';
 
 // fade-in keyframes for skeletons
 const fadeIn = keyframes`
@@ -342,7 +336,12 @@ let filteredLeaves = leavesRes.data.filter((lv) => {
       </Grid>
 
 
-      <Grid item xs={12}>
+      <Grid container item xs={12} spacing={2}>
+      <Grid item xs={12} sm={6}>
+              <MyTask />
+        </Grid>
+
+      <Grid item xs={12} sm={6}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -420,6 +419,7 @@ let filteredLeaves = leavesRes.data.filter((lv) => {
             </Grid>
           </MainCard>
         </motion.div>
+      </Grid>
       </Grid>
 
       <Grid item xs={12}>
