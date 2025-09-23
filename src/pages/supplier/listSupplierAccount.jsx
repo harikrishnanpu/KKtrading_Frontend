@@ -1113,12 +1113,6 @@ const SupplierAccountList = () => {
                           >
                             <i className="fa fa-eye" />
                           </button>
-                          <button
-                            onClick={() => generatePDF(acc)}
-                            className="bg-red-500 text-white px-1 py-1 rounded hover:bg-red-600"
-                          >
-                            <i className="fa fa-file-pdf-o" />
-                          </button>
                           {userInfo?.isSuper && (
                             <button
                               onClick={() => handleRemove(acc._id)}
@@ -1172,12 +1166,6 @@ const SupplierAccountList = () => {
                       className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
                     >
                       <i className="fa fa-eye" />
-                    </button>
-                    <button
-                      onClick={() => generatePDF(acc)}
-                      className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
-                    >
-                      <i className="fa fa-file" />
                     </button>
                     {userInfo?.isSuper && (
                       <button

@@ -50,7 +50,6 @@ export default function DashboardDefault() {
   const theme = useTheme();
   const { user } = useAuth();
 
-  const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -89,8 +88,6 @@ export default function DashboardDefault() {
       }
 
       // Fetch user info
-      const userRes = await api.get(`/api/users/${user._id}`);
-      setUserData(userRes.data);
 
       const billsRes = await api.get(
                 `/api/billing/bill/profile?salesmanName=${encodeURIComponent(user.name)}`
@@ -128,7 +125,7 @@ export default function DashboardDefault() {
       if (dialogMode === 'add') {
         await api.post('/api/leaves', {
           userId: user._id,
-          userName: userData?.name,
+          userName: user?.name,
           reason,
           startDate,
           endDate
@@ -185,7 +182,7 @@ export default function DashboardDefault() {
   };
 
   // --- LOADING SKELETON ---
-  if (loading && !userData) {
+  if (loading && !user) {
     return (
       <Grid container rowSpacing={4.5} columnSpacing={2.75} sx={{ p: 3 }}>
         <Grid item xs={12}>

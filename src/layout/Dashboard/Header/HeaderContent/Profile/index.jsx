@@ -28,8 +28,7 @@ import { ThemeMode } from 'config';
 import useAuth from 'hooks/useAuth';
 
 // assets
-import { Setting2, Profile, Logout } from 'iconsax-react';
-import api from 'pages/api';
+import {  Profile, Logout } from 'iconsax-react';
 
 // tab panel wrapper
 function TabPanel({ children, value, index, ...other }) {
@@ -59,7 +58,6 @@ function a11yProps(index) {
 export default function ProfilePage() {
   const theme = useTheme();
   const navigate = useNavigate();
-  const [avatar, setAvatar] = useState();
 
   const { logout, user } = useAuth();
   const handleLogout = async () => {
@@ -74,22 +72,6 @@ export default function ProfilePage() {
       console.error(err);
     }
   };
-
-  useEffect(()=>{
-   async function  fetch(){
-
-     if(user){
-       const { data } = await api.get(`/api/users/${user._id}`);
-       if(data.error){
-         console.error(data.error);
-        }else{
-          setAvatar(data.avatar);
-        }
-      }
-    }
-
-    fetch();
-  },[user]);
 
   const anchorRef = useRef(null);
   const [open, setOpen] = useState(false);
@@ -128,7 +110,7 @@ export default function ProfilePage() {
         aria-haspopup="true"
         onClick={handleToggle}
       >
-        <Avatar alt="profile user" src={avatar} />
+        <Avatar alt="profile user" src={user.avatar} />
       </ButtonBase>
       <Popper
         placement="bottom-end"
@@ -157,7 +139,7 @@ export default function ProfilePage() {
                     <Grid container justifyContent="space-between" alignItems="center">
                       <Grid item>
                         <Stack direction="row" spacing={1.25} alignItems="center">
-                          <Avatar alt="profile user" src={avatar} />
+                          <Avatar alt="profile user" src={user.avatar} />
                           <Stack>
                             <Typography variant="subtitle1">{user?.name}</Typography>
                             <Typography variant="body2" color="secondary">
