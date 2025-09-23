@@ -1,15 +1,13 @@
-// src/components/SupplierAccountEdit.js
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import api from '../api'; // Ensure this is correctly set up to handle API requests
+import api from '../api';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import useAuth from 'hooks/useAuth';
 
 const SupplierAccountEdit = () => {
   const navigate = useNavigate();
-  const { id } = useParams(); // Get the supplier account ID from the URL
+  const { id } = useParams();
   const [sellerId, setsellerId] = useState('');
   const [sellerName, setsellerName] = useState('');
   const [sellerAddress, setsellerAddress] = useState('');
@@ -19,19 +17,21 @@ const SupplierAccountEdit = () => {
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const [paymentAccounts, setPaymentAccounts] = useState([]); // Added to store payment accounts
-
-
+  const [paymentAccounts, setPaymentAccounts] = useState([]);
   const { user: userInfo } = useAuth();
 
-  // Refs for managing focus
   const sellerIdRef = useRef();
   const sellerNameRef = useRef();
   const supplierContactRef = useRef();
   const billRefs = useRef([]);
   const paymentRefs = useRef([]);
 
-  // Fetch existing supplier account data
+  useEffect(() => {
+    fetchSupplierAccount();
+    fetchAccounts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
   const fetchSupplierAccount = async () => {
     setLoading(true);
     try {
@@ -40,45 +40,38 @@ const SupplierAccountEdit = () => {
       setsellerId(account.sellerId);
       setsellerName(account.sellerName);
       setsellerAddress(account.sellerAddress);
-      setBills(account.bills);
-      setPayments(account.payments);
+      setBills(account.bills || []);
+      setPayments(account.payments || []);
     } catch (err) {
       setError('Failed to fetch supplier account data.');
-      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-
   const fetchAccounts = async () => {
-    setLoading(true);
     try {
       const response = await api.get('/api/accounts/allaccounts');
       setPaymentAccounts(response.data);
     } catch (err) {
       setError('Failed to fetch payment accounts.');
-      console.error(err);
-    } finally {
-      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchSupplierAccount();
-    fetchAccounts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
-
-  // Handlers for bills
+  // Bill handlers
   const handleBillChange = (index, field, value) => {
     const updatedBills = [...bills];
+    if (field === 'billAmount' || field === 'cashPart') {
+      value = parseFloat(value);
+      if (isNaN(value) || value < 0) value = 0;
+      value = Number(value.toFixed(2)); // keep 2 decimals
+    }
     updatedBills[index][field] = value;
     setBills(updatedBills);
   };
 
   const addBill = () => {
-    setBills([...bills, { invoiceNo: '', billAmount: '', cashPart: '', invoiceDate: '', remark: '' }]);
+    setBills([...bills, { invoiceNo: '', billAmount: 0, cashPart: 0, invoiceDate: '', remark: '' }]);
   };
 
   const removeBill = (index) => {
@@ -86,18 +79,20 @@ const SupplierAccountEdit = () => {
     setBills(updatedBills);
   };
 
-  // Handlers for payments
+  // Payment handlers
   const handlePaymentChange = (index, field, value) => {
     const updatedPayments = [...payments];
+    if (field === 'amount') {
+      value = parseFloat(value);
+      if (isNaN(value) || value < 0) value = 0;
+      value = Number(value.toFixed(2));
+    }
     updatedPayments[index][field] = value;
     setPayments(updatedPayments);
   };
 
   const addPayment = () => {
-    setPayments([
-      ...payments,
-      { amount: '', date: '', method: '', submittedBy: '', remark: '' },
-    ]);
+    setPayments([...payments, { amount: 0, date: '', method: '', submittedBy: userInfo._id, remark: '' }]);
   };
 
   const removePayment = (index) => {
@@ -105,148 +100,73 @@ const SupplierAccountEdit = () => {
     setPayments(updatedPayments);
   };
 
-  // Function to handle Enter key navigation
-  function changeRef(e, nextRef) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      nextRef.current?.focus();
-    }
-  }
-
-  // Validation before submission
   const validateForm = () => {
-    if (!sellerId.trim()) {
-      setError('Supplier ID is required.');
-      return false;
-    }
+    if (!sellerId.trim()) { setError('Supplier ID is required.'); return false; }
+    if (!sellerName.trim()) { setError('Supplier Name is required.'); return false; }
+    if (!sellerAddress.trim()) { setError('Supplier Contact Number is required.'); return false; }
 
-    if (!sellerName.trim()) {
-      setError('Supplier Name is required.');
-      return false;
-    }
-
-    if (!sellerAddress.trim()) {
-      setError('Supplier Contact Number is required.');
-      return false;
-    }
-
-    // Validate Supplier Contact Number (10-digit number)
-    // const contactRegex = /^\d{10}$/;
-    // if (!contactRegex.test(sellerAddress.trim())) {
-    //   setError('Supplier Contact Number must be a 10-digit number.');
-    //   return false;
-    // }
-
-    // Validate bills
     for (let i = 0; i < bills.length; i++) {
       const bill = bills[i];
-      if (!bill.invoiceNo.trim()) {
-        setError(`Invoice Number is required for Bill ${i + 1}.`);
-        return false;
-      }
-      if (bill.billAmount === '' || isNaN(bill.billAmount) || Number(bill.billAmount) < 0) {
-        setError(`Valid Bill Amount is required for Bill ${i + 1}.`);
-        return false;
-      }
-      if (bill.invoiceDate && isNaN(Date.parse(bill.invoiceDate))) {
-        setError(`Valid Invoice Date is required for Bill ${i + 1}.`);
-        return false;
-      }
+      if (!bill.invoiceNo.trim()) { setError(`Invoice Number is required for Bill ${i + 1}.`); return false; }
+      if (bill.billAmount < 0) { setError(`Bill Amount must be non-negative for Bill ${i + 1}.`); return false; }
     }
 
-    // Check for duplicate invoice numbers within bills
-    const invoiceNos = bills.map((bill) => bill.invoiceNo.trim());
-    const uniqueInvoiceNos = new Set(invoiceNos);
-    if (invoiceNos.length !== uniqueInvoiceNos.size) {
-      setError('Duplicate invoice numbers within bills are not allowed.');
-      return false;
+    const invoiceNos = bills.map(b => b.invoiceNo.trim());
+    if (new Set(invoiceNos).size !== invoiceNos.length) { setError('Duplicate invoice numbers are not allowed.'); return false; }
+
+    for (let i = 0; i < payments.length; i++) {
+      const payment = payments[i];
+      if (payment.amount < 0) { setError(`Payment Amount must be non-negative for Payment ${i + 1}.`); return false; }
+      if (!payment.method) { setError(`Payment method is required for Payment ${i + 1}.`); return false; }
     }
 
-    // Validate payments
-    if(payments[0]?.amount > 0){
-
-      for (let i = 0; i < payments.length; i++) {
-        const payment = payments[i];
-        if (payment.amount === '' || isNaN(payment.amount) || Number(payment.amount) < 0) {
-          setError(`Valid Payment Amount is required for Payment ${i + 1}.`);
-          return false;
-        }
-        if (!payment.method) {
-          setError(`Payment method is required for Payment ${i + 1}.`);
-          return false;
-        }
-        if (payment.date && isNaN(Date.parse(payment.date))) {
-          setError(`Valid Payment Date is required for Payment ${i + 1}.`);
-          return false;
-        }
-      }
-      
-    }
     setError('');
     return true;
-
   };
 
-  // Handler for form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setFormSubmitting(true);
 
-    // Prepare payload
     const payload = {
       supplierId: sellerId.trim(),
       supplierName: sellerName.trim(),
       supplierAddress: sellerAddress.trim(),
-      bills: bills.map((bill) => ({
+      bills: bills.map(bill => ({
         invoiceNo: bill.invoiceNo.trim(),
-        billAmount: parseFloat(bill.billAmount.toFixed(2)),
-        cashPart: parseFloat(bill.cashPart),
+        billAmount: Number(bill.billAmount.toFixed(2)),
+        cashPart: Number(bill.cashPart.toFixed(2)),
         invoiceDate: bill.invoiceDate ? new Date(bill.invoiceDate) : new Date(),
         remark: bill.remark,
       })),
-      payments: payments.map((payment) => ({
-        amount: parseFloat(payment.amount || 0),
+      payments: payments.map(payment => ({
+        amount: Number(payment.amount.toFixed(2)),
         date: payment.date ? new Date(payment.date) : new Date(),
         submittedBy: payment.submittedBy || userInfo._id,
         remark: payment.remark,
         method: payment.method,
-      
-      
       })),
       userId: userInfo?._id,
     };
 
     try {
       const response = await api.put(`/api/seller/${id}/update`, payload);
-
       if (response.status === 200) {
         setSuccessMessage('Supplier account updated successfully.');
-        setError('');
-        // Optionally, redirect to the suppliers list after a delay
-        setTimeout(() => {
-          setSuccessMessage('');
-          navigate('/supplier/account');
-        }, 2000);
+        setTimeout(() => { navigate('/supplier/account'); }, 2000);
       } else {
         setError('Failed to update supplier account. Please try again.');
-        setSuccessMessage('');
       }
-    } catch (error) {
-      const errorMsg =
-        error.response?.data?.message ||
-        'Failed to update supplier account. Please try again.';
-      setError(errorMsg);
-      setSuccessMessage('');
-      console.error(error);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update supplier account.');
+      console.error(err);
     } finally {
       setFormSubmitting(false);
     }
   };
+
 
   // Rendering Skeletons
   const renderSkeleton = () => {

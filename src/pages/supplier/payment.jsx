@@ -1,6 +1,5 @@
 // src/screens/EditSellerPaymentPage.js
 import React, { useState, useEffect, useRef, forwardRef } from "react";
-import { useNavigate } from "react-router-dom";
 import api from "../api"; // Adjust the import path as necessary
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
@@ -31,7 +30,6 @@ const EditSellerPaymentPage = () => {
   const [paymentDate, setPaymentDate] = useState("");
   const [remark, setRemark] = useState("");
   const [remarkType, setRemarkType] = useState("CASH"); // "CASH" or "BILL"
-  const [remainingAmount, setRemainingAmount] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -39,7 +37,9 @@ const EditSellerPaymentPage = () => {
   const [accounts, setAccounts] = useState([]);
   const [addPaymentModal, setAddPaymentModal] = useState(false);
   const [activeSection, setActiveSection] = useState("home");
-  const navigate = useNavigate();
+  const [maxAllowedAmount, setMaxAllowedAmount] = useState(0);
+
+
   const { user: userInfo } = useAuth();
 
   const sellerNameRef = useRef();
@@ -102,7 +102,6 @@ const EditSellerPaymentPage = () => {
         throw new Error("Invalid supplier response");
       }
       setSupplierDetails(response.data);
-      setRemainingAmount(response.data.totalPendingAmount ?? 0);
     } catch (error) {
       console.error("Error fetching supplier:", error);
       setErrorMessage("Error fetching supplier details.");
@@ -112,6 +111,7 @@ const EditSellerPaymentPage = () => {
       setIsLoading(false);
     }
   };
+
   
 
   // Handle Add Payment action
@@ -129,12 +129,18 @@ const EditSellerPaymentPage = () => {
       setTimeout(() => setShowErrorModal(false), 3000);
       return;
     }
-    if (Number(paymentAmount) > remainingAmount) {
-      setErrorMessage("Payment amount cannot exceed the remaining amount.");
-      setShowErrorModal(true);
-      setTimeout(() => setShowErrorModal(false), 3000);
-      return;
-    }
+
+ if (Number(paymentAmount) > maxAllowedAmount) {
+  setErrorMessage(
+    `Payment amount cannot exceed the pending ${remarkType} part (₹${maxAllowedAmount.toFixed(
+      2
+    )}).`
+  );
+  setShowErrorModal(true);
+  setTimeout(() => setShowErrorModal(false), 3000);
+  return;
+}
+
     setIsLoading(true);
     try {
       // Build final remark based on the selected type (CASH or BILL)
@@ -198,16 +204,12 @@ const EditSellerPaymentPage = () => {
     }
   };
 
-  // Shortcuts for pending amounts if needed
-  const cashPartPending =
-  supplierDetails?.totalCashPart && supplierDetails?.totalCashPartGiven
-    ? supplierDetails.totalCashPart - supplierDetails.totalCashPartGiven
-    : 0;
-
-const billPartPending =
-  supplierDetails?.totalBillPart && supplierDetails?.totalBillPartGiven
-    ? supplierDetails.totalBillPart - supplierDetails.totalBillPartGiven
-    : 0;
+  
+  useEffect(() => {
+  const cashPartPending = supplierDetails?.totalCashPart - supplierDetails?.totalCashPartGiven;
+  const billPartPending =  supplierDetails?.totalBillPart - supplierDetails?.totalBillPartGiven;
+  setMaxAllowedAmount(remarkType == "CASH" ? cashPartPending : billPartPending);
+}, [remarkType,supplierDetails]);
 
 
   return (
@@ -528,12 +530,12 @@ const billPartPending =
 
           {/* Error and Success Alerts */}
           {showErrorModal && (
-            <div className="fixed top-4 right-4 bg-red-500 text-white p-3 rounded-md shadow-md animate-slideIn">
+            <div className="fixed top-36 right-20 bg-red-500 text-white p-3 rounded-md shadow-md animate-slideIn">
               <p className="text-xs">{errorMessage}</p>
             </div>
           )}
           {showSuccessModal && (
-            <div className="fixed top-4 right-4 bg-green-500 text-white p-3 rounded-md shadow-md animate-slideIn">
+            <div className="fixed top-36 right-20 bg-green-500 text-white p-3 rounded-md shadow-md animate-slideIn">
               <p className="text-xs">{successMessage}</p>
             </div>
           )}
@@ -577,20 +579,19 @@ const billPartPending =
                   <label className="block text-xs font-bold text-gray-500 mb-1">
                     Payment Amount
                   </label>
-                  <input
-                    type="number"
-                    value={paymentAmount}
-                    onChange={(e) =>
-                      setPaymentAmount(
-                        e.target.value > remainingAmount
-                          ? remainingAmount
-                          : e.target.value
-                      )
-                    }
-                    max={remainingAmount}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-red-300 focus:ring-red-300 text-xs"
-                    placeholder={`Max: ₹${remainingAmount.toFixed(2)}`}
-                  />
+<input
+  type="number"
+  value={paymentAmount}
+  onChange={(e) =>
+    setPaymentAmount(
+      e.target.value > maxAllowedAmount ? maxAllowedAmount : e.target.value
+    )
+  }
+  max={maxAllowedAmount}
+  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-red-300 focus:ring-red-300 text-xs"
+  placeholder={`Max: ₹${maxAllowedAmount.toFixed(2)}`}
+/>
+
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-500 mb-1">
@@ -601,11 +602,11 @@ const billPartPending =
                     onChange={(e) => setPaymentMethod(e.target.value)}
                     className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
                   >
-                    {accounts.map((acc) => (
-                      <option key={acc.accountId} value={acc.accountId}>
-                        {acc.accountName}
-                      </option>
-                    ))}
+                    {accounts.map((account, index) => (
+                <option className='flex justify-between gap-30' key={index} value={account.accountId}>
+                  <span>{account.accountName}</span> <span className={`ml-auto ${Number(account.balanceAmount) > 0 ? 'text-green-500' : 'text-red-500'}`}> Balance: {account.balanceAmount.toFixed(2)}</span>
+                </option>
+              ))}
                   </select>
                 </div>
                 <div>

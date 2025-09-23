@@ -14,7 +14,7 @@ const RoleGuard = ({ allowedRoles }) => {
 
   
   if(allowedRoles){
-    const hasAccess = user.role && allowedRoles.includes(user.role);  
+    const hasAccess = ( user.role && allowedRoles.includes(user.role) ) || ( allowedRoles.includes('admin') && user.isAdmin );  
     if (!hasAccess) {
       return <Navigate to="/unauthorized" replace />;
     }

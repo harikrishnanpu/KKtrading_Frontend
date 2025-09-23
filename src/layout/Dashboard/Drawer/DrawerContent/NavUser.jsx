@@ -20,7 +20,6 @@ import useAuth from 'hooks/useAuth';
 // assets
 import { ArrowRight2 } from 'iconsax-react';
 
-import api from 'pages/api';
 import { useDrawer } from 'hooks/useDrawerState';
 
 const ExpandMore = styled(IconButton, { shouldForwardProp: (prop) => prop !== 'theme' && prop !== 'expand' && prop !== 'drawerOpen' })(
@@ -44,36 +43,10 @@ const ExpandMore = styled(IconButton, { shouldForwardProp: (prop) => prop !== 't
 export default function UserList() {
   const theme = useTheme();
   const navigate = useNavigate();
-  const [avatar, setAvatar] = useState();
   
   const { isDashboardDrawerOpened, setDashboardDrawerOpened } = useDrawer();
   
   const { logout, user } = useAuth();
-
-useEffect(() => {
-  let isMounted = true;
-
-  const fetchUser = async () => {
-    if (user) {
-      try {
-        const { data } = await api.get(`/api/users/${user._id}`);
-        if (!data.error && isMounted) {
-          setAvatar(data.avatar);
-        } else if (data.error) {
-          console.error(data.error);
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    }
-  };
-
-  fetchUser();
-
-  return () => {
-    isMounted = false;
-  };
-}, [user]);
 
   
   const handleLogout = async () => {
@@ -125,7 +98,7 @@ useEffect(() => {
           }}
         >
           <ListItemAvatar>
-            <Avatar alt="Avatar" src={avatar} sx={{ ...(isDashboardDrawerOpened && { width: 46, height: 46 }) }} />
+            <Avatar alt="Avatar" src={user.avatar} sx={{ ...(isDashboardDrawerOpened && { width: 46, height: 46 }) }} />
           </ListItemAvatar>
           <ListItemText primary={user?.name} sx={{ ...(!isDashboardDrawerOpened && { display: 'none' }) }} secondary={user.role} />
         </ListItem>
