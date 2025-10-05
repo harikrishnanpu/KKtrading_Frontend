@@ -741,7 +741,6 @@ export default function PurchasePage() {
       setLoading(true);
       const returnData = await api.post("/api/products/purchase", purchaseData);
       setReturnInvoice(returnData.data);
-      alert("Purchase submitted successfully!");
       // Reset form fields
       setCurrentStep(1);
       setSellerId("");

@@ -1,5 +1,5 @@
 // src/screens/BillingScreen.jsx
-import React, { useState, useEffect, useRef, forwardRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SuccessModal from 'components/invoice/SccessModal';
 import api from '../api';
@@ -183,6 +183,27 @@ const [printOptions, setPrintOptions] = useState({
 });
 
 
+const handleError = useCallback((err) => {
+  console.error(err);
+  const message = err.response?.data?.message || err.message || 'Unexpected error';
+  setErrorMessage(message);
+  setShowErrorModal(false);
+  setTimeout(() => setShowErrorModal(true), 10);
+}, []);
+
+
+const withLoading = useCallback(async (asyncFn) => {
+  setIsLoading(true);
+  try {
+    await asyncFn();
+  } catch (err) {
+    handleError(err);
+  } finally {
+    setIsLoading(false);
+  }
+}, [handleError]);
+
+
   useEffect(() => {
     if (error) {
       setTimeout(() => {
@@ -195,10 +216,8 @@ const [printOptions, setPrintOptions] = useState({
     discountRef.current?.focus();
   }, [showSummaryModal]);
 
-useEffect(() => {
-  const fetchData = async () => {
-    setIsLoading(true);
-    try {
+useEffect(async () => {
+    await withLoading(async () => {
       const [salesmenRes, accountsRes, lastBillRes] = await Promise.all([
         api.get('/api/users/salesmen/all'),
         api.get('/api/accounts/allaccounts'),
@@ -216,18 +235,7 @@ useEffect(() => {
         'CUS' + (parseInt(lastBillRes.data.lastCustomerId.slice(3), 10) || 0) + 1
       );
       setInvoiceNo(nextInvoiceNo);
-    } catch (err) {
-      console.error(err);
-      setErrorMessage(
-        err.response?.data?.message || err.message || 'Unexpected error'
-      );
-      setShowErrorModal(true);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  fetchData();
+    })
 }, []);
 
   // Handle Salesman Selection
@@ -464,9 +472,7 @@ const handleproductUpdate = async (
   product,                 
   needToPurchaseFlag,             
 ) => {
-  try {
-    setIsLoading(true);
-
+    await withLoading(async () => {
     const res = await api.put(`/api/products/update-stock/${product._id}`, {
       newQty: qty,
       userName:     userInfo.name,
@@ -482,24 +488,15 @@ const handleproductUpdate = async (
         ? "Recorded as need-to-purchase ✅"
         : "Stock updated successfully ✅"
     );
-  } catch (err) {
-    console.error(err);
-    setErrorMessage(
-      err.response?.data?.message || err.message || "Unexpected error"
-    );
-    setShowErrorModal(true);
-  } finally {
-    setIsLoading(false);
-  }
+
+  })
+
 };
 
 
   // Add Product by Selecting from Suggestions
   const addProductByItemId = async (product) => {
-    setIsLoading(false);
-    setIsLoading(true);
-    setError('');
-    try {
+      await withLoading(async () => {
       const { data } = await api.get(`/api/products/itemId/${product.item_id}`);
 
       setSelectedProduct(data);
@@ -545,14 +542,7 @@ const handleproductUpdate = async (
       setFetchQuantity(adjustedquantity || 0);
       setSuggestions([]);
       itemNameRef.current?.focus();
-    } catch (err) {
-  console.error(err);
-  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
-  setShowErrorModal(false);        // reset so modal can reopen on same error
-  setShowErrorModal(true);
-    } finally {
-      setIsLoading(false);
-    }
+    })
   };
 
 
@@ -982,73 +972,6 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
 
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const generatePDF = async () => {
-    setIsLoading(false);
-    setIsLoading(true);
-
-    const formData = {
-      invoiceNo,
-      invoiceDate,
-      salesmanName,
-      expectedDeliveryDate,
-      deliveryStatus,
-      salesmanPhoneNumber,
-      paymentStatus,
-      billingAmount: totalAmount,
-      paymentAmount: receivedAmount,
-      paymentMethod,
-      paymentReceivedDate: receivedDate,
-      customerName,
-      customerAddress,
-      customerContactNumber,
-      marketedBy,
-      subTotal: amountWithoutGST,
-      transportation,
-      unloading,
-      grandTotal: grandTotal,
-      cgst,
-      sgst,
-      discount,
-      products: products.map((product) => ({
-        item_id: product.item_id,
-        name: product.name,
-        category: product.category,
-        brand: product.brand,
-        quantity: product.quantity,
-        sellingPrice: product.sellingPrice,
-        enteredQty: product.enteredQty,
-        sellingPriceinQty: product.sellingPriceinQty,
-        unit: product.unit,
-        size: product.size,
-        gstRate: product.gstRate,
-      })),
-    };
-
-    try {
-      const response = await api.post(
-        '/generate-pdf',
-        formData,
-        {
-          responseType: 'blob',
-        }
-      );
-
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `Invoice_${formData.invoiceNo}.pdf`;
-      link.click();
-    } catch (err) {
-  console.error(err);
-  setErrorMessage(err.response?.data?.message || err.message || 'Unexpected error');
-  setShowErrorModal(false);        // reset so modal can reopen on same error
-  setShowErrorModal(true);
-
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -2892,12 +2815,10 @@ const rateWithoutGST = (itemBase - itemDiscount) / (1 + gstRate / 100);
 />
 
 
-
 <BottomLoader
-      open={isLoading || isSubmitting}
-      text={isSubmitting ? 'Saving bill…' : 'Loading…'}
-      width="50%"
-    />
+  open={isLoading || isSubmitting}
+  text={isSubmitting ? 'Saving bill…' : 'Loading…'}
+/>
     </div>
   );
 }
