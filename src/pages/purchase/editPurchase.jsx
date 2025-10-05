@@ -840,7 +840,6 @@ export default function EditPurchaseScreen() {
       // Call API to update
       const response = await api.put(`/api/products/purchase/${purchaseId}`, purchaseData);
       if (response.status === 200) {
-        alert("Purchase updated successfully!");
         navigate("/purchase/list");
       } else {
         setError("Error updating purchase. Please try again.");
