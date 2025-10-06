@@ -566,12 +566,7 @@ const [printOptions, setPrintOptions] = useState({
     const updatedProducts = [productWithDetails, ...products];
     setProducts(updatedProducts);
 
-    setShowSuccessModal(true);
     itemIdRef.current?.focus();
-
-    setTimeout(() => {
-      setShowSuccessModal(false);
-    }, 2000);
 
     // Reset input fields
     setSelectedProduct(null);
@@ -1351,8 +1346,8 @@ const netTotal = rateWithoutGST + gstAmount;
                 onChange={(e) => setshowRoom(e.target.value)}
                 className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
               >
-                <option value="moncompu">Moncompu - Main Office</option>
-                <option value="chenganasherry">Chenganasherry - Branch</option>
+                <option value="MNCP">Moncompu - Main Office</option>
+                <option value="CHRY">Chenganasherry - Branch</option>
               </select>
             </div>
           </div>
@@ -2615,7 +2610,7 @@ const netTotal = rateWithoutGST + gstAmount;
 
 <BottomLoader
   open={isLoading || isSubmitting}
-  text="Saving bill…"
+  text="loading.."
   width="50%"
 />
 

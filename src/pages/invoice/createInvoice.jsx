@@ -48,7 +48,7 @@ export default function BillingScreen() {
   const [customerAddress, setCustomerAddress] = useState('');
   const [customerId, setCustomerId] = useState('');
   const [customerContactNumber, setCustomerContactNumber] = useState('');
-  const [showroom, setshowRoom] = useState('Moncompu - Main Office');
+  const [showroom, setshowRoom] = useState('MNCP');
   const [marketedBy, setMarketedBy] = useState('');
   const [discount, setDiscount] = useState(0);
   const [receivedAmount, setReceivedAmount] = useState(0);
@@ -190,6 +190,13 @@ const handleError = useCallback((err) => {
   setShowErrorModal(false);
   setTimeout(() => setShowErrorModal(true), 10);
 }, []);
+
+useEffect(() => {
+  if (error) {
+    const timer = setTimeout(() => setError(null), 3000);
+    return () => clearTimeout(timer);
+  }
+}, [error]);
 
 
 const withLoading = useCallback(async (asyncFn) => {
@@ -1524,8 +1531,8 @@ const discountRatio = sumOfBase > 0 ? parsedDiscount / sumOfBase : 0;
                 onChange={(e) => setshowRoom(e.target.value)}
                 className="w-full border border-gray-300 px-3 py-2 rounded-md focus:border-red-200 focus:ring-red-500 focus:outline-none text-xs"
               >
-                <option value="moncompu">Moncompu - Main Office</option>
-                <option value="chenganasherry">Chenganasherry - Branch</option>
+                <option value="MNCP">Moncompu - Main Office</option>
+                <option value="CHRY">Chenganasherry - Branch</option>
               </select>
             </div>
           </div>
