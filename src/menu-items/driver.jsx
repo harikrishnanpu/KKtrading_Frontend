@@ -26,6 +26,7 @@ const driver = {
       type: 'item',
       url: '/driver/delivery',
       icon: icons.delivery,
+                breadcrumbs: false
     },
     {
       id: 'All Deliveries',
@@ -33,6 +34,8 @@ const driver = {
       type: 'item',
       url: '/driver/all',
       icon: icons.delivery,
+      breadcrumbs: false
+
     }
   ]
 };

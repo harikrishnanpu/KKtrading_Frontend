@@ -1106,7 +1106,7 @@ Margin:{' '}
                         {format(new Date(billing.expectedDeliveryDate), 'dd MMM yyyy, HH:mm')}
                       </td>
                       <td className="px-2 text-xs py-2">
-                        {billing.showroom == "Moncompu - Main Office" ? 'MNCP' : 'CGNRY'}
+                        {billing.showroom == "Moncompu - Main Office" || billing.showroom == "MNCP" ? 'MNCP' : 'CHRY'}
                       </td>
                       <td className="px-2 text-xs py-2">
                         {billing.salesmanName}
@@ -1329,20 +1329,33 @@ Margin:{' '}
                         {selectedBilling.deliveryStatus}
                       </span>
                     </p>
-                    <p className="mb-1">
-                      <span className="font-bold">Payment Status:</span>{' '}
-                      <span
-                        className={`px-2 py-1 rounded text-white text-xs ${
-                          selectedBilling.paymentStatus === 'Paid'
-                            ? 'bg-green-500'
-                            : selectedBilling.paymentStatus === 'Partial'
-                            ? 'bg-yellow-500'
-                            : 'bg-red-500'
-                        }`}
-                      >
-                        {selectedBilling.paymentStatus}
-                      </span>
-                    </p>
+<p className="mb-1">
+  <span className="font-bold">Payment Status:</span>{' '}
+  <span
+    className={`px-2 py-1 rounded text-white text-xs ${
+      selectedBilling.paymentStatus === 'Paid'
+        ? 'bg-green-500'
+        : selectedBilling.paymentStatus === 'Partial'
+        ? 'bg-yellow-500'
+        : 'bg-red-500'
+    }`}
+  >
+    {selectedBilling.paymentStatus}
+  </span>
+</p>
+{/* ✅ Add Paid and Pending Amounts */}
+{selectedBilling && (
+  <p className="text-sm mt-1">
+    <span className="font-semibold">Paid:</span>{' '}
+    ₹{selectedBilling.billingAmountReceived?.toFixed(2) || 0}{' '}
+    | <span className="font-semibold">Pending:</span>{' '}
+    ₹{Math.max(
+      (selectedBilling.grandTotal || 0) - (selectedBilling.billingAmountReceived || 0),
+      0
+    ).toFixed(2)}
+  </p>
+)}
+
                     <p className="mb-1">
                       <span className="font-bold">Remark:</span>{' '}
                       <span className="text-gray-700">{selectedBilling.remark}</span>

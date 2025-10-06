@@ -1,135 +1,148 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { X, Filter, ChevronDown, ChevronUp, MapPin, Package, Truck, Calendar, DollarSign } from "lucide-react";
 import api from "../api";
-
-// Import your custom DriverTracking component
 import DriverTracking from "components/driver/deliveryTracking";
 
 const DriverTrackingPage = () => {
   const navigate = useNavigate();
 
-  // States
-  const [invoiceNo, setInvoiceNo] = useState("");
-  const [locationData, setLocationData] = useState([]);
-  const [billingDetails, setBillingDetails] = useState(null);
-  const [suggestions, setSuggestions] = useState([]);
-  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
-  const [error, setError] = useState(null);
-  const [activeSection, setActiveSection] = useState("billing");
-  const [showModal, setShowModal] = useState(true);
+  // Pagination & Data States
+  const [bills, setBills] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1); 
+  const [totalItems, setTotalItems] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  
+  // Filter & Search States
+  const [searchQuery, setSearchQuery] = useState("");
+  const [deliveryStatusFilter, setDeliveryStatusFilter] = useState("");
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [sortBy, setSortBy] = useState("invoiceDate");
+  const [sortOrder, setSortOrder] = useState("desc");
+  
+  // UI States
   const [isLoading, setIsLoading] = useState(false);
-
-  // For location markers/polylines filtering
+  const [error, setError] = useState(null);
+  const [selectedBill, setSelectedBill] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [locationData, setLocationData] = useState([]);
   const [filteredDeliveryId, setFilteredDeliveryId] = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [showFilterSidebar, setShowFilterSidebar] = useState(false);
+  const [expandedSections, setExpandedSections] = useState({
+    billing: true,
+    products: true,
+    deliveries: true,
+    tracking: true
+  });
 
-  // Function to handle filtering of deliveries
-  const handleFilter = (deliveryId) => {
-    setFilteredDeliveryId(deliveryId);
-  };
-
-  // Function to reset the filter
-  const handleResetFilter = () => {
-    setFilteredDeliveryId(null);
-  };
-
-  // Fetch suggestions as user types invoiceNo
+  // Handle window resize for responsive design
   useEffect(() => {
-    const fetchSuggestions = async () => {
-      if (!invoiceNo) {
-        setSuggestions([]);
-        return;
-      }
-      try {
-        setIsLoading(true);
-        const response = await api.get(
-          `/api/billing/billing/suggestions?search=${invoiceNo}`
-        );
-        setSuggestions(response.data);
-        setError(null);
-      } catch (err) {
-        console.error("Error fetching suggestions:", err);
-        setError("Could not fetch suggestions. Please try again.");
-      } finally {
-        setIsLoading(false);
-      }
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
     };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
-    fetchSuggestions();
-  }, [invoiceNo]);
-
-  // Fetch location and billing data once user picks an invoice
-  const fetchLocationData = async (invoiceNum) => {
+  // Fetch bills with pagination, search, filter, sort
+  const fetchBills = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
-      setBillingDetails(null);
-      setLocationData([]);
 
-      // Get location data
-      const response = await api.get(`/api/users/locations/invoice/${invoiceNum}`);
-      setLocationData(response.data || []);
+      const params = {
+        page: currentPage,
+        limit: itemsPerPage,
+        search: searchQuery,
+        deliveryStatus: deliveryStatusFilter,
+        paymentStatus: paymentStatusFilter,
+        dateFrom,
+        dateTo,
+        sortBy,
+        sortOrder,
+      };
 
-      // Get billing data
-      const billingResponse = await api.get(`/api/billing/getinvoice/${invoiceNum}`);
-      setBillingDetails(billingResponse.data);
-
-      // Switch to billing section on successful fetch
-      setActiveSection("billing");
+      const response = await api.get("/api/driver-tracking/bills-with-deliveries", { params });
+      
+      setBills(response.data.bills || []);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalItems(response.data.totalItems || 0);
     } catch (err) {
-      console.error(err);
-      setError("No data found for this invoice or an error occurred.");
+      console.error("Error fetching bills:", err);
+      setError("Failed to fetch bills. Please try again.");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentPage, itemsPerPage, searchQuery, deliveryStatusFilter, paymentStatusFilter, dateFrom, dateTo, sortBy, sortOrder]);
 
-  // Whenever invoiceNo changes and user has typed something
   useEffect(() => {
-    if (invoiceNo && !showModal) {
-      fetchLocationData(invoiceNo);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invoiceNo]);
+    fetchBills();
+  }, [fetchBills]);
 
-  // Handle user clicking a suggestion from the list
-  const handleSuggestionClick = (suggestion) => {
-    setInvoiceNo(suggestion.invoiceNo);
-    setSuggestions([]);
-    setShowModal(false);
-    fetchLocationData(suggestion.invoiceNo);
-  };
-
-  // Keyboard navigation in suggestion list
-  const handleKeyDown = (e) => {
-    if (e.key === "ArrowDown") {
-      setSelectedSuggestionIndex((prevIndex) =>
-        prevIndex < suggestions.length - 1 ? prevIndex + 1 : 0
-      );
-    } else if (e.key === "ArrowUp") {
-      setSelectedSuggestionIndex((prevIndex) =>
-        prevIndex > 0 ? prevIndex - 1 : suggestions.length - 1
-      );
-    } else if (e.key === "Enter" && selectedSuggestionIndex >= 0) {
-      handleSuggestionClick(suggestions[selectedSuggestionIndex]);
+  // Fetch location data for selected bill
+  const fetchLocationData = async (invoiceNo) => {
+    try {
+      const response = await api.get(`/api/users/locations/invoice/${invoiceNo}`);
+      setLocationData(response.data || []);
+    } catch (err) {
+      console.error("Error fetching location data:", err);
+      setLocationData([]);
     }
   };
 
-  // Prepare markers and polylines for the map
+  // Handle bill selection
+  const handleViewDetails = async (bill) => {
+    setSelectedBill(bill);
+    setShowDetailModal(true);
+    document.body.style.overflow = 'hidden';
+    await fetchLocationData(bill.invoiceNo);
+  };
+
+  // Close modal
+  const handleCloseModal = () => {
+    setShowDetailModal(false);
+    setSelectedBill(null);
+    setLocationData([]);
+    setFilteredDeliveryId(null);
+    document.body.style.overflow = 'unset';
+  };
+
+  // Reset filters
+  const handleResetFilters = () => {
+    setSearchQuery("");
+    setDeliveryStatusFilter("");
+    setPaymentStatusFilter("");
+    setDateFrom("");
+    setDateTo("");
+    setSortBy("invoiceDate");
+    setSortOrder("desc");
+    setCurrentPage(1);
+  };
+
+  // Toggle section expansion
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
+  // Prepare markers and polylines for map
   const markers = [];
   const polylines = [];
 
   if (locationData && locationData.length > 0) {
     locationData.forEach((location) => {
       const { startLocations, endLocations, deliveryId } = location;
-
       const numDeliveries = Math.max(
-        startLocations ? startLocations.length : 0,
-        endLocations ? endLocations.length : 0
+        startLocations?.length || 0,
+        endLocations?.length || 0
       );
 
       for (let i = 0; i < numDeliveries; i++) {
-        const startLocation = startLocations && startLocations[i];
-        const endLocation = endLocations && endLocations[i];
+        const startLocation = startLocations?.[i];
+        const endLocation = endLocations?.[i];
 
         if (startLocation) {
           markers.push({
@@ -170,7 +183,7 @@ const DriverTrackingPage = () => {
               },
             ],
             options: {
-              strokeColor: "#EF4444", // Tailwind red-500
+              strokeColor: "#EF4444",
               strokeOpacity: 0.8,
               strokeWeight: 2,
             },
@@ -181,357 +194,1062 @@ const DriverTrackingPage = () => {
     });
   }
 
-  // Render invoice input modal
-  const renderInvoiceModal = () => {
-    if (!showModal) return null;
+  // Render filter content
+  const renderFilterContent = () => (
+    <div className="space-y-4">
+      {/* Search */}
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1">
+          Search Invoice/Customer
+        </label>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setCurrentPage(1);
+          }}
+          placeholder="Invoice or Customer..."
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-400"
+        />
+      </div>
 
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-auto p-4 relative">
-          <div className="flex items-center justify-between mb-3">
-            <h5 className="text-md font-semibold text-gray-700">
-              Enter Invoice Number
-            </h5>
-            <span
-              onClick={() => navigate("/")}
-              className="text-sm text-gray-500 hover:text-gray-700 cursor-pointer"
-            >
-              Close
-            </span>
-          </div>
+      {/* Delivery Status */}
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1">
+          Delivery Status
+        </label>
+        <select
+          value={deliveryStatusFilter}
+          onChange={(e) => {
+            setDeliveryStatusFilter(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-400"
+        >
+          <option value="">All</option>
+          <option value="Pending">Pending</option>
+          <option value="Partially Delivered">Partially Delivered</option>
+          <option value="Delivered">Delivered</option>
+        </select>
+      </div>
 
-          <p className="text-xs text-gray-400 mb-2">
-            (Select a suggestion to see invoice details)
-          </p>
+      {/* Payment Status */}
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1">
+          Payment Status
+        </label>
+        <select
+          value={paymentStatusFilter}
+          onChange={(e) => {
+            setPaymentStatusFilter(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-400"
+        >
+          <option value="">All</option>
+          <option value="Unpaid">Unpaid</option>
+          <option value="Partial">Partial</option>
+          <option value="Paid">Paid</option>
+        </select>
+      </div>
 
+      {/* Date From */}
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1">
+          Date From
+        </label>
+        <input
+          type="date"
+          value={dateFrom}
+          onChange={(e) => {
+            setDateFrom(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-400"
+        />
+      </div>
+
+      {/* Date To */}
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1">
+          Date To
+        </label>
+        <input
+          type="date"
+          value={dateTo}
+          onChange={(e) => {
+            setDateTo(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-400"
+        />
+      </div>
+
+      {/* Sort By */}
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1">
+          Sort By
+        </label>
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-400"
+        >
+          <option value="invoiceDate">Invoice Date</option>
+          <option value="expectedDeliveryDate">Expected Delivery</option>
+          <option value="customerName">Customer Name</option>
+          <option value="billingAmount">Billing Amount</option>
+          <option value="deliveryStatus">Delivery Status</option>
+          <option value="paymentStatus">Payment Status</option>
+        </select>
+      </div>
+
+      {/* Sort Order */}
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1">
+          Sort Order
+        </label>
+        <select
+          value={sortOrder}
+          onChange={(e) => setSortOrder(e.target.value)}
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-400"
+        >
+          <option value="asc">Ascending</option>
+          <option value="desc">Descending</option>
+        </select>
+      </div>
+
+      {/* Items Per Page */}
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1">
+          Items Per Page
+        </label>
+        <select
+          value={itemsPerPage}
+          onChange={(e) => {
+            setItemsPerPage(Number(e.target.value));
+            setCurrentPage(1);
+          }}
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-400"
+        >
+          <option value="10">10</option>
+          <option value="25">25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+      </div>
+
+      <div className="flex flex-col gap-2 pt-2">
+        <button
+          onClick={() => {
+            fetchBills();
+            if (isMobile) setShowFilterSidebar(false);
+          }}
+          className="w-full px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600 transition-colors"
+        >
+          Apply Filters
+        </button>
+        <button
+          onClick={() => {
+            handleResetFilters();
+            if (isMobile) setShowFilterSidebar(false);
+          }}
+          className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+        >
+          Reset Filters
+        </button>
+      </div>
+    </div>
+  );
+
+  // Render filters for desktop
+  const renderDesktopFilters = () => (
+    <div className="bg-white rounded-lg shadow-md p-4 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Search Invoice/Customer
+          </label>
           <input
             type="text"
-            value={invoiceNo}
-            onChange={(e) => setInvoiceNo(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-400"
-            placeholder="Type or paste invoice number..."
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
+            placeholder="Invoice or Customer..."
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-400"
           />
+        </div>
 
-          {isLoading && (
-            <p className="text-xs text-center text-gray-500 mt-2">
-              Loading suggestions...
-            </p>
-          )}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Delivery Status
+          </label>
+          <select
+            value={deliveryStatusFilter}
+            onChange={(e) => {
+              setDeliveryStatusFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-400"
+          >
+            <option value="">All</option>
+            <option value="Pending">Pending</option>
+            <option value="Partially Delivered">Partially Delivered</option>
+            <option value="Delivered">Delivered</option>
+          </select>
+        </div>
 
-          {suggestions.length > 0 && (
-            <ul className="bg-white border border-gray-300 rounded-md mt-3 divide-y max-h-48 overflow-y-auto text-sm">
-              {suggestions.map((suggestion, index) => (
-                <li
-                  key={suggestion._id}
-                  className={`p-2 cursor-pointer hover:bg-gray-100 flex justify-between ${
-                    index === selectedSuggestionIndex ? "bg-gray-200" : ""
-                  }`}
-                  onClick={() => handleSuggestionClick(suggestion)}
-                >
-                  <span className="text-gray-600 font-medium">
-                    {suggestion.invoiceNo}
-                  </span>
-                  <i className="fa fa-arrow-right text-gray-400" />
-                </li>
-              ))}
-            </ul>
-          )}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Payment Status
+          </label>
+          <select
+            value={paymentStatusFilter}
+            onChange={(e) => {
+              setPaymentStatusFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-400"
+          >
+            <option value="">All</option>
+            <option value="Unpaid">Unpaid</option>
+            <option value="Partial">Partial</option>
+            <option value="Paid">Paid</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Date From
+          </label>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => {
+              setDateFrom(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-400"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Date To
+          </label>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => {
+              setDateTo(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-400"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Sort By
+          </label>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-400"
+          >
+            <option value="invoiceDate">Invoice Date</option>
+            <option value="expectedDeliveryDate">Expected Delivery</option>
+            <option value="customerName">Customer Name</option>
+            <option value="billingAmount">Billing Amount</option>
+            <option value="deliveryStatus">Delivery Status</option>
+            <option value="paymentStatus">Payment Status</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Sort Order
+          </label>
+          <select
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-400"
+          >
+            <option value="asc">Ascending</option>
+            <option value="desc">Descending</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Items Per Page
+          </label>
+          <select
+            value={itemsPerPage}
+            onChange={(e) => {
+              setItemsPerPage(Number(e.target.value));
+              setCurrentPage(1);
+            }}
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-400"
+          >
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
         </div>
       </div>
-    );
-  };
 
-  // Render billing details
-  const renderBillingSection = () => {
-    if (!billingDetails) {
-      return (
-        <div className="p-4 mx-auto max-w-xl text-center text-sm text-gray-500">
-          {isLoading
-            ? "Loading billing details..."
-            : "No billing details to show. Please enter a valid invoice."}
-        </div>
-      );
-    }
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button
+          onClick={handleResetFilters}
+          className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+        >
+          Reset Filters
+        </button>
+        <button
+          onClick={fetchBills}
+          className="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600 transition-colors"
+        >
+          Apply Filters
+        </button>
+      </div>
+    </div>
+  );
 
-    const {
-      invoiceNo,
-      customerName,
-      deliveryStatus,
-      paymentStatus,
-      expectedDeliveryDate,
-      products,
-      deliveries,
-      billingAmount,
-      discount,
-      customerAddress,
-    } = billingDetails;
+  // Render mobile filter sidebar
+  const renderMobileFilterSidebar = () => (
+    <>
+      {/* Overlay */}
+      {showFilterSidebar && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={() => setShowFilterSidebar(false)}
+        />
+      )}
 
-    return (
-      <div className="bg-white rounded-lg shadow-md p-4 max-w-xl mx-auto space-y-3">
-        <div className="flex items-start justify-between">
-          <h5 className="text-md font-bold text-gray-700">{invoiceNo}</h5>
-          {/* Indicator Dot */}
-          <div className="flex-shrink-0">
-            {deliveryStatus === "Delivered" && paymentStatus === "Paid" && (
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-              </span>
-            )}
-            {deliveryStatus === "Delivered" && paymentStatus !== "Paid" && (
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
-              </span>
-            )}
-            {deliveryStatus !== "Delivered" && paymentStatus === "Paid" && (
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
-              </span>
-            )}
-            {deliveryStatus !== "Delivered" && paymentStatus !== "Paid" && (
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-              </span>
-            )}
+      {/* Sidebar */}
+      <div
+        className={`fixed top-0 left-0 h-full w-80 bg-white shadow-xl z-50 transform transition-transform duration-300 ${
+          showFilterSidebar ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="h-full flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
+            <button
+              onClick={() => setShowFilterSidebar(false)}
+              className="p-1 text-gray-500 hover:text-gray-700"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Filter Content */}
+          <div className="flex-1 overflow-y-auto p-4">
+            {renderFilterContent()}
           </div>
         </div>
+      </div>
+    </>
+  );
 
-        <div className="flex items-center justify-between text-sm text-gray-600">
-          <p className="font-semibold">Customer:</p>
-          <p>{customerName}</p>
-        </div>
+  // Render table view (desktop)
+  const renderTableView = () => (
+    <div className="bg-white rounded-lg shadow-md overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                Invoice No
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                Customer
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                Date
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                Delivery IDs
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                Amount
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                Delivery Status
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                Payment Status
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {bills.map((bill) => (
+              <tr key={bill._id} className="hover:bg-gray-50 transition-colors">
+                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                  {bill.invoiceNo}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
+                  {bill.customerName}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
+                  {new Date(bill.invoiceDate).toLocaleDateString()}
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-700">
+                  <div className="flex flex-wrap gap-1">
+                    {bill.deliveries && bill.deliveries.length > 0 ? (
+                      bill.deliveries.map((delivery, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-block px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded"
+                        >
+                          {delivery.deliveryId}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-xs text-gray-400 italic">No deliveries</span>
+                    )}
+                  </div>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
+                  ₹{(bill.billingAmount - (bill.discount || 0)).toFixed(2)}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm">
+                  <span
+                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      bill.deliveryStatus === "Delivered"
+                        ? "bg-green-100 text-green-800"
+                        : bill.deliveryStatus === "Partially Delivered"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-red-100 text-red-800"
+                    }`}
+                  >
+                    {bill.deliveryStatus}
+                  </span>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm">
+                  <span
+                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      bill.paymentStatus === "Paid"
+                        ? "bg-green-100 text-green-800"
+                        : bill.paymentStatus === "Partial"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-red-100 text-red-800"
+                    }`}
+                  >
+                    {bill.paymentStatus}
+                  </span>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm">
+                  <button
+                    onClick={() => handleViewDetails(bill)}
+                    className="text-red-600 hover:text-red-800 font-medium"
+                  >
+                    View Details
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 
-        <div className="flex items-center justify-between text-sm text-gray-600">
-          <p className="font-semibold">Exp. Delivery Date:</p>
-          <p>{new Date(expectedDeliveryDate).toLocaleDateString()}</p>
-        </div>
-
-        <div className="flex items-center justify-between text-sm">
-          <p
-            className={`font-semibold ${
-              deliveryStatus !== "Delivered" ? "text-red-500" : "text-green-600"
-            }`}
-          >
-            Delivery Sts:
-          </p>
-          <p
-            className={`${
-              deliveryStatus !== "Delivered" ? "text-red-500" : "text-green-600"
-            }`}
-          >
-            {deliveryStatus}
-          </p>
-        </div>
-
-        <div className="flex items-center justify-between text-sm">
-          <p
-            className={`font-semibold ${
-              paymentStatus !== "Paid" ? "text-red-500" : "text-green-600"
-            }`}
-          >
-            Payment Sts:
-          </p>
-          <p
-            className={`${
-              paymentStatus !== "Paid" ? "text-red-500" : "text-green-600"
-            }`}
-          >
-            {paymentStatus}
-          </p>
-        </div>
-
-        <div className="flex items-center justify-between text-sm text-gray-600">
-          <p className="font-semibold">Products Qty:</p>
-          <p>{products.length}</p>
-        </div>
-
-        <div className="text-sm text-gray-600">
-          <p className="font-semibold">Customer Address:</p>
-          <p>{customerAddress}, Kerala, India</p>
-        </div>
-
-        <div className="flex items-center justify-between text-sm text-gray-700">
-          <p className="font-semibold">Delivery Assigned:</p>
-          <p>{deliveries?.length || 0}</p>
-        </div>
-
-        <div className="flex items-center justify-between text-sm text-gray-700">
-          <p className="font-semibold">Bill Amount:</p>
-          <p>
-            {(billingAmount - (discount || 0)).toFixed(2)}
-          </p>
-        </div>
-
-        {/* Check if any products exist */}
-        {products && products.length > 0 ? (
-          <div className="mt-3">
-            <div className="overflow-x-auto border rounded">
-              <table className="min-w-full text-sm text-gray-600">
-                <thead className="bg-gray-50 border-b text-xs text-gray-700 uppercase">
-                  <tr>
-                    <th className="px-3 py-2 text-left">Product</th>
-                    <th className="px-3 py-2 text-center">ID</th>
-                    <th className="px-3 py-2 text-center">Qty</th>
-                    <th className="px-3 py-2 text-center">Delivered</th>
-                    <th className="px-3 py-2 text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {products.map((product, i) => (
-                    <tr
-                      key={i}
-                      className="border-b hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="px-3 py-2 text-left font-medium text-gray-700">
-                        {product.name.length > 14
-                          ? product.name.slice(0, 14) + "..."
-                          : product.name}
-                      </td>
-                      <td className="px-3 py-2 text-center">{product.item_id}</td>
-                      <td className="px-3 py-2 text-center">{product.quantity}</td>
-                      <td className="px-3 py-2 text-center">
-                        {product.deliveredQuantity}
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <input
-                          type="checkbox"
-                          disabled
-                          className="cursor-default text-green-500 focus:ring-0 focus:outline-0"
-                          checked={product.deliveryStatus === "Delivered"}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+  // Render card view (mobile)
+  const renderCardView = () => (
+    <div className="space-y-4">
+      {bills.map((bill) => (
+        <div key={bill._id} className="bg-white rounded-lg shadow-md p-4">
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <h3 className="text-sm font-bold text-gray-900">{bill.invoiceNo}</h3>
+              <p className="text-xs text-gray-600 mt-1">{bill.customerName}</p>
+            </div>
+            <div className="flex gap-2">
+              <span
+                className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                  bill.deliveryStatus === "Delivered"
+                    ? "bg-green-100 text-green-800"
+                    : bill.deliveryStatus === "Partially Delivered"
+                    ? "bg-yellow-100 text-yellow-800"
+                    : "bg-red-100 text-red-800"
+                }`}
+              >
+                {bill.deliveryStatus}
+              </span>
             </div>
           </div>
-        ) : (
-          <p className="mt-2 text-sm text-gray-500">
-            No products listed in this invoice.
-          </p>
-        )}
+
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Date:</span>
+              <span className="font-medium text-gray-900">
+                {new Date(bill.invoiceDate).toLocaleDateString()}
+              </span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="text-gray-600">Amount:</span>
+              <span className="font-medium text-gray-900">
+                ₹{(bill.billingAmount - (bill.discount || 0)).toFixed(2)}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Payment:</span>
+              <span
+                className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                  bill.paymentStatus === "Paid"
+                    ? "bg-green-100 text-green-800"
+                    : bill.paymentStatus === "Partial"
+                    ? "bg-yellow-100 text-yellow-800"
+                    : "bg-red-100 text-red-800"
+                }`}
+              >
+                {bill.paymentStatus}
+              </span>
+            </div>
+
+            <div>
+              <span className="text-gray-600 block mb-1">Delivery IDs:</span>
+              <div className="flex flex-wrap gap-1">
+                {bill.deliveries && bill.deliveries.length > 0 ? (
+                  bill.deliveries.map((delivery, idx) => (
+                    <span
+                      key={idx}
+                      className="inline-block px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded"
+                    >
+                      {delivery.deliveryId}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs text-gray-400 italic">No deliveries</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={() => handleViewDetails(bill)}
+            className="mt-3 w-full px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600 transition-colors"
+          >
+            View Details
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+
+  // Render pagination
+  const renderPagination = () => (
+    <div className="bg-white rounded-lg shadow-md p-4 mt-4">
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="text-sm text-gray-700">
+          Showing {bills.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1} to{" "}
+          {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} results
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Previous
+          </button>
+
+          <div className="flex gap-1">
+            {[...Array(Math.min(5, totalPages))].map((_, idx) => {
+              let pageNum;
+              if (totalPages <= 5) {
+                pageNum = idx + 1;
+              } else if (currentPage <= 3) {
+                pageNum = idx + 1;
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + idx;
+              } else {
+                pageNum = currentPage - 2 + idx;
+              }
+
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`px-3 py-2 text-sm font-medium rounded-md ${
+                    currentPage === pageNum
+                      ? "bg-red-500 text-white"
+                      : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Next
+          </button>
+        </div>
       </div>
-    );
-  };
+    </div>
+  );
 
-  // Render location tracking section
-  const renderLocationSection = () => {
-    if (isLoading) {
-      return (
-        <p className="text-center text-sm text-gray-500 mt-4">
-          Loading location data...
-        </p>
-      );
-    }
+  // Render detail modal
+  const renderDetailModal = () => {
+    if (!showDetailModal || !selectedBill) return null;
 
-    // If there's no billing details or deliveries at all
-    if (!billingDetails) {
-      return (
-        <p className="text-center text-gray-500 text-sm mt-4">
-          No details available. Please enter a valid invoice.
-        </p>
-      );
-    }
-
-    // If the invoice has no deliveries assigned
-    if (!billingDetails?.deliveries || billingDetails?.deliveries.length === 0) {
-      return (
-        <div className="max-w-lg mx-auto text-center p-4 bg-white shadow-md rounded mt-4">
-          <p className="text-sm text-gray-600">
-            No deliveries assigned for this invoice.
-          </p>
-        </div>
-      );
-    }
-
-    // If there's no location data returned from the server
-    if (!locationData || locationData.length === 0) {
-      return (
-        <div className="max-w-lg mx-auto text-center p-4 bg-white shadow-md rounded mt-4">
-          <p className="text-sm text-gray-600">
-            No location data available for this invoice.
-          </p>
-        </div>
-      );
-    }
-
-    // If there is location data, render the DriverTracking component
     return (
-      <div className="max-w-lg mx-auto mt-4">
-        <DriverTracking
-          locationData={locationData}
-          billingDetails={billingDetails}
-          markers={markers}
-          polylines={polylines}
-          handleFilter={handleFilter}
-          handleResetFilter={handleResetFilter}
-          filteredDeliveryId={filteredDeliveryId}
-          mapContainerStyle={{ width: "100%", height: "500px" }}
-        />
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-0 md:pt-12">
+        <div className="bg-white w-full h-full md:h-[95vh] md:rounded-lg shadow-xl flex flex-col md:max-w-[95vw]">
+          {/* Header - Fixed */}
+          <div className="sticky top-0 bg-white border-b border-gray-200 px-4 md:px-6 py-4 flex justify-between items-center z-10">
+            <div className="flex items-center gap-3">
+              <div className="hidden md:block w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <Package className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h2 className="text-lg md:text-xl font-bold text-gray-900">
+                  Invoice: {selectedBill.invoiceNo}
+                </h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {selectedBill.customerName}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleCloseModal}
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Content - Scrollable */}
+          <div className="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-6">
+            <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
+              {/* Billing Information */}
+              <div className="bg-white border border-gray-200 rounded-lg">
+                <button
+                  onClick={() => toggleSection('billing')}
+                  className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <DollarSign className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <h3 className="text-base md:text-lg font-semibold text-gray-800">
+                      Billing Information
+                    </h3>
+                  </div>
+                  {expandedSections.billing ? (
+                    <ChevronUp className="w-5 h-5 text-gray-500" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-gray-500" />
+                  )}
+                </button>
+
+                {expandedSections.billing && (
+                  <div className="px-4 pb-4 border-t border-gray-100">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+                      <div className="flex items-start gap-3">
+                        <Calendar className="w-4 h-4 text-gray-400 mt-1" />
+                        <div>
+                          <p className="text-xs text-gray-500">Invoice Date</p>
+                          <p className="text-sm font-medium text-gray-900 mt-0.5">
+                            {new Date(selectedBill.invoiceDate).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <Calendar className="w-4 h-4 text-gray-400 mt-1" />
+                        <div>
+                          <p className="text-xs text-gray-500">Expected Delivery</p>
+                          <p className="text-sm font-medium text-gray-900 mt-0.5">
+                            {new Date(selectedBill.expectedDeliveryDate).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <DollarSign className="w-4 h-4 text-gray-400 mt-1" />
+                        <div>
+                          <p className="text-xs text-gray-500">Total Amount</p>
+                          <p className="text-sm font-semibold text-gray-900 mt-0.5">
+                            ₹{(selectedBill.billingAmount - (selectedBill.discount || 0)).toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <div className="w-4 h-4 text-gray-400 mt-1">📱</div>
+                        <div>
+                          <p className="text-xs text-gray-500">Contact Number</p>
+                          <p className="text-sm font-medium text-gray-900 mt-0.5">
+                            {selectedBill.customerContactNumber || "N/A"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 md:col-span-2">
+                        <MapPin className="w-4 h-4 text-gray-400 mt-1" />
+                        <div>
+                          <p className="text-xs text-gray-500">Delivery Address</p>
+                          <p className="text-sm font-medium text-gray-900 mt-0.5">
+                            {selectedBill.customerAddress}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <div className="w-4 h-4 text-gray-400 mt-1">📦</div>
+                        <div>
+                          <p className="text-xs text-gray-500">Delivery Status</p>
+                          <span
+                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full mt-1 ${
+                              selectedBill.deliveryStatus === "Delivered"
+                                ? "bg-green-100 text-green-800"
+                                : selectedBill.deliveryStatus === "Partially Delivered"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {selectedBill.deliveryStatus}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <div className="w-4 h-4 text-gray-400 mt-1">💳</div>
+                        <div>
+                          <p className="text-xs text-gray-500">Payment Status</p>
+                          <span
+                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full mt-1 ${
+                              selectedBill.paymentStatus === "Paid"
+                                ? "bg-green-100 text-green-800"
+                                : selectedBill.paymentStatus === "Partial"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {selectedBill.paymentStatus}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Products */}
+              {selectedBill.products && selectedBill.products.length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-lg">
+                  <button
+                    onClick={() => toggleSection('products')}
+                    className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <Package className="w-4 h-4 text-purple-600" />
+                      </div>
+                      <h3 className="text-base md:text-lg font-semibold text-gray-800">
+                        Products ({selectedBill.products.length})
+                      </h3>
+                    </div>
+                    {expandedSections.products ? (
+                      <ChevronUp className="w-5 h-5 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-gray-500" />
+                    )}
+                  </button>
+
+                  {expandedSections.products && (
+                    <div className="px-4 pb-4 border-t border-gray-100">
+                      <div className="mt-4 overflow-x-auto">
+                        <table className="min-w-full text-sm border border-gray-200 rounded-lg">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 border-b">
+                                Product Name
+                              </th>
+                              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 border-b">
+                                Ordered
+                              </th>
+                              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 border-b">
+                                Delivered
+                              </th>
+                              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 border-b">
+                                Status
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200">
+                            {selectedBill.products.map((product, idx) => (
+                              <tr key={idx} className="hover:bg-gray-50">
+                                <td className="px-4 py-3 font-medium text-gray-900">
+                                  {product.name}
+                                </td>
+                                <td className="px-4 py-3 text-center text-gray-700">
+                                  {product.quantity}
+                                </td>
+                                <td className="px-4 py-3 text-center text-gray-700">
+                                  {product.deliveredQuantity}
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  <span
+                                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                      product.deliveryStatus === "Delivered"
+                                        ? "bg-green-100 text-green-800"
+                                        : "bg-yellow-100 text-yellow-800"
+                                    }`}
+                                  >
+                                    {product.deliveryStatus}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Deliveries */}
+              {selectedBill.deliveries && selectedBill.deliveries.length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-lg">
+                  <button
+                    onClick={() => toggleSection('deliveries')}
+                    className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <Truck className="w-4 h-4 text-orange-600" />
+                      </div>
+                      <h3 className="text-base md:text-lg font-semibold text-gray-800">
+                        Delivery Details ({selectedBill.deliveries.length})
+                      </h3>
+                    </div>
+                    {expandedSections.deliveries ? (
+                      <ChevronUp className="w-5 h-5 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-gray-500" />
+                    )}
+                  </button>
+
+                  {expandedSections.deliveries && (
+                    <div className="px-4 pb-4 border-t border-gray-100">
+                      <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {selectedBill.deliveries.map((delivery, idx) => (
+                          <div
+                            key={idx}
+                            className="border border-gray-200 rounded-lg p-4 bg-gradient-to-br from-gray-50 to-white hover:shadow-md transition-shadow"
+                          >
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                  <span className="text-xs font-bold text-blue-600">
+                                    {idx + 1}
+                                  </span>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-gray-500">Delivery ID</p>
+                                  <p className="text-sm font-semibold text-blue-600">
+                                    {delivery.deliveryId}
+                                  </p>
+                                </div>
+                              </div>
+                              <span
+                                className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                  delivery.deliveryStatus === "Delivered"
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-yellow-100 text-yellow-800"
+                                }`}
+                              >
+                                {delivery.deliveryStatus || "Pending"}
+                              </span>
+                            </div>
+
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                                <span className="text-xs text-gray-600">Driver</span>
+                                <span className="text-sm font-medium text-gray-900">
+                                  {delivery.driverName || "Not Assigned"}
+                                </span>
+                              </div>
+
+                              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                                <span className="text-xs text-gray-600">Vehicle</span>
+                                <span className="text-sm font-medium text-gray-900">
+                                  {delivery.vehicleNumber || "N/A"}
+                                </span>
+                              </div>
+
+                              {delivery.kmTravelled && (
+                                <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                                  <span className="text-xs text-gray-600">Distance</span>
+                                  <span className="text-sm font-medium text-gray-900">
+                                    {delivery.kmTravelled} km
+                                  </span>
+                                </div>
+                              )}
+
+                              {delivery.fuelCharge && (
+                                <div className="flex justify-between items-center py-2">
+                                  <span className="text-xs text-gray-600">Fuel Charge</span>
+                                  <span className="text-sm font-semibold text-green-600">
+                                    ₹{delivery.fuelCharge}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Location Tracking */}
+              {locationData && locationData.length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-lg">
+                  <button
+                    onClick={() => toggleSection('tracking')}
+                    className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                        <MapPin className="w-4 h-4 text-green-600" />
+                      </div>
+                      <h3 className="text-base md:text-lg font-semibold text-gray-800">
+                        Live Location Tracking
+                      </h3>
+                    </div>
+                    {expandedSections.tracking ? (
+                      <ChevronUp className="w-5 h-5 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-gray-500" />
+                    )}
+                  </button>
+
+                  {expandedSections.tracking && (
+                    <div className="px-4 pb-4 border-t border-gray-100">
+                      <div className="mt-4">
+                        <DriverTracking
+                          locationData={locationData}
+                          billingDetails={selectedBill}
+                          markers={markers}
+                          polylines={polylines}
+                          handleFilter={setFilteredDeliveryId}
+                          handleResetFilter={() => setFilteredDeliveryId(null)}
+                          filteredDeliveryId={filteredDeliveryId}
+                          mapContainerStyle={{ 
+                            width: "100%", 
+                            height: isMobile ? "350px" : "500px",
+                            borderRadius: "8px"
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Footer - Fixed (Optional) */}
+          <div className="sticky bottom-0 bg-white border-t border-gray-200 px-4 md:px-6 py-3 flex justify-start gap-3">
+            <button
+              onClick={handleCloseModal}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
       </div>
     );
   };
 
   return (
-    <div className="min-h-screen">
-      {/* Invoice Input Modal */}
-      {renderInvoiceModal()}
+    <div className="min-h-screen bg-gray-50 py-4 px-4 sm:px-6 lg:px-8">
+      {/* Mobile Filter Sidebar */}
+      {isMobile && renderMobileFilterSidebar()}
 
-      {/* Container */}
-      <div className="max-w-4xl mx-auto p-4 sm:p-6">
-        {/* Page Title */}
-        <h1 className="text-md sm:text-2xl font-bold text-gray-700 text-center mb-6">
-          Driver Tracking
-        </h1>
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+              Driver Tracking Dashboard
+            </h1>
+            <p className="mt-1 text-sm text-gray-600">
+              View and track all bills with delivery information
+            </p>
+          </div>
+
+          {/* Mobile Filter Button */}
+          {isMobile && (
+            <button
+              onClick={() => setShowFilterSidebar(true)}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600 transition-colors"
+            >
+              <Filter className="w-4 h-4" />
+              Filters
+            </button>
+          )}
+        </div>
 
         {/* Error Banner */}
         {error && (
-          <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-2 rounded mb-4 text-sm">
+          <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
             {error}
           </div>
         )}
 
-        {/* Only show navigation tabs if we have some billing details or data */}
-        {(billingDetails || locationData.length > 0) && (
-          <div className="flex justify-center gap-4 mb-6">
-            <button
-              className={`text-sm font-semibold px-4 py-2 rounded transition-colors ${
-                activeSection === "billing"
-                  ? "bg-red-500 text-white"
-                  : "bg-white text-gray-700 border border-gray-200 hover:bg-red-50"
-              }`}
-              onClick={() => setActiveSection("billing")}
-            >
-              Billing
-            </button>
-            <button
-              className={`text-sm font-semibold px-4 py-2 rounded transition-colors ${
-                activeSection === "location"
-                  ? "bg-red-500 text-white"
-                  : "bg-white text-gray-700 border border-gray-200 hover:bg-red-50"
-              }`}
-              onClick={() => setActiveSection("location")}
-            >
-              Location
-            </button>
+        {/* Desktop Filters */}
+        {!isMobile && renderDesktopFilters()}
+
+        {/* Loading State */}
+        {isLoading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500"></div>
           </div>
+        ) : bills.length === 0 ? (
+          <div className="bg-white rounded-lg shadow-md p-8 text-center">
+            <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500 text-sm">
+              No bills found matching your criteria
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Table/Card View */}
+            {isMobile ? renderCardView() : renderTableView()}
+
+            {/* Pagination */}
+            {renderPagination()}
+          </>
         )}
 
-        {/* Sections */}
-        {activeSection === "billing" && renderBillingSection()}
-        {activeSection === "location" && renderLocationSection()}
-
-        {/* Loading indicator if user has closed the modal but triggered a fetch */}
-        {isLoading && !showModal && (
-          <p className="text-center text-gray-500 text-sm mt-4">
-            Fetching details...
-          </p>
-        )}
+        {/* Detail Modal */}
+        {renderDetailModal()}
       </div>
     </div>
   );
